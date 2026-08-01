@@ -105,7 +105,8 @@ export function assertPreviewSafeConfig(configText) {
 }
 
 export function assertTrustedWorkflowRun(input) {
-  const { event, apiRun, associatedPullRequests, currentPullRequest, expectedRepository } = input;
+  const { event, apiRun, currentPullRequest, expectedRepository } = input;
+  const associatedPullRequests = apiRun?.pull_requests;
   const eventRun = event?.workflow_run;
   if (
     event?.action !== "completed" ||
@@ -137,10 +138,12 @@ export function assertTrustedWorkflowRun(input) {
 
   const prNumber = assertPositiveInteger(associatedPullRequest?.number, "prNumber");
   const headSha = assertFullSha(apiRun.head_sha, "workflowRun.headSha");
+  const baseSha = assertFullSha(associatedPullRequest.base?.sha, "pullRequest.baseSha");
   assertCurrentPullRequest(currentPullRequest, {
     repository: expectedRepository,
     prNumber,
     headSha,
+    baseSha,
   });
   if (
     apiRun.actor?.login === "dependabot[bot]" ||
@@ -154,7 +157,7 @@ export function assertTrustedWorkflowRun(input) {
     runId: assertPositiveInteger(apiRun.id, "workflowRunId"),
     prNumber,
     headSha,
-    baseSha: assertFullSha(associatedPullRequest.base?.sha, "pullRequest.baseSha"),
+    baseSha,
   };
 }
 
@@ -163,7 +166,10 @@ export function assertCurrentPullRequest(pullRequest, expected) {
     pullRequest?.state !== "open" ||
     pullRequest?.head?.repo?.full_name !== expected.repository ||
     pullRequest?.head?.sha !== expected.headSha ||
-    pullRequest?.number !== expected.prNumber
+    pullRequest?.number !== expected.prNumber ||
+    (expected.baseSha !== undefined &&
+      (pullRequest?.base?.repo?.full_name !== expected.repository ||
+        pullRequest?.base?.sha !== expected.baseSha))
   ) {
     throw new PreviewContractError(
       "STALE_PULL_REQUEST",
