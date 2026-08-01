@@ -9,6 +9,14 @@
     "head_sampling_rate": 1,
   },
   "upload_source_maps": true,
+  "workers_dev": true,
+  "preview_urls": true,
+  "vars": {
+    "APP_VERSION": "0.1.0",
+    "CATALOG_VERSION": "not-imported",
+    "COMMIT_SHA": "0000000000000000000000000000000000000000",
+    "DEPLOYMENT_ENV": "local",
+  },
   "assets": {
     "directory": "./dist/client",
     "not_found_handling": "single-page-application",

@@ -17,14 +17,22 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Assert exact workflow commit is checked out
+        run: >-
+          node scripts/preview/assert-checkout.mjs
+          "${{ github.event.pull_request.head.sha || github.sha }}"
 
       - name: Validate repository governance
         shell: pwsh
         run: ./scripts/validate-bootstrap.ps1
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -59,6 +67,9 @@ jobs:
       - name: Worker integration tests
         run: npm run test:worker
 
+      - name: Preview policy and lifecycle tests
+        run: npm run test:preview
+
       - name: Build
         run: npm run build
 
@@ -73,8 +84,59 @@ jobs:
           REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: npm run test:e2e:smoke
 
+      - name: Build inert preview deployment artifact
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.actor != 'dependabot[bot]' &&
+          !startsWith(github.head_ref, 'dependabot/')
+        run: >-
+          npm run preview:artifact --
+          --repository "${{ github.repository }}"
+          --head-repository "${{ github.event.pull_request.head.repo.full_name }}"
+          --pr-number "${{ github.event.pull_request.number }}"
+          --head-sha "${{ github.event.pull_request.head.sha }}"
+          --base-sha "${{ github.event.pull_request.base.sha }}"
+          --run-id "${{ github.run_id }}"
+          --created-at "${{ github.event.pull_request.updated_at }}"
+          --app-version "0.1.0"
+          --catalog-version "not-imported"
+
+      - name: Verify inert preview deployment artifact
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.actor != 'dependabot[bot]' &&
+          !startsWith(github.head_ref, 'dependabot/')
+        shell: pwsh
+        run: |
+          $trusted = @{
+            repository = "${{ github.repository }}"
+            headRepository = "${{ github.event.pull_request.head.repo.full_name }}"
+            prNumber = [int]"${{ github.event.pull_request.number }}"
+            headSha = "${{ github.event.pull_request.head.sha }}"
+            baseSha = "${{ github.event.pull_request.base.sha }}"
+            runId = [long]"${{ github.run_id }}"
+          }
+          New-Item -ItemType Directory -Force artifacts/preview | Out-Null
+          $trusted | ConvertTo-Json -Compress | Set-Content artifacts/preview/trusted-event.json
+          npm run preview:verify -- artifacts/preview/package artifacts/preview/trusted-event.json
+
+      - name: Upload inert preview deployment artifact
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.actor != 'dependabot[bot]' &&
+          !startsWith(github.head_ref, 'dependabot/')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: preview-bundle-${{ github.event.pull_request.head.sha }}
+          path: artifacts/preview/package/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload reproducible review evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: review-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/

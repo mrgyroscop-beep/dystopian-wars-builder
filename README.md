@@ -85,6 +85,13 @@ change. E2E creates ignored screenshots and JSON metadata under `artifacts/`.
 Each review-evidence sidecar records the route, fixture state, viewport and exact
 review commit SHA; CI publishes the directory as a workflow artifact.
 
+Trusted same-repository pull requests also produce a credential-free inert preview
+bundle. After the preview environment is bootstrapped, the protected deployment
+controller publishes a stable PR URL plus an immutable exact-version URL and verifies
+the full SHA through `/api/health` before reporting success. Forks remain CI-only.
+See [preview operations](docs/preview-operations.md) and
+[ADR-0005](docs/architecture/ADR-0005-trusted-pr-previews.md).
+
 ## Architecture
 
 The allowed dependency direction is UI → application → domain. Infrastructure
@@ -106,7 +113,8 @@ Node-only catalogue tooling remains outside both bundles.
 See [ADR-0001](docs/architecture/ADR-0001-cloudflare-spa-worker.md),
 [ADR-0002](docs/architecture/ADR-0002-layered-boundaries.md),
 [ADR-0003](docs/architecture/ADR-0003-catalog-import-seam.md) and
-[ADR-0004](docs/architecture/ADR-0004-catalog-ingestion-and-promotion.md).
+[ADR-0004](docs/architecture/ADR-0004-catalog-ingestion-and-promotion.md), and
+[ADR-0005](docs/architecture/ADR-0005-trusted-pr-previews.md).
 
 ## Release and rollback
 
