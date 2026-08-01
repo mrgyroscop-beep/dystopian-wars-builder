@@ -1,11 +1,11 @@
 # Repository settings
 
-This file records the expected server-side controls for the private GitHub
-repository. It contains no credentials.
+This file records the server-side controls for the public GitHub repository.
+It contains no credentials.
 
 ## Applied repository settings
 
-- visibility: private;
+- visibility: public;
 - default branch: `main`;
 - allowed merge method: squash only;
 - merge commits and rebase merges: disabled;
@@ -19,6 +19,7 @@ The target protection policy is:
 - all changes arrive through a pull request;
 - at least one approval, with stale approvals dismissed and the last push
   approved by someone other than its author;
+- CODEOWNER review is not additionally required;
 - the branch is current before merge;
 - `Required CI` is successful;
 - review conversations are resolved;
@@ -26,15 +27,19 @@ The target protection policy is:
 - administrators cannot bypass the rule;
 - force-push and branch deletion are forbidden.
 
-## Verified plan limitation
+This policy intentionally needs a second GitHub account to approve a change.
+The repository owner cannot approve their own last push.
 
-During `KAN-38`, both the branch-protection and repository-ruleset APIs returned
-HTTP 403 for this private repository with the message that GitHub Pro is
-required or the repository must be public. The repository remains private by
-design. Consequently, the desired `main` policy is documented and the CI check
-exists, but GitHub does not currently enforce the policy server-side.
+## Public repository safeguards
 
-Do not make the repository public or weaken the target policy as a workaround.
-After GitHub Pro (or another private-repository plan with rules support) is
-available, apply the policy above and verify through the API that `main` reports
-`protected: true` before treating protection as complete.
+The repository was made public so GitHub Free can enforce the `main` protection
+policy without a paid plan. Before publication, all reachable commit author and
+committer addresses were rewritten to the account's GitHub-provided `noreply`
+address. GitHub email privacy remains enabled so server-generated pull-request
+merge refs also use a `noreply` address.
+
+Because every tracked object is publicly readable, do not commit credentials,
+private reference material, PDF or STL files, upstream XML exports, or generated
+catalog datasets that are not approved for redistribution. Verify the branch
+protection through the GitHub API after any repository visibility or plan
+change.

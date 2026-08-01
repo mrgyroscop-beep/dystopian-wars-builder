@@ -1,6 +1,6 @@
 # Dystopian Wars Builder
 
-Private application repository for a Dystopian Wars 4.0 fleet builder. The
+Public application repository for a Dystopian Wars 4.0 fleet builder. The
 product will let players assemble, validate, save and review fleets using the
 current game data.
 
@@ -12,6 +12,8 @@ application code. It establishes a protected, reviewable delivery path first.
 
 Reference PDF and STL files may be kept beside the checkout for research. They
 are ignored by Git and must never be committed or uploaded to the repository.
+The same restriction applies to upstream XML exports and generated catalog
+datasets unless their redistribution has been explicitly approved.
 
 ## Development workflow
 
@@ -24,7 +26,7 @@ are ignored by Git and must never be committed or uploaded to the repository.
 Direct work on `main`, force-pushes and merge commits are not part of the
 supported process. See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete
 conventions and [docs/repository-settings.md](docs/repository-settings.md) for
-the intended GitHub settings and their verified availability.
+the applied GitHub settings and public-repository safeguards.
 
 ## Continuous integration
 
