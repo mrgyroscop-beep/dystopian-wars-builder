@@ -17,6 +17,7 @@ $requiredFiles = @(
     "CONTRIBUTING.md",
     "README.md",
     "docs/release-and-rollback.md",
+    "docs/repository-settings.md",
     "scripts/validate-bootstrap.ps1"
 )
 

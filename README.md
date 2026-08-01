@@ -23,7 +23,8 @@ are ignored by Git and must never be committed or uploaded to the repository.
 
 Direct work on `main`, force-pushes and merge commits are not part of the
 supported process. See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete
-conventions.
+conventions and [docs/repository-settings.md](docs/repository-settings.md) for
+the intended GitHub settings and their verified availability.
 
 ## Continuous integration
 
