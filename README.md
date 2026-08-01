@@ -1,19 +1,45 @@
 # Dystopian Wars Builder
 
-Public application repository for a Dystopian Wars 4.0 fleet builder. The
-product will let players assemble, validate, save and review fleets using the
-current game data.
+Public application repository and production-oriented scaffold for a Dystopian
+Wars 4.0 fleet builder. It runs a React single-page application and a Hono
+Cloudflare Worker API on the same local origin through the Cloudflare Vite
+plugin.
 
-## Repository status
+KAN-29 intentionally contains only the application shell. Catalogue import,
+game entities, validation, functional rosters, authentication, D1 and deployment
+belong to later Jira tasks.
 
-The repository is in **bootstrap mode** while the application scaffold is built
-in `KAN-29`. Bootstrap mode intentionally contains no product UI or runtime
-application code. It establishes a protected, reviewable delivery path first.
-
-Reference PDF and STL files may be kept beside the checkout for research. They
+Reference PDF and STL files may remain beside the checkout for research. They
 are ignored by Git and must never be committed or uploaded to the repository.
 The same restriction applies to upstream XML exports and generated catalog
 datasets unless their redistribution has been explicitly approved.
+
+## Requirements
+
+- Node.js 24 or newer;
+- npm and the committed `package-lock.json`;
+- Chromium installed by Playwright for E2E (`npm run test:e2e:install`).
+
+## Local development
+
+```powershell
+npm ci
+npm run types:generate
+npm run dev
+```
+
+One Vite command starts both the React SPA and the Worker runtime. Open the URL
+printed by Vite (normally `http://localhost:5173`). Useful endpoints:
+
+- `/` — local roster-library placeholder and state fixtures;
+- `/?state=loading|empty|error|success` — deterministic UI fixtures;
+- `/rosters/new` — creation seam;
+- `/rosters/scaffold-demo` — responsive builder shell;
+- `/settings` — live same-origin health status;
+- `/api/health` — Worker JSON health endpoint.
+
+Static asset fallback serves `index.html` for deep SPA links, while
+`/api/*` is routed to the Worker first.
 
 ## Development workflow
 
@@ -31,18 +57,46 @@ the applied GitHub settings and public-repository safeguards.
 ## Continuous integration
 
 The `Required CI` job has a stable name so it can be required by branch
-protection.
-
-- Without `package.json`, it validates repository governance and reports
-  **bootstrap mode**.
-- Once `KAN-29` adds the application, it additionally runs `npm ci`, `build`,
-  `lint`, unit tests and the E2E smoke test through documented package scripts.
-
-Run the bootstrap validation locally from PowerShell 7:
+protection. Run the same checks locally:
 
 ```powershell
-pwsh -File scripts/validate-bootstrap.ps1
+npm run typecheck
+npm run lint
+npm run format:check
+npm run check:architecture
+npm run test:unit
+npm run test:worker
+npm run build
+npm run test:e2e:smoke
 ```
+
+`typecheck` first verifies that `worker-configuration.d.ts` still matches
+`wrangler.jsonc`; regenerate it with `npm run types:generate` after any binding
+change. E2E creates ignored screenshots and JSON metadata under `artifacts/`.
+Each review-evidence sidecar records the route, fixture state, viewport and exact
+review commit SHA; CI publishes the directory as a workflow artifact.
+
+## Architecture
+
+The allowed dependency direction is UI → application → domain. Infrastructure
+implements application ports; the browser and Worker are composition roots.
+Node-only catalogue tooling remains outside both bundles.
+
+- `src/app` — bootstrap, router and shell;
+- `src/routes` — route components and error boundaries;
+- `src/ui` — reusable UI primitives;
+- `src/domain` — pure TypeScript rules and types;
+- `src/application` — use cases, ports and runtime-boundary schemas;
+- `src/infrastructure` — adapters;
+- `worker` — Hono Worker entrypoint and API tests;
+- `scripts/catalog` — future Node-only import seam;
+- `data/fixtures`, `data/generated` — controlled data inputs/outputs;
+- `docs/architecture` — architecture decisions;
+- `e2e` — same-origin browser and API smoke tests.
+
+See [ADR-0001](docs/architecture/ADR-0001-cloudflare-spa-worker.md),
+[ADR-0002](docs/architecture/ADR-0002-layered-boundaries.md) and
+[ADR-0003](docs/architecture/ADR-0003-catalog-import-seam.md).
 
 ## Release and rollback
 

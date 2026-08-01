@@ -1,5 +1,8 @@
 * text=auto eol=lf
 
+# Wrangler owns this generated declaration and currently emits five trailing spaces.
+worker-configuration.d.ts whitespace=-trailing-space
+
 *.png binary
 *.jpg binary
 *.jpeg binary

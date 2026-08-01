@@ -38,18 +38,21 @@ work.
 
 ## Continuous integration contract
 
-During bootstrap, `scripts/validate-bootstrap.ps1` validates the repository
-process and ensures prohibited reference files are not tracked. When
-`package.json` is present, it must expose all of these scripts:
+The application must expose and pass all of these scripts:
 
+- `typecheck`
 - `build`
 - `lint`
+- `format:check`
+- `check:architecture`
 - `test:unit`
+- `test:worker`
 - `test:e2e:smoke`
 
-The CI workflow installs locked dependencies with `npm ci` and runs every
-script. A failing or missing check blocks merge; tests or protections must not
-be weakened to make a change pass.
+CI installs locked dependencies with `npm ci`, installs the Playwright Chromium
+runtime and runs every check. A failing or missing check blocks merge; tests or
+protections must not be weakened to make a change pass. Run `wrangler types`
+after any binding change and commit the generated `worker-configuration.d.ts`.
 
 ## Review, release and rollback
 

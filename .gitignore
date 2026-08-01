@@ -17,9 +17,12 @@ build/
 coverage/
 playwright-report/
 test-results/
+artifacts/
 .cache/
 .turbo/
 .wrangler/
+.dev.vars
+.dev.vars.*
 
 # Editor and operating-system files.
 .idea/
@@ -34,4 +37,3 @@ desktop.ini
 *.log
 *.tmp
 *.temp
-
