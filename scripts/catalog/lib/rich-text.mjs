@@ -56,8 +56,9 @@ export function toSafeRichText(source) {
   appendText(decodeEntities(value.slice(offset)));
   closeTable();
   flushParagraph();
+  normalizeBlocks(blocks);
 
-  const plainText = blocks.map(blockPlainText).filter(Boolean).join("\n");
+  const plainText = blocks.map(blockPlainText).filter(Boolean).join("\n").normalize("NFC");
   const result = {
     type: "document",
     children: blocks,
@@ -144,6 +145,37 @@ export function toSafeRichText(source) {
   function note(code, tag) {
     diagnostics.set(`${code}:${tag}`, { code, tag });
   }
+}
+
+function normalizeBlocks(blocks) {
+  for (const block of blocks) {
+    if (block.type === "paragraph") normalizeInline(block.children);
+    else for (const row of block.rows) for (const cell of row.cells) normalizeInline(cell.children);
+  }
+}
+
+function normalizeInline(children) {
+  let previous;
+  for (const child of children) {
+    if (child.type === "lineBreak") {
+      previous = undefined;
+      continue;
+    }
+    child.value = child.value.normalize("NFC");
+    const leadingMarks = /^\p{M}+/u.exec(child.value)?.[0] ?? "";
+    if (previous && leadingMarks) {
+      const separated = `${previous.value}${leadingMarks}`;
+      const composed = separated.normalize("NFC");
+      if (composed !== separated) {
+        previous.value = composed;
+        child.value = child.value.slice(leadingMarks.length).normalize("NFC");
+      }
+    }
+    if (child.value) previous = child;
+  }
+  for (let index = children.length - 1; index >= 0; index -= 1)
+    if (children[index].type !== "lineBreak" && children[index].value.length === 0)
+      children.splice(index, 1);
 }
 
 function trimInline(inline) {

@@ -115,13 +115,15 @@ export async function promoteDataset(dataset, runtimeRoot, options = {}) {
       const stableBefore = before?.stable ?? emptyStable();
       const requestedReleaseId = options.requestedReleaseId ?? dataset.releaseId;
       assertReleaseId(requestedReleaseId, "requested release");
-      const stale = stableBefore.activeReleaseId === dataset.releaseId;
       try {
+        const candidateOrder = await compareCandidateOrder(dataset, stableBefore, runtimeRoot);
+        const current = candidateOrder === "CURRENT";
+        const stale = candidateOrder === "OLDER";
         let latestProjection = project(before, {
           operationId,
           attemptedAt: before.latest.attemptedAt,
           phase: "RESOLVED",
-          outcome: stale ? "STALE" : "UPDATE_AVAILABLE",
+          outcome: stale ? "STALE" : current ? "SUCCESS" : "UPDATE_AVAILABLE",
           requestedReleaseId,
           resolvedReleaseId: dataset.releaseId,
           diagnosticId: null,
@@ -131,7 +133,7 @@ export async function promoteDataset(dataset, runtimeRoot, options = {}) {
         await writeOperation(runtimeRoot, latestProjection, "PROMOTE");
         await writeProjection(runtimeRoot, latestProjection);
         await inject(options, "after-resolved");
-        if (stale) return latestProjection;
+        if (stale || current) return latestProjection;
         latestProjection = project(latestProjection, {
           ...latestProjection.latest,
           phase: "PROMOTING",
@@ -245,7 +247,7 @@ export async function recordOperationalFailure(runtimeRoot, error, options = {})
 
 async function recordFailureLocked(runtimeRoot, error, options) {
   const before = await readLifecycle(runtimeRoot);
-  const operationId = options.operationId ?? before?.latest.operationId ?? randomUUID();
+  const operationId = options.operationId ?? (await createOperationId(runtimeRoot));
   const superseded = options.operationId && before?.latest.operationId !== operationId;
   const diagnostic = createOperationalDiagnostic(error, before?.stable.activeReleaseId ?? null);
   await mkdir(path.join(runtimeRoot, "diagnostics"), { recursive: true });
@@ -387,6 +389,56 @@ async function prepareRelease(dataset, runtimeRoot) {
     await rm(staging, { recursive: true, force: true });
     throw error;
   }
+}
+
+async function compareCandidateOrder(dataset, stable, runtimeRoot) {
+  if (!stable.activeReleaseId) return "NEWER";
+  if (stable.activeReleaseId === dataset.releaseId) return "CURRENT";
+
+  const activeDirectory = path.join(runtimeRoot, "releases", stable.activeReleaseId);
+  await verifyRelease(activeDirectory, stable.activeReleaseId);
+  const activeManifest = JSON.parse(
+    await readFile(path.join(activeDirectory, "manifest.json"), "utf8"),
+  );
+  const revisionOrder = compareInventoryRevisions(
+    dataset.manifest.inventory,
+    activeManifest.inventory,
+  );
+  if (revisionOrder !== 0) return revisionOrder < 0 ? "OLDER" : "NEWER";
+
+  const candidateTimestamp = Date.parse(dataset.manifest.source.resolved.commitTimestamp);
+  const activeTimestamp = Date.parse(activeManifest.source.resolved.commitTimestamp);
+  if (!Number.isFinite(candidateTimestamp) || !Number.isFinite(activeTimestamp))
+    throw new CatalogImportError("RELEASE_INVALID", "Catalog release ordering is invalid", {});
+  return candidateTimestamp < activeTimestamp ? "OLDER" : "NEWER";
+}
+
+function compareInventoryRevisions(candidate = [], active = []) {
+  const activeByPath = new Map(active.map((item) => [item.path, item.revision]));
+  let direction = 0;
+  for (const item of candidate) {
+    if (!activeByPath.has(item.path)) return 0;
+    const comparison = compareRevision(item.revision, activeByPath.get(item.path));
+    if (comparison === 0) continue;
+    if (direction !== 0 && direction !== comparison) return 0;
+    direction = comparison;
+  }
+  return candidate.length === active.length ? direction : 0;
+}
+
+function compareRevision(candidate, active) {
+  const left = String(candidate);
+  const right = String(active);
+  if (/^\d+$/u.test(left) && /^\d+$/u.test(right))
+    return BigInt(left) === BigInt(right) ? 0 : BigInt(left) < BigInt(right) ? -1 : 1;
+  return Math.sign(left.localeCompare(right, "en", { numeric: true }));
+}
+
+async function createOperationId(runtimeRoot) {
+  let operationId;
+  do operationId = randomUUID();
+  while (await exists(path.join(runtimeRoot, "operations", `${operationId}.json`)));
+  return operationId;
 }
 
 function assertExpected(before, options, action) {

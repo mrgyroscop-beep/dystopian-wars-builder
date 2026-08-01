@@ -44,6 +44,13 @@ describe("source lock and safe content", () => {
     expect(result.diagnostics).toEqual([]);
   });
 
+  it("normalizes NFC after composing adjacent rich-text segments", () => {
+    const result = toSafeRichText("Cafe<strong>\u0301 noir</strong>");
+    expect(result.plainText).toBe("Caf\u00e9 noir");
+    expect(result.plainText).toBe(result.plainText.normalize("NFC"));
+    expect(JSON.stringify(result.children)).not.toContain("e\u0301");
+  });
+
   it("uses deterministic plain fallback and reports hostile or lossy content", () => {
     const unavailable = toSafeRichText(
       '<script src="https://attacker.test/x" onload="steal()">secret</script>',

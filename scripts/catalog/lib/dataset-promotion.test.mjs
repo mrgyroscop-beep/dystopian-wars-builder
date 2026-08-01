@@ -291,16 +291,16 @@ describe("deterministic dataset and atomic lifecycle", () => {
       latest: { phase: "SUCCESS", outcome: "SUCCESS", capability: "ACTIVE" },
     });
 
-    const staleCheck = await beginCatalogCheck(runtime, {
+    const currentCheck = await beginCatalogCheck(runtime, {
       expectedCurrent: dataset.releaseId,
     });
-    const stale = await promoteDataset(dataset, runtime, {
-      operationId: staleCheck.operationId,
+    const current = await promoteDataset(dataset, runtime, {
+      operationId: currentCheck.operationId,
       expectedCurrent: dataset.releaseId,
     });
-    expect(stale).toMatchObject({
+    expect(current).toMatchObject({
       stable: { activeReleaseId: dataset.releaseId },
-      latest: { phase: "RESOLVED", outcome: "STALE" },
+      latest: { phase: "RESOLVED", outcome: "SUCCESS" },
     });
 
     const changedLock = { ...lock, commit: "f".repeat(40) };
@@ -339,6 +339,73 @@ describe("deterministic dataset and atomic lifecycle", () => {
       stable: { activeReleaseId: null, lastKnownGoodReleaseId: null },
       latest: { phase: "FAILURE", outcome: "UNAVAILABLE", capability: "UNAVAILABLE" },
     });
+  });
+
+  it("orders current, older, and newer candidates without inverting update availability", async () => {
+    const { lock, sources } = await fixtureSet();
+    const runtime = await temp("catalog-ordering-");
+    const current = await buildDataset(lock, sources, provenance(lock));
+    await promoteDataset(current, runtime, { expectedCurrent: null });
+
+    const equal = await promoteDataset(current, runtime, {
+      expectedCurrent: current.releaseId,
+    });
+    expect(equal.latest).toMatchObject({ phase: "RESOLVED", outcome: "SUCCESS" });
+
+    const olderLock = {
+      ...lock,
+      commit: "c".repeat(40),
+      commitTimestamp: "2025-01-01T00:00:00Z",
+    };
+    const older = await buildDataset(olderLock, sources, provenance(olderLock));
+    const stale = await promoteDataset(older, runtime, {
+      expectedCurrent: current.releaseId,
+    });
+    expect(stale).toMatchObject({
+      stable: { activeReleaseId: current.releaseId },
+      latest: {
+        phase: "RESOLVED",
+        outcome: "STALE",
+        resolvedReleaseId: older.releaseId,
+      },
+    });
+
+    const newerLock = {
+      ...lock,
+      commit: "d".repeat(40),
+      commitTimestamp: "2026-08-02T00:00:00Z",
+    };
+    const newer = await buildDataset(newerLock, sources, provenance(newerLock));
+    const promoted = await promoteDataset(newer, runtime, {
+      expectedCurrent: current.releaseId,
+    });
+    expect(promoted).toMatchObject({
+      stable: {
+        activeReleaseId: newer.releaseId,
+        lastKnownGoodReleaseId: current.releaseId,
+      },
+      latest: { phase: "SUCCESS", outcome: "SUCCESS" },
+    });
+  });
+
+  it("creates an append-only audit record whenever operationId is null", async () => {
+    const runtime = await temp("catalog-append-only-");
+    const first = await recordOperationalFailure(runtime, new Error("first"), {
+      operationId: null,
+      attemptedAt: "2026-08-01T00:00:00.000Z",
+    });
+    const firstFile = path.join(runtime, "operations", `${first.operationId}.json`);
+    const firstSnapshot = await readFile(firstFile, "utf8");
+
+    const second = await recordOperationalFailure(runtime, new Error("second"), {
+      operationId: null,
+      attemptedAt: "2026-08-01T00:01:00.000Z",
+    });
+    expect(second.operationId).not.toBe(first.operationId);
+    expect(await readFile(firstFile, "utf8")).toBe(firstSnapshot);
+    expect((await readdir(path.join(runtime, "operations"))).sort()).toEqual(
+      [`${first.operationId}.json`, `${second.operationId}.json`].sort(),
+    );
   });
 
   it("does not let a superseded concurrent check overwrite the latest projection", async () => {
