@@ -18,6 +18,14 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Assert exact workflow commit is checked out
+        run: >-
+          node scripts/preview/assert-checkout.mjs
+          "${{ github.event.pull_request.head.sha || github.sha }}"
 
       - name: Validate repository governance
         shell: pwsh
@@ -79,7 +87,9 @@ jobs:
       - name: Build inert preview deployment artifact
         if: >-
           github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.repository
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.actor != 'dependabot[bot]' &&
+          !startsWith(github.head_ref, 'dependabot/')
         run: >-
           npm run preview:artifact --
           --repository "${{ github.repository }}"
@@ -95,7 +105,9 @@ jobs:
       - name: Verify inert preview deployment artifact
         if: >-
           github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.repository
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.actor != 'dependabot[bot]' &&
+          !startsWith(github.head_ref, 'dependabot/')
         shell: pwsh
         run: |
           $trusted = @{
@@ -113,7 +125,9 @@ jobs:
       - name: Upload inert preview deployment artifact
         if: >-
           github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.repository
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.actor != 'dependabot[bot]' &&
+          !startsWith(github.head_ref, 'dependabot/')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: preview-bundle-${{ github.event.pull_request.head.sha }}

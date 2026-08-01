@@ -4,6 +4,10 @@ import path from "node:path";
 
 export const PREVIEW_TTL_DAYS = 7;
 export const MAX_ACTIVE_PREVIEWS = 20;
+export const MAX_ARTIFACT_FILES = 250;
+export const MAX_ARTIFACT_FILE_BYTES = 10 * 1024 * 1024;
+export const MAX_ARTIFACT_TOTAL_BYTES = 25 * 1024 * 1024;
+export const MAX_MANIFEST_BYTES = 256 * 1024;
 export const WORKER_NAME_PATTERN = /^dwb-pr-([1-9][0-9]*)$/;
 export const SHA_PATTERN = /^[0-9a-f]{40}$/;
 
@@ -27,6 +31,27 @@ export function assertFullSha(value, field = "sha") {
     throw new PreviewContractError("INVALID_SHA", `${field} must be a lowercase full commit SHA`);
   }
   return value;
+}
+
+export function assertCheckedOutCommit(actual, claimed) {
+  const checkedOut = assertFullSha(actual, "checkedOutSha");
+  const expected = assertFullSha(claimed, "claimedSha");
+  if (checkedOut !== expected) {
+    throw new PreviewContractError(
+      "CHECKOUT_SHA_MISMATCH",
+      "checked out commit does not match the claimed workflow commit",
+    );
+  }
+  return checkedOut;
+}
+
+export function assertCleanTrackedCheckout(status) {
+  if (typeof status !== "string" || status.trim().length > 0) {
+    throw new PreviewContractError(
+      "DIRTY_CHECKOUT",
+      "tracked checkout changed after the exact commit was selected",
+    );
+  }
 }
 
 export function assertPositiveInteger(value, field) {
@@ -79,15 +104,18 @@ export function assertPreviewSafeConfig(configText) {
   }
 }
 
-export function assertTrustedWorkflowRun(event, expectedRepository) {
-  const run = event?.workflow_run;
-  const pullRequests = run?.pull_requests;
+export function assertTrustedWorkflowRun(input) {
+  const { event, apiRun, associatedPullRequests, currentPullRequest, expectedRepository } = input;
+  const eventRun = event?.workflow_run;
   if (
     event?.action !== "completed" ||
-    run?.name !== "CI" ||
-    run?.conclusion !== "success" ||
-    !Array.isArray(pullRequests) ||
-    pullRequests.length !== 1
+    assertPositiveInteger(eventRun?.id, "event.workflowRunId") !== apiRun?.id ||
+    apiRun?.name !== "CI" ||
+    apiRun?.event !== "pull_request" ||
+    apiRun?.status !== "completed" ||
+    apiRun?.conclusion !== "success" ||
+    !Array.isArray(associatedPullRequests) ||
+    associatedPullRequests.length !== 1
   ) {
     throw new PreviewContractError(
       "UNTRUSTED_WORKFLOW_RUN",
@@ -95,13 +123,11 @@ export function assertTrustedWorkflowRun(event, expectedRepository) {
     );
   }
 
-  const pullRequest = pullRequests[0];
-  const repository = run.repository?.full_name;
-  const headRepository = run.head_repository?.full_name;
+  const associatedPullRequest = associatedPullRequests[0];
   if (
-    repository !== expectedRepository ||
-    headRepository !== expectedRepository ||
-    pullRequest?.head?.repo?.full_name !== expectedRepository
+    apiRun.repository?.full_name !== expectedRepository ||
+    apiRun.head_repository?.full_name !== expectedRepository ||
+    currentPullRequest?.head?.repo?.full_name !== expectedRepository
   ) {
     throw new PreviewContractError(
       "FORK_NOT_DEPLOYABLE",
@@ -109,11 +135,26 @@ export function assertTrustedWorkflowRun(event, expectedRepository) {
     );
   }
 
+  const prNumber = assertPositiveInteger(associatedPullRequest?.number, "prNumber");
+  const headSha = assertFullSha(apiRun.head_sha, "workflowRun.headSha");
+  assertCurrentPullRequest(currentPullRequest, {
+    repository: expectedRepository,
+    prNumber,
+    headSha,
+  });
+  if (
+    apiRun.actor?.login === "dependabot[bot]" ||
+    currentPullRequest.user?.login === "dependabot[bot]" ||
+    currentPullRequest.head?.ref?.startsWith("dependabot/")
+  ) {
+    throw new PreviewContractError("DEPENDABOT_CI_ONLY", "Dependabot pull requests are CI-only");
+  }
+
   return {
-    runId: assertPositiveInteger(run.id, "workflowRunId"),
-    prNumber: assertPositiveInteger(pullRequest.number, "prNumber"),
-    headSha: assertFullSha(run.head_sha, "workflowRun.headSha"),
-    baseSha: assertFullSha(pullRequest.base?.sha, "pullRequest.baseSha"),
+    runId: assertPositiveInteger(apiRun.id, "workflowRunId"),
+    prNumber,
+    headSha,
+    baseSha: assertFullSha(associatedPullRequest.base?.sha, "pullRequest.baseSha"),
   };
 }
 
@@ -129,6 +170,19 @@ export function assertCurrentPullRequest(pullRequest, expected) {
       "pull request head changed or is no longer open",
     );
   }
+  return pullRequest;
+}
+
+export function planAliasRecovery(input) {
+  if (!input.mutationStarted) return "none";
+  if (!input.existedBefore) return "delete";
+  if (input.currentPullRequest?.state !== "open") return "delete";
+  const currentMatches =
+    input.currentPullRequest.number === input.expected.prNumber &&
+    input.currentPullRequest.head?.repo?.full_name === input.expected.repository &&
+    input.currentPullRequest.head?.sha === input.expected.headSha;
+  if (!currentMatches) return "skip-stale";
+  return input.hasPreviousArtifact ? "restore" : "fail-no-lkg";
 }
 
 export function createArtifactDigest(files) {
@@ -150,22 +204,66 @@ export function assertChecksumDocument(content, files) {
 }
 
 export async function collectArtifactFiles(directory) {
+  const entries = await inspectArtifactTree(directory);
   const files = [];
-  await visit(directory, directory, files);
-  return files.sort((left, right) => left.path.localeCompare(right.path));
+  for (const entry of entries) {
+    const buffer = await readFile(path.join(directory, entry.path));
+    files.push({ path: entry.path, sha256: sha256(buffer), size: entry.size });
+  }
+  return files;
 }
 
-async function visit(root, current, files) {
+export async function inspectArtifactTree(directory) {
+  const entries = [];
+  await visit(directory, directory, entries);
+  assertArtifactBounds(entries);
+  return entries.sort((left, right) => left.path.localeCompare(right.path));
+}
+
+export async function readBoundedText(file, maximumBytes = MAX_MANIFEST_BYTES) {
+  const details = await stat(file);
+  if (details.size > maximumBytes) {
+    throw new PreviewContractError("ARTIFACT_METADATA_SIZE", "artifact metadata is too large");
+  }
+  return readFile(file, "utf8");
+}
+
+async function visit(root, current, entries) {
   for (const entry of await readdir(current, { withFileTypes: true })) {
     const absolute = path.join(current, entry.name);
     if (entry.isDirectory()) {
-      await visit(root, absolute, files);
+      await visit(root, absolute, entries);
     } else if (entry.isFile()) {
       const relative = path.relative(root, absolute).replaceAll("\\", "/");
-      const buffer = await readFile(absolute);
       const details = await stat(absolute);
-      files.push({ path: relative, sha256: sha256(buffer), size: details.size });
+      entries.push({ path: relative, size: details.size });
+    } else {
+      throw new PreviewContractError(
+        "UNSAFE_ARTIFACT_ENTRY",
+        "artifact contains a symbolic link or unsupported entry",
+      );
     }
+  }
+}
+
+export function assertArtifactBounds(entries) {
+  if (!Array.isArray(entries) || entries.length === 0 || entries.length > MAX_ARTIFACT_FILES) {
+    throw new PreviewContractError("ARTIFACT_FILE_COUNT", "artifact file count is outside limits");
+  }
+  let totalBytes = 0;
+  for (const entry of entries) {
+    if (
+      typeof entry?.path !== "string" ||
+      !Number.isSafeInteger(entry.size) ||
+      entry.size < 0 ||
+      entry.size > MAX_ARTIFACT_FILE_BYTES
+    ) {
+      throw new PreviewContractError("ARTIFACT_FILE_SIZE", "artifact file size is outside limits");
+    }
+    totalBytes += entry.size;
+  }
+  if (totalBytes > MAX_ARTIFACT_TOTAL_BYTES) {
+    throw new PreviewContractError("ARTIFACT_TOTAL_SIZE", "artifact total size is outside limits");
   }
 }
 
@@ -240,6 +338,7 @@ export function assertArtifactPaths(files) {
     throw new PreviewContractError("EMPTY_ARTIFACT", "preview artifact is empty");
   }
   const paths = new Set();
+  assertArtifactBounds(files);
   for (const file of files) {
     if (
       typeof file?.path !== "string" ||

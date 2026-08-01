@@ -10,6 +10,9 @@ import {
   assertPreviewCapacity,
   collectArtifactFiles,
   createArtifactDigest,
+  inspectArtifactTree,
+  planAliasRecovery,
+  readBoundedText,
   redactOperationalError,
 } from "./core.mjs";
 import { deletePreviewWorker, listPreviewWorkers } from "./cloudflare-api.mjs";
@@ -22,7 +25,9 @@ const trustedEvent = JSON.parse(
 const previousArtifact = process.argv[4] ? path.resolve(process.argv[4]) : undefined;
 let manifest;
 let existedBefore = false;
-let stableAliasChanged = false;
+let anyUploadMutationStarted = false;
+let stableAliasMutationStarted = false;
+let previousManifest;
 
 try {
   manifest = await verifiedManifest(artifact, trustedEvent);
@@ -30,13 +35,29 @@ try {
   const activeWorkers = await listPreviewWorkers();
   existedBefore = activeWorkers.includes(manifest.workerName);
   assertPreviewCapacity(activeWorkers, manifest.workerName);
+  if (existedBefore) {
+    if (!previousArtifact)
+      throw new Error("Existing preview cannot update without last-known-good");
+    await inspectArtifactTree(previousArtifact);
+    previousManifest = await verifiedManifest(
+      previousArtifact,
+      JSON.parse(await readBoundedText(path.join(previousArtifact, "manifest.json"))),
+    );
+    if (
+      previousManifest.repository !== manifest.repository ||
+      previousManifest.prNumber !== manifest.prNumber
+    ) {
+      throw new Error("Previous artifact belongs to a different preview");
+    }
+  }
 
+  anyUploadMutationStarted = true;
   const immutable = await uploadVersion(manifest, artifact, false);
   await smoke(immutable.previewUrl, manifest.headSha);
   await assertPullRequestIsCurrent(trustedEvent);
 
+  stableAliasMutationStarted = true;
   const stable = await uploadVersion(manifest, artifact, true);
-  stableAliasChanged = true;
   if (!stable.previewAliasUrl || stable.previewAliasUrl === stable.previewUrl) {
     throw new Error("Wrangler did not return distinct stable and immutable preview URLs");
   }
@@ -51,8 +72,10 @@ try {
     commitSha: manifest.headSha,
     requiredCiRunId: manifest.runId,
     workerName: manifest.workerName,
-    versionId: stable.versionId,
+    versionId: immutable.versionId,
     immutableUrl: immutable.previewUrl,
+    aliasVersionId: stable.versionId,
+    aliasImmutableUrl: stable.previewUrl,
     stableUrl: stable.previewAliasUrl,
     smokePassed: true,
     productionUntouched: true,
@@ -70,18 +93,31 @@ try {
   );
 } catch (error) {
   try {
-    if (manifest && stableAliasChanged && existedBefore && previousArtifact) {
-      const previous = JSON.parse(
-        await readFile(path.join(previousArtifact, "manifest.json"), "utf8"),
-      );
-      if (previous.repository !== manifest.repository || previous.prNumber !== manifest.prNumber) {
-        throw new Error("Previous artifact belongs to a different preview");
+    if (manifest) {
+      const currentPullRequest = await getCurrentPullRequest(trustedEvent);
+      const recovery = planAliasRecovery({
+        mutationStarted: existedBefore ? stableAliasMutationStarted : anyUploadMutationStarted,
+        existedBefore,
+        hasPreviousArtifact: Boolean(previousManifest && previousArtifact),
+        currentPullRequest,
+        expected: trustedEvent,
+      });
+      if (recovery === "restore") {
+        const restored = await uploadVersion(previousManifest, previousArtifact, true);
+        await smoke(restored.previewAliasUrl, previousManifest.headSha);
+        const afterRestore = await getCurrentPullRequest(trustedEvent);
+        if (afterRestore.state !== "open") {
+          await deletePreviewWorker(manifest.workerName, manifest.prNumber);
+        }
+      } else if (recovery === "delete") {
+        await deletePreviewWorker(manifest.workerName, manifest.prNumber);
+      } else if (recovery === "fail-no-lkg") {
+        throw new Error("Alias mutation cannot be recovered without last-known-good");
+      } else if (recovery === "skip-stale") {
+        console.error(
+          JSON.stringify({ event: "preview_rollback_skipped", code: "SUPERSEDED_HEAD" }),
+        );
       }
-      await verifiedManifest(previousArtifact, previous);
-      const restored = await uploadVersion(previous, previousArtifact, true);
-      await smoke(restored.previewAliasUrl, previous.headSha);
-    } else if (manifest && !existedBefore) {
-      await deletePreviewWorker(manifest.workerName, manifest.prNumber);
     }
   } catch {
     console.error(JSON.stringify({ event: "preview_rollback_failed", code: "ROLLBACK_FAILED" }));
@@ -91,7 +127,8 @@ try {
 }
 
 async function verifiedManifest(directory, expected) {
-  const value = JSON.parse(await readFile(path.join(directory, "manifest.json"), "utf8"));
+  await inspectArtifactTree(directory);
+  const value = JSON.parse(await readBoundedText(path.join(directory, "manifest.json")));
   assertManifest(value, expected);
   const actualFiles = (await collectArtifactFiles(directory)).filter(
     (file) => file.path !== "manifest.json" && file.path !== "checksums.sha256",
@@ -103,7 +140,7 @@ async function verifiedManifest(directory, expected) {
     throw new Error("Artifact integrity verification failed");
   }
   assertChecksumDocument(
-    await readFile(path.join(directory, "checksums.sha256"), "utf8"),
+    await readBoundedText(path.join(directory, "checksums.sha256")),
     value.files,
   );
   return value;
@@ -159,7 +196,11 @@ async function uploadVersion(value, directory, withAlias) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
-  return parseVersionUploadOutput(await readFile(outputFile, "utf8"));
+  return parseVersionUploadOutput(await readFile(outputFile, "utf8"), {
+    workerName: value.workerName,
+    previewAlias: value.previewAlias,
+    withAlias,
+  });
 }
 
 async function smoke(url, sha) {
@@ -172,6 +213,10 @@ async function smoke(url, sha) {
 }
 
 async function assertPullRequestIsCurrent(expected) {
+  assertCurrentPullRequest(await getCurrentPullRequest(expected), expected);
+}
+
+async function getCurrentPullRequest(expected) {
   const response = await fetch(
     `https://api.github.com/repos/${expected.repository}/pulls/${expected.prNumber}`,
     {
@@ -184,7 +229,7 @@ async function assertPullRequestIsCurrent(expected) {
     },
   );
   if (!response.ok) throw new Error(`GitHub request failed with status ${response.status}`);
-  assertCurrentPullRequest(await response.json(), expected);
+  return response.json();
 }
 
 function requiredEnvironment(name) {

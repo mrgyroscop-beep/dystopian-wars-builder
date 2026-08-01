@@ -19,7 +19,7 @@ jobs:
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.pull_requests[0].head.repo.full_name == github.repository
+      github.event.workflow_run.name == 'CI'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: preview
@@ -41,6 +41,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Revalidate trusted run and unchanged PR head
+        id: trusted
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -50,10 +51,10 @@ jobs:
       - name: Download exact inert artifact from Required CI
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: preview-bundle-${{ github.event.workflow_run.head_sha }}
+          name: preview-bundle-${{ steps.trusted.outputs.head_sha }}
           path: artifacts/preview/current/package
           repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ steps.trusted.outputs.run_id }}
           github-token: ${{ github.token }}
 
       - name: Verify exact artifact before credentials are exposed
@@ -66,17 +67,20 @@ jobs:
         id: previous
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/preview/find-last-good.mjs "${{ github.event.workflow_run.pull_requests[0].number }}"
+        run: node scripts/preview/find-last-good.mjs "${{ steps.trusted.outputs.pr_number }}"
 
       - name: Download retained last-known-good preview
         if: steps.previous.outputs.found == 'true'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: preview-last-good-pr-${{ github.event.workflow_run.pull_requests[0].number }}
+          name: preview-last-good-pr-${{ steps.trusted.outputs.pr_number }}
           path: artifacts/preview/previous/package
           repository: ${{ github.repository }}
           run-id: ${{ steps.previous.outputs.run_id }}
           github-token: ${{ github.token }}
+
+      - name: Install trusted browser for deployed preview smoke
+        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
 
       - name: Upload immutable version, smoke, promote alias and smoke again
         env:
@@ -92,7 +96,7 @@ jobs:
       - name: Retain verified last-known-good package for rollback
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: preview-last-good-pr-${{ github.event.workflow_run.pull_requests[0].number }}
+          name: preview-last-good-pr-${{ steps.trusted.outputs.pr_number }}
           path: artifacts/preview/current/package/
           if-no-files-found: error
           retention-days: 7
@@ -100,7 +104,7 @@ jobs:
       - name: Publish redacted deployment evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: preview-evidence-${{ github.event.workflow_run.head_sha }}
+          name: preview-evidence-${{ steps.trusted.outputs.head_sha }}
           path: artifacts/preview/deployment-report.json
           if-no-files-found: error
           retention-days: 7

@@ -4,6 +4,8 @@ import path from "node:path";
 import process from "node:process";
 
 import {
+  assertCheckedOutCommit,
+  assertCleanTrackedCheckout,
   assertFullSha,
   assertPositiveInteger,
   assertPreviewSafeConfig,
@@ -28,6 +30,16 @@ if (repository !== headRepository)
   throw new Error("Fork PRs are CI-only and cannot create deploy artifacts");
 
 const headSha = assertFullSha(required(options, "head-sha"), "headSha");
+assertCheckedOutCommit(
+  execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim(),
+  headSha,
+);
+assertCleanTrackedCheckout(
+  execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], {
+    cwd: root,
+    encoding: "utf8",
+  }),
+);
 const baseSha = assertFullSha(required(options, "base-sha"), "baseSha");
 const prNumber = assertPositiveInteger(required(options, "pr-number"), "prNumber");
 const runId = assertPositiveInteger(required(options, "run-id"), "runId");

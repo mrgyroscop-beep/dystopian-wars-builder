@@ -1,9 +1,20 @@
 import process from "node:process";
 
+import { chromium } from "@playwright/test";
+
 import { assertFullSha } from "./core.mjs";
 
 const baseUrl = new URL(process.argv[2]);
-if (baseUrl.protocol !== "https:") throw new Error("Preview smoke requires HTTPS");
+if (
+  baseUrl.protocol !== "https:" ||
+  !baseUrl.hostname.endsWith(".workers.dev") ||
+  baseUrl.hostname === "localhost" ||
+  baseUrl.port ||
+  baseUrl.username ||
+  baseUrl.password
+) {
+  throw new Error("Preview smoke requires an isolated workers.dev HTTPS origin");
+}
 const expectedSha = assertFullSha(process.argv[3], "expectedSha");
 
 const root = await request("/");
@@ -42,10 +53,76 @@ if (!asset || !/-[A-Za-z0-9_-]{6,}\./.test(asset))
   throw new Error("Hashed asset was not found in the app shell");
 assertStatus(await request(asset), 200, "hashed asset");
 
+await runBrowserContract();
+
 console.log(JSON.stringify({ event: "preview_smoke_passed", commitSha: expectedSha }));
 
 async function request(pathname, init) {
   return fetch(new URL(pathname, baseUrl), { ...init, redirect: "error" });
+}
+
+async function runBrowserContract() {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const viewport of [
+      { width: 1280, height: 800 },
+      { width: 360, height: 800 },
+    ]) {
+      const context = await browser.newContext({ viewport });
+      const page = await context.newPage();
+      await page.goto(new URL("/rosters/scaffold-demo", baseUrl).toString(), {
+        waitUntil: "networkidle",
+      });
+      if (new URL(page.url()).pathname !== "/rosters/scaffold-demo") {
+        throw new Error("Deployed deep link did not preserve the KAN-29 route");
+      }
+      await assertSemanticAndResponsivePage(page);
+
+      if (viewport.width === 1280) {
+        await page.goto(new URL("/", baseUrl).toString(), { waitUntil: "networkidle" });
+        await page.keyboard.press("Tab");
+        const focusedHref = await page.locator(":focus").getAttribute("href");
+        if (focusedHref !== "#main-content") throw new Error("Deployed skip link is not first");
+        await page.keyboard.press("Enter");
+        if ((await page.locator("main:focus").count()) !== 1) {
+          throw new Error("Deployed skip link does not focus main content");
+        }
+
+        for (const state of ["loading", "empty", "error", "success"]) {
+          await page.goto(new URL(`/?state=${state}`, baseUrl).toString(), {
+            waitUntil: "networkidle",
+          });
+          if ((await page.locator(`[data-state="${state}"]`).count()) !== 1) {
+            throw new Error(`Deployed ${state} state is unavailable`);
+          }
+          await assertSemanticAndResponsivePage(page);
+        }
+      }
+      await context.close();
+    }
+  } finally {
+    await browser.close();
+  }
+}
+
+async function assertSemanticAndResponsivePage(page) {
+  const evidence = await page.evaluate(() => ({
+    h1: globalThis.document.querySelectorAll("h1").length,
+    header: globalThis.document.querySelectorAll("header.site-header").length,
+    nav: globalThis.document.querySelectorAll("nav").length,
+    main: globalThis.document.querySelectorAll("main").length,
+    viewportWidth: globalThis.document.documentElement.clientWidth,
+    scrollWidth: globalThis.document.documentElement.scrollWidth,
+  }));
+  if (
+    evidence.h1 !== 1 ||
+    evidence.header !== 1 ||
+    evidence.nav < 1 ||
+    evidence.main !== 1 ||
+    evidence.scrollWidth > evidence.viewportWidth
+  ) {
+    throw new Error("Deployed semantic or responsive KAN-29 contract failed");
+  }
 }
 
 function assertStatus(response, expected, label) {

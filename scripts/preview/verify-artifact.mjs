@@ -7,13 +7,16 @@ import {
   assertManifest,
   collectArtifactFiles,
   createArtifactDigest,
+  inspectArtifactTree,
+  readBoundedText,
 } from "./core.mjs";
 
 const artifact = path.resolve(process.argv[2] ?? "artifacts/preview/package");
 const expected = JSON.parse(
   await readFile(process.argv[3] ?? "artifacts/preview/trusted-event.json", "utf8"),
 );
-const manifest = JSON.parse(await readFile(path.join(artifact, "manifest.json"), "utf8"));
+await inspectArtifactTree(artifact);
+const manifest = JSON.parse(await readBoundedText(path.join(artifact, "manifest.json")));
 assertManifest(manifest, expected);
 
 const actualFiles = (await collectArtifactFiles(artifact)).filter(
@@ -26,7 +29,7 @@ if (
   throw new Error("Artifact contents do not match the verified manifest");
 }
 assertChecksumDocument(
-  await readFile(path.join(artifact, "checksums.sha256"), "utf8"),
+  await readBoundedText(path.join(artifact, "checksums.sha256")),
   manifest.files,
 );
 
