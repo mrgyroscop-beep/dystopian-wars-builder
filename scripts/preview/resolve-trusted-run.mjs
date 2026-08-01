@@ -1,32 +1,16 @@
 import { appendFile, readFile, writeFile } from "node:fs/promises";
 import process from "node:process";
 
-import {
-  assertPositiveInteger,
-  assertTrustedWorkflowRun,
-  redactOperationalError,
-} from "./core.mjs";
+import { redactOperationalError } from "./core.mjs";
+import { resolveTrustedWorkflowRun } from "./resolve-trusted-run-core.mjs";
 
 try {
   const event = JSON.parse(await readFile(requiredEnvironment("GITHUB_EVENT_PATH"), "utf8"));
   const repository = requiredEnvironment("GITHUB_REPOSITORY");
-  const runId = assertPositiveInteger(event?.workflow_run?.id, "event.workflowRunId");
-  const apiRun = await githubRequest(`/repos/${repository}/actions/runs/${runId}`);
-  const associatedPullRequests = await githubRequest(
-    `/repos/${repository}/actions/runs/${runId}/pull_requests`,
-  );
-  if (!Array.isArray(associatedPullRequests) || associatedPullRequests.length !== 1) {
-    throw new Error("Workflow run must resolve to exactly one pull request");
-  }
-  const currentPullRequest = await githubRequest(
-    `/repos/${repository}/pulls/${associatedPullRequests[0].number}`,
-  );
-  const trusted = assertTrustedWorkflowRun({
+  const trusted = await resolveTrustedWorkflowRun({
     event,
-    apiRun,
-    associatedPullRequests,
-    currentPullRequest,
-    expectedRepository: repository,
+    repository,
+    request: githubRequest,
   });
 
   const output = {

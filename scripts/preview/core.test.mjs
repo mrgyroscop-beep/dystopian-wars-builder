@@ -51,18 +51,18 @@ function trustedRun(overrides = {}) {
     repository: { full_name: REPOSITORY },
     head_repository: { full_name: REPOSITORY },
     actor: { login: "developer" },
+    pull_requests: [{ number: 39, base: { sha: BASE_SHA } }],
   };
-  const associatedPullRequests = [{ number: 39, base: { sha: BASE_SHA } }];
   const currentPullRequest = {
     number: 39,
     state: "open",
     user: { login: "developer" },
     head: { sha: HEAD_SHA, ref: "codex/KAN-39-preview", repo: { full_name: REPOSITORY } },
+    base: { sha: BASE_SHA, repo: { full_name: REPOSITORY } },
   };
   return {
     event,
     apiRun,
-    associatedPullRequests,
     currentPullRequest,
     expectedRepository: REPOSITORY,
     ...overrides,
@@ -110,6 +110,55 @@ describe("preview trust boundary", () => {
       head: { ...stale.currentPullRequest.head, sha: "c".repeat(40) },
     };
     expect(() => assertTrustedWorkflowRun(stale)).toThrow(/changed/);
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["malformed", { number: 39, base: { sha: BASE_SHA } }],
+    ["zero", []],
+    [
+      "multiple",
+      [
+        { number: 39, base: { sha: BASE_SHA } },
+        { number: 40, base: { sha: BASE_SHA } },
+      ],
+    ],
+    ["missing PR number", [{ base: { sha: BASE_SHA } }]],
+    ["missing base SHA", [{ number: 39, base: {} }]],
+  ])("fails closed for %s authenticated workflow-run PR associations", (_name, pullRequests) => {
+    const input = trustedRun();
+    input.apiRun = { ...input.apiRun, pull_requests: pullRequests };
+    expect(() => assertTrustedWorkflowRun(input)).toThrow();
+  });
+
+  it.each([
+    ["missing run repository", (input) => delete input.apiRun.repository],
+    [
+      "mismatched run repository",
+      (input) => (input.apiRun.repository = { full_name: "attacker/repository" }),
+    ],
+    ["missing head repository", (input) => delete input.apiRun.head_repository],
+    [
+      "mismatched current head repository",
+      (input) => (input.currentPullRequest.head.repo.full_name = "attacker/repository"),
+    ],
+    ["missing run head", (input) => delete input.apiRun.head_sha],
+    ["mismatched current head", (input) => (input.currentPullRequest.head.sha = "c".repeat(40))],
+    ["missing current base", (input) => delete input.currentPullRequest.base],
+    [
+      "mismatched current base repository",
+      (input) => (input.currentPullRequest.base.repo.full_name = "attacker/repository"),
+    ],
+    [
+      "mismatched current base SHA",
+      (input) => (input.currentPullRequest.base.sha = "c".repeat(40)),
+    ],
+    ["in-progress run", (input) => (input.apiRun.status = "in_progress")],
+    ["closed current PR", (input) => (input.currentPullRequest.state = "closed")],
+  ])("rejects %s", (_name, mutate) => {
+    const input = trustedRun();
+    mutate(input);
+    expect(() => assertTrustedWorkflowRun(input)).toThrow();
   });
 
   it.each([

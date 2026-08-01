@@ -46,12 +46,13 @@ describe("preview workflow policy", () => {
     expect(content).toContain("cancel-in-progress: true");
     expect(content).toContain("environment: preview");
     const resolver = await readFile(
-      path.resolve("scripts/preview/resolve-trusted-run.mjs"),
+      path.resolve("scripts/preview/resolve-trusted-run-core.mjs"),
       "utf8",
     );
     expect(resolver).toContain("/actions/runs/${runId}");
-    expect(resolver).toContain("/actions/runs/${runId}/pull_requests");
-    expect(resolver).toContain("/pulls/${associatedPullRequests[0].number}");
+    expect(resolver).not.toContain("/actions/runs/${runId}/pull_requests");
+    expect(resolver).toContain("apiRun?.pull_requests");
+    expect(resolver).toContain("/pulls/${prNumber}");
   });
 
   it("checks out only the protected default branch in privileged workflows", async () => {
