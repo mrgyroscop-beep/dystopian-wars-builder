@@ -86,8 +86,11 @@ export async function deleteBootstrappedPreviewWorker({
   assertAllowlistedWorkerName(name, prNumber);
   assertOwnershipTag(ownershipTag);
   try {
+    // This is the final provider re-fetch before the destructive request. The
+    // standalone resource may only be deleted while every safety invariant is
+    // still present in both provider views.
     const evidence = await readOwnershipEvidence({ name, prNumber, ownershipTag, request });
-    if (!evidence.owned) throw new Error("Worker ownership is not proven");
+    if (!evidence.readyForFirstUpload) throw new Error("Worker ownership is not proven");
 
     await guardedRequest(
       name,
@@ -190,39 +193,28 @@ async function readOwnershipEvidence({ name, prNumber, ownershipTag, request }) 
     guardedRequest(name, prNumber, request, "/workers/scripts"),
   ]);
   const listedWorker = normalizeCollection(workerResources).find((worker) => worker?.name === name);
-  const exactOwned = isOwnedEmptyWorker(exactWorker, name, ownershipTag);
-  const listedOwned = isOwnedEmptyWorker(listedWorker, name, ownershipTag);
+  const exactOwned = isExclusivelyOwnedEmptyPreviewWorker(exactWorker, name, ownershipTag);
+  const listedOwned = isExclusivelyOwnedEmptyPreviewWorker(listedWorker, name, ownershipTag);
   const owned = exactOwned && listedOwned;
-  const configured =
-    owned &&
-    exactWorker.subdomain?.enabled === true &&
-    exactWorker.subdomain?.previews_enabled === true &&
-    listedWorker.subdomain?.enabled === true &&
-    listedWorker.subdomain?.previews_enabled === true;
   const scriptExists = normalizeCollection(scripts).some((script) => script?.id === name);
   return {
     owned,
-    configured,
-    readyForFirstUpload: owned && configured && !scriptExists,
+    configured: owned,
+    readyForFirstUpload: owned && !scriptExists,
     conflictingOwner:
-      hasDifferentOwner(exactWorker, ownershipTag) || hasDifferentOwner(listedWorker, ownershipTag),
+      (exactWorker !== undefined && !exactOwned) || (listedWorker !== undefined && !listedOwned),
   };
 }
 
-function isOwnedEmptyWorker(worker, name, ownershipTag) {
+function isExclusivelyOwnedEmptyPreviewWorker(worker, name, ownershipTag) {
   return (
     worker?.name === name &&
     Array.isArray(worker.tags) &&
-    worker.tags.includes(ownershipTag) &&
-    worker.deployed_on === null
-  );
-}
-
-function hasDifferentOwner(worker, ownershipTag) {
-  return (
-    worker !== undefined &&
-    Array.isArray(worker?.tags) &&
-    worker.tags.some((tag) => tag !== ownershipTag)
+    worker.tags.length === 1 &&
+    worker.tags[0] === ownershipTag &&
+    worker.deployed_on === null &&
+    worker.subdomain?.enabled === true &&
+    worker.subdomain?.previews_enabled === true
   );
 }
 

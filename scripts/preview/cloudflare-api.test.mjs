@@ -11,6 +11,14 @@ import {
 const WORKER = "dwb-pr-5";
 const OWNER = "dwb-preview-owner-11111111-1111-4111-8111-111111111111";
 const OTHER_OWNER = "dwb-preview-owner-22222222-2222-4222-8222-222222222222";
+const NON_EXCLUSIVE_TAGS = [
+  ["ours plus foreign", [OWNER, OTHER_OWNER]],
+  ["duplicate ours", [OWNER, OWNER]],
+  ["missing", undefined],
+  ["malformed", [null]],
+  ["non-array", OWNER],
+  ["case variant", [OWNER.toUpperCase()]],
+];
 
 function workerResource(owner = OWNER, overrides = {}) {
   return {
@@ -79,7 +87,7 @@ describe("preview Worker first-upload ownership", () => {
     expect(provider.request).toHaveBeenCalledWith("/workers/scripts");
   });
 
-  it("removes the owned standalone resource after lost response and later upload failure", async () => {
+  it("refuses standalone cleanup if a legacy script appeared after reconciliation", async () => {
     const provider = statefulProvider({ loseCreateResponse: true });
     const owner = await bootstrapPreviewWorker({
       name: WORKER,
@@ -88,6 +96,35 @@ describe("preview Worker first-upload ownership", () => {
       request: provider.request,
     });
     provider.state.script = true;
+
+    const error = await deleteBootstrappedPreviewWorker({
+      name: WORKER,
+      prNumber: 5,
+      ownershipTag: owner,
+      request: provider.request,
+    }).catch((value) => value);
+
+    expect(redactOperationalError(error)).toEqual({
+      event: "preview_failure",
+      code: "PREVIEW_BOOTSTRAP_FAILED",
+      stage: "cleanup-worker",
+    });
+    expect(provider.state.worker).toBeDefined();
+    expect(provider.state.script).toBe(true);
+    expect(provider.state.deleted).toBe(false);
+    expect(
+      provider.request.mock.calls.filter(([, init]) => init?.method === "DELETE"),
+    ).toHaveLength(0);
+  });
+
+  it("deletes an exclusively owned empty preview resource after the final re-fetch", async () => {
+    const provider = statefulProvider({ loseCreateResponse: true });
+    const owner = await bootstrapPreviewWorker({
+      name: WORKER,
+      prNumber: 5,
+      ownershipTag: OWNER,
+      request: provider.request,
+    });
 
     await deleteBootstrappedPreviewWorker({
       name: WORKER,
@@ -100,11 +137,8 @@ describe("preview Worker first-upload ownership", () => {
     expect(provider.state.script).toBe(false);
     expect(provider.state.deleted).toBe(true);
     expect(
-      provider.request.mock.calls
-        .slice(-3)
-        .map(([pathname]) => pathname)
-        .sort(),
-    ).toEqual([`/workers/workers/${WORKER}`, "/workers/scripts", "/workers/workers"].sort());
+      provider.request.mock.calls.filter(([, init]) => init?.method === "DELETE"),
+    ).toHaveLength(1);
   });
 
   it("never bootstraps an existing Worker", async () => {
@@ -158,6 +192,34 @@ describe("preview Worker first-upload ownership", () => {
     expect(provider.state.deleted).toBe(false);
     expect(provider.state.postCount).toBe(1);
   });
+
+  it.each(NON_EXCLUSIVE_TAGS)(
+    "rejects %s ownership tags during reconciliation without deleting",
+    async (_caseName, tags) => {
+      const provider = statefulProvider({
+        existingWorker: workerResource(OWNER, { tags }),
+      });
+
+      const error = await bootstrapPreviewWorker({
+        name: WORKER,
+        prNumber: 5,
+        ownershipTag: OWNER,
+        request: provider.request,
+        wait: vi.fn().mockResolvedValue(undefined),
+      }).catch((value) => value);
+
+      expect(redactOperationalError(error)).toEqual({
+        event: "preview_failure",
+        code: "PREVIEW_BOOTSTRAP_FAILED",
+        stage: "reconcile-worker",
+      });
+      expect(JSON.stringify(redactOperationalError(error))).not.toMatch(
+        /11111111|22222222|foreign|token|account|internal/i,
+      );
+      expect(provider.state.deleted).toBe(false);
+      expect(provider.request.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
+    },
+  );
 
   it("idempotently reconciles a retry carrying the same ownership tag", async () => {
     const provider = statefulProvider({ existingWorker: workerResource(OWNER) });
@@ -221,7 +283,7 @@ describe("preview Worker first-upload ownership", () => {
     expect(exactReads).toBe(2);
   });
 
-  it("deletes an owned but invalid empty resource and reports only a safe stage", async () => {
+  it("refuses destructive cleanup when preview subdomain invariants are invalid", async () => {
     const provider = statefulProvider();
     const originalRequest = provider.request;
     provider.request = vi.fn(async (...arguments_) => {
@@ -241,10 +303,13 @@ describe("preview Worker first-upload ownership", () => {
     expect(redactOperationalError(error)).toEqual({
       event: "preview_failure",
       code: "PREVIEW_BOOTSTRAP_FAILED",
-      stage: "configure-subdomain",
+      stage: "reconcile-worker",
     });
-    expect(provider.state.worker).toBeUndefined();
-    expect(provider.state.deleted).toBe(true);
+    expect(provider.state.worker).toBeDefined();
+    expect(provider.state.deleted).toBe(false);
+    expect(
+      provider.request.mock.calls.filter(([, init]) => init?.method === "DELETE"),
+    ).toHaveLength(0);
   });
 
   it("refuses cleanup when fresh ownership proof does not match", async () => {
@@ -259,6 +324,63 @@ describe("preview Worker first-upload ownership", () => {
     ).rejects.toMatchObject({ code: "PREVIEW_BOOTSTRAP_FAILED", stage: "cleanup-worker" });
     expect(provider.state.deleted).toBe(false);
     expect(provider.state.worker.tags).toEqual([OTHER_OWNER]);
+  });
+
+  it.each(NON_EXCLUSIVE_TAGS)(
+    "rejects %s ownership tags immediately before cleanup DELETE",
+    async (_caseName, tags) => {
+      const provider = statefulProvider({
+        existingWorker: workerResource(OWNER, { tags }),
+      });
+
+      const error = await deleteBootstrappedPreviewWorker({
+        name: WORKER,
+        prNumber: 5,
+        ownershipTag: OWNER,
+        request: provider.request,
+      }).catch((value) => value);
+
+      expect(redactOperationalError(error)).toEqual({
+        event: "preview_failure",
+        code: "PREVIEW_BOOTSTRAP_FAILED",
+        stage: "cleanup-worker",
+      });
+      expect(JSON.stringify(redactOperationalError(error))).not.toMatch(
+        /11111111|22222222|foreign|token|account|internal/i,
+      );
+      expect(provider.state.deleted).toBe(false);
+      expect(provider.request.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
+    },
+  );
+
+  it("rejects ownership mutation between successful reconciliation and cleanup", async () => {
+    const provider = statefulProvider({ existingWorker: workerResource(OWNER) });
+    await expect(
+      bootstrapPreviewWorker({
+        name: WORKER,
+        prNumber: 5,
+        ownershipTag: OWNER,
+        request: provider.request,
+      }),
+    ).resolves.toBe(OWNER);
+
+    provider.state.worker.tags = [OWNER, OTHER_OWNER];
+    const error = await deleteBootstrappedPreviewWorker({
+      name: WORKER,
+      prNumber: 5,
+      ownershipTag: OWNER,
+      request: provider.request,
+    }).catch((value) => value);
+
+    expect(redactOperationalError(error)).toEqual({
+      event: "preview_failure",
+      code: "PREVIEW_BOOTSTRAP_FAILED",
+      stage: "cleanup-worker",
+    });
+    expect(provider.state.deleted).toBe(false);
+    expect(
+      provider.request.mock.calls.filter(([, init]) => init?.method === "DELETE"),
+    ).toHaveLength(0);
   });
 
   it.each(["resource", "script"])(
