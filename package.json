@@ -18,10 +18,15 @@
     "check:architecture": "node scripts/check-architecture.mjs",
     "test": "npm run test:unit && npm run test:worker",
     "test:unit": "vitest run --config vitest.config.ts",
+    "test:catalog": "vitest run --config vitest.catalog.config.mjs",
+    "test:catalog:real": "node scripts/catalog/real-integration.mjs",
+    "test:catalog:policy": "node scripts/catalog/check-policy.mjs",
+    "test:catalog:bundle": "node scripts/catalog/check-bundle.mjs",
     "test:worker": "vitest run --config vitest.worker.config.ts",
     "test:e2e:smoke": "playwright test",
     "test:e2e:install": "playwright install chromium",
-    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run check:architecture && npm run test:unit && npm run test:worker && npm run build && npm run test:e2e:smoke"
+    "catalog": "node scripts/catalog/cli.mjs",
+    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run check:architecture && npm run test:catalog:policy && npm run test:unit && npm run test:catalog && npm run test:worker && npm run build && npm run test:catalog:bundle && npm run test:e2e:smoke"
   },
   "dependencies": {
     "hono": "4.12.33",
@@ -50,6 +55,7 @@
     "globals": "17.8.0",
     "jsdom": "29.1.1",
     "prettier": "3.9.6",
+    "saxes": "6.0.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.65.0",
     "vite": "8.2.0",
