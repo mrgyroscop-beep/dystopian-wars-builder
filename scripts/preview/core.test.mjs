@@ -99,6 +99,10 @@ describe("preview trust boundary", () => {
 });
 
 describe("preview artifacts", () => {
+  it("preserves GitHub run IDs beyond the signed 32-bit range", () => {
+    expect(manifest({ runId: 30_698_461_529 }).runId).toBe(30_698_461_529);
+  });
+
   it("binds the manifest to the PR, run and exact commit", () => {
     const value = manifest();
     expect(value.workerName).toBe("dwb-pr-39");

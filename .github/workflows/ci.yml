@@ -104,7 +104,7 @@ jobs:
             prNumber = [int]"${{ github.event.pull_request.number }}"
             headSha = "${{ github.event.pull_request.head.sha }}"
             baseSha = "${{ github.event.pull_request.base.sha }}"
-            runId = [int]"${{ github.run_id }}"
+            runId = [long]"${{ github.run_id }}"
           }
           New-Item -ItemType Directory -Force artifacts/preview | Out-Null
           $trusted | ConvertTo-Json -Compress | Set-Content artifacts/preview/trusted-event.json
