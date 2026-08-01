@@ -9,6 +9,31 @@ async function workflow(name) {
   return readFile(path.resolve(".github/workflows", name), "utf8");
 }
 
+function namedStep(content, name) {
+  const marker = `      - name: ${name}`;
+  const start = content.indexOf(marker);
+  if (start < 0) throw new Error(`Missing workflow step: ${name}`);
+  const end = content.indexOf("\n      - name:", start + marker.length);
+  return content.slice(start, end < 0 ? undefined : end);
+}
+
+function transportedPaths(paths, includeHiddenFiles) {
+  return paths.filter(
+    (file) => includeHiddenFiles || !file.split("/").some((part) => part.startsWith(".")),
+  );
+}
+
+function assertNarrowHiddenUpload(step) {
+  if (!/^\s+include-hidden-files:\s+true\s*$/m.test(step)) return;
+  if (!step.startsWith("      - name: Upload inert preview deployment artifact")) {
+    throw new Error("Hidden files may only be enabled for the inert preview package");
+  }
+  const artifactPath = /^\s+path:\s+(.+)\s*$/m.exec(step)?.[1];
+  if (artifactPath !== "artifacts/preview/package/") {
+    throw new Error("Hidden preview upload path must be exact and package-scoped");
+  }
+}
+
 describe("preview workflow policy", () => {
   it("pins every action to a full commit SHA", async () => {
     for (const name of workflows) {
@@ -35,6 +60,60 @@ describe("preview workflow policy", () => {
     expect(content).toContain(`ref: ${exactExpression}`);
     expect(content).toContain(`assert-checkout.mjs\n          "${exactExpression}"`);
     expect(content).not.toMatch(/refs\/pull|github\.ref/);
+  });
+
+  it("round-trips every manifest file, including Wrangler's hidden assets allowlist", () => {
+    const manifestFiles = [
+      "assets/.assetsignore",
+      "assets/index.css",
+      "assets/index.html",
+      "assets/index.js",
+      "worker/index.js",
+      "wrangler.json",
+    ];
+
+    const defaultUpload = transportedPaths(manifestFiles, false);
+    expect(defaultUpload).toHaveLength(5);
+    expect(defaultUpload).not.toEqual(manifestFiles);
+
+    const hiddenAwareUpload = transportedPaths(manifestFiles, true);
+    expect(hiddenAwareUpload).toHaveLength(6);
+    expect(hiddenAwareUpload).toEqual(manifestFiles);
+  });
+
+  it("enables hidden transport only for the exact inert package path", async () => {
+    const content = await workflow("ci.yml");
+    const inertUpload = namedStep(content, "Upload inert preview deployment artifact");
+    const reviewEvidence = namedStep(content, "Upload reproducible review evidence");
+
+    expect(inertUpload).toContain("path: artifacts/preview/package/");
+    expect(inertUpload).toContain("include-hidden-files: true");
+    expect(reviewEvidence).not.toContain("include-hidden-files: true");
+
+    const uploadSteps = content
+      .split(/(?=^ {6}- name:)/gm)
+      .filter((step) => step.includes("actions/upload-artifact@"));
+    const hiddenUploads = uploadSteps.filter((step) => step.includes("include-hidden-files: true"));
+    expect(hiddenUploads).toHaveLength(1);
+    expect(hiddenUploads[0]).toContain("name: Upload inert preview deployment artifact");
+    for (const step of uploadSteps) expect(() => assertNarrowHiddenUpload(step)).not.toThrow();
+  });
+
+  it.each([
+    [
+      "broad artifacts root",
+      "      - name: Upload inert preview deployment artifact\n        with:\n          path: artifacts/\n          include-hidden-files: true\n",
+    ],
+    [
+      "repository glob",
+      "      - name: Upload inert preview deployment artifact\n        with:\n          path: '**'\n          include-hidden-files: true\n",
+    ],
+    [
+      "review evidence",
+      "      - name: Upload reproducible review evidence\n        with:\n          path: artifacts/\n          include-hidden-files: true\n",
+    ],
+  ])("rejects unsafe hidden upload scope: %s", (_name, step) => {
+    expect(() => assertNarrowHiddenUpload(step)).toThrow();
   });
 
   it("keeps the privileged job gate payload-safe and resolves detailed trust through GitHub API", async () => {
