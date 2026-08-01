@@ -8,6 +8,7 @@ export default tseslint.config(
   {
     ignores: [
       "artifacts/**",
+      ".cache/**",
       "dist/**",
       "node_modules/**",
       "playwright-report/**",

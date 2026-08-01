@@ -5,9 +5,9 @@ Wars 4.0 fleet builder. It runs a React single-page application and a Hono
 Cloudflare Worker API on the same local origin through the Cloudflare Vite
 plugin.
 
-KAN-29 intentionally contains only the application shell. Catalogue import,
-game entities, validation, functional rosters, authentication, D1 and deployment
-belong to later Jira tasks.
+The application shell is accompanied by a Node-only, deterministic catalogue
+importer. Game-domain adapters, functional rosters, authentication, D1 and
+production deployment belong to later Jira tasks.
 
 Reference PDF and STL files may remain beside the checkout for research. They
 are ignored by Git and must never be committed or uploaded to the repository.
@@ -64,11 +64,20 @@ npm run typecheck
 npm run lint
 npm run format:check
 npm run check:architecture
+npm run test:catalog:policy
 npm run test:unit
+npm run test:catalog
+npm run test:catalog:real
 npm run test:worker
 npm run build
+npm run test:catalog:bundle
 npm run test:e2e:smoke
 ```
+
+`test:catalog:real` uses immutable, hash-verified upstream files and writes only
+hash/count evidence under `artifacts/`; it does not commit or publish source or
+generated game data. See [catalog operations](docs/catalog-operations.md) for
+the update, promotion and rollback contract.
 
 `typecheck` first verifies that `worker-configuration.d.ts` still matches
 `wrangler.jsonc`; regenerate it with `npm run types:generate` after any binding
@@ -89,14 +98,15 @@ Node-only catalogue tooling remains outside both bundles.
 - `src/application` — use cases, ports and runtime-boundary schemas;
 - `src/infrastructure` — adapters;
 - `worker` — Hono Worker entrypoint and API tests;
-- `scripts/catalog` — future Node-only import seam;
+- `scripts/catalog` — Node-only import, validation and promotion tooling;
 - `data/fixtures`, `data/generated` — controlled data inputs/outputs;
 - `docs/architecture` — architecture decisions;
 - `e2e` — same-origin browser and API smoke tests.
 
 See [ADR-0001](docs/architecture/ADR-0001-cloudflare-spa-worker.md),
-[ADR-0002](docs/architecture/ADR-0002-layered-boundaries.md) and
-[ADR-0003](docs/architecture/ADR-0003-catalog-import-seam.md).
+[ADR-0002](docs/architecture/ADR-0002-layered-boundaries.md),
+[ADR-0003](docs/architecture/ADR-0003-catalog-import-seam.md) and
+[ADR-0004](docs/architecture/ADR-0004-catalog-ingestion-and-promotion.md).
 
 ## Release and rollback
 

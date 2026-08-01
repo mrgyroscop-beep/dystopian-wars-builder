@@ -1,0 +1,57 @@
+{
+  "repository": "Nord0rk/Dystopian-Wars-4.0",
+  "commit": "859c43ce554b11ce0c00a7dccd2c3889760a5c7c",
+  "tree": "e9367d13dafeeb7d3d62253bbe3ed4ede34d56f0",
+  "files": [
+    {
+      "path": "Alliance.cat",
+      "blob": "a06599280b1f81028da2b9b81e6bf66a9b853b2c",
+      "sha256": "f48d18d2f8082b9c4ee5af4296718aa72248f056044e604672ac0080b1925544"
+    },
+    {
+      "path": "Commonwealth.cat",
+      "blob": "8fb218147b68f6e99422e1023963ec5a661b51fd",
+      "sha256": "8ddd699c9ac5d44b4a34d99f5a11805459834870d5e91347c3f3597ec0ccf65e"
+    },
+    {
+      "path": "Crown.cat",
+      "blob": "4f757fd63e508530c1b1bc0c3c2a4bf3cb1406d2",
+      "sha256": "b38d6a9129e446632d8d5bb5542ff7bb6944c5ad19c0b3e30a9ee5c32904059e"
+    },
+    {
+      "path": "Dystopian Wars 4.0.gst",
+      "blob": "d436b942098e89f1b240b38e354ff48ca61cbbc4",
+      "sha256": "5e1f53048cb00af3d6947d46b2d7bbee12ca6ed257d8b0f3d91894cdbb676d16"
+    },
+    {
+      "path": "Empire.cat",
+      "blob": "c2d5e9cdf744b495e07ac4f0ef5f480887c3c7db",
+      "sha256": "be9f74d30ca940387dad063bf1e285584543208df91e06fbde182c1a2df95d40"
+    },
+    {
+      "path": "Enlightened.cat",
+      "blob": "1265cc55d45f2ae060a7d1c62b445cffb633beef",
+      "sha256": "00a44531bb5e04fd01651f1b104cec834ff5ca8d20b51af2581a542247ef2afe"
+    },
+    {
+      "path": "Imperium.cat",
+      "blob": "02b0e75e31b2b2ab60d592c7f71aba936b4daed1",
+      "sha256": "69bab822eb2ac41baa3593b4acbeed3a82fee9e1370665f49114fc498224b4e2"
+    },
+    {
+      "path": "Rules Glossary.cat",
+      "blob": "c719b004a86e040206b414f31fdb9b02ed627725",
+      "sha256": "5596d8ab92d6bcb19371cabf67f295fd6b0729e0d8633052b3ee82bf5226f524"
+    },
+    {
+      "path": "Sultanate.cat",
+      "blob": "37ecdf07962d4b90c7d345ac9c38502a78b26284",
+      "sha256": "4c31755d1d820d5941ed09fd4aa2faf19a21d68cfd5453d528bbfae1cbde36b5"
+    },
+    {
+      "path": "Union.cat",
+      "blob": "bcdee0d4105100f3f8afc6548c2aa9fd71fc5950",
+      "sha256": "cce38797e30926c0e6781b2cf9bde42cce5f9a3c66b7d89c98e21f587df1f686"
+    }
+  ]
+}

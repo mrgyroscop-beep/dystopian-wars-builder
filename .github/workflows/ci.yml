@@ -47,6 +47,12 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
+      - name: Catalog importer unit and security tests
+        run: npm run test:catalog
+
+      - name: Catalog importer real-source, reproducibility and lifecycle evidence
+        run: npm run test:catalog:real
+
       - name: Worker integration tests
         run: npm run test:worker
 
