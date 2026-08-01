@@ -68,7 +68,7 @@ try {
     expectedCurrent: first.releaseId,
     attemptedAt: "2000-01-01T00:01:00.000Z",
   });
-  if ((await readLifecycle(runtime))?.lastKnownGoodReleaseId !== first.releaseId)
+  if ((await readLifecycle(runtime))?.stable.lastKnownGoodReleaseId !== first.releaseId)
     throw new Error("Real-source lifecycle did not retain last-known-good");
   await rollbackDataset(runtime, first.releaseId, {
     expectedCurrent: lifecycleCandidate.releaseId,
@@ -76,8 +76,8 @@ try {
   });
   const rolledBack = await readLifecycle(runtime);
   if (
-    rolledBack?.activeReleaseId !== first.releaseId ||
-    rolledBack.lastKnownGoodReleaseId !== lifecycleCandidate.releaseId
+    rolledBack?.stable.activeReleaseId !== first.releaseId ||
+    rolledBack.stable.lastKnownGoodReleaseId !== lifecycleCandidate.releaseId
   )
     throw new Error("Real-source lifecycle rollback contract failed");
 

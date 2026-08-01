@@ -50,7 +50,7 @@ export async function parseCatalogSource(source, options = {}) {
     if (entries.length > limits.attributes)
       fail("XML_ATTRIBUTE_LIMIT", "Catalog XML element has too many attributes");
     for (const [key, raw] of entries) {
-      const value = typeof raw === "string" ? raw : raw.value;
+      const value = (typeof raw === "string" ? raw : raw.value).normalize("NFC");
       if (value.length > limits.attributeChars)
         fail("XML_ATTRIBUTE_LIMIT", "Catalog XML attribute is too long");
       if (key !== "xmlns") attributes[key] = value;
@@ -88,7 +88,7 @@ export async function parseCatalogSource(source, options = {}) {
   parser.on("closetag", () => {
     const node = stack.pop();
     if (!node) return;
-    node.text = node.text.trim();
+    node.text = node.text.normalize("NFC").trim();
     if (richTextTags.has(node.tag) && node.text) {
       node.richText = toSafeRichText(node.text);
       delete node.text;

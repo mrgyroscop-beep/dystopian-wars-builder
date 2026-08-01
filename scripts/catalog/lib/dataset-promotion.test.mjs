@@ -5,6 +5,8 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildDataset, validateLinkKind } from "./build-dataset.mjs";
 import {
+  beginCatalogCheck,
+  createOperationalDiagnostic,
   promoteDataset,
   readCurrent,
   readLifecycle,
@@ -62,11 +64,16 @@ describe("deterministic dataset and atomic lifecycle", () => {
       attemptedAt: "2026-08-01T00:01:00.000Z",
     });
     expect(await readLifecycle(runtime)).toMatchObject({
-      state: "ACTIVE",
-      requestedReleaseId: alternative.releaseId,
-      resolvedReleaseId: alternative.releaseId,
-      activeReleaseId: alternative.releaseId,
-      lastKnownGoodReleaseId: first.releaseId,
+      stable: {
+        activeReleaseId: alternative.releaseId,
+        lastKnownGoodReleaseId: first.releaseId,
+      },
+      latest: {
+        phase: "SUCCESS",
+        outcome: "SUCCESS",
+        requestedReleaseId: alternative.releaseId,
+        resolvedReleaseId: alternative.releaseId,
+      },
     });
     await rollbackDataset(runtime, first.releaseId, {
       expectedCurrent: alternative.releaseId,
@@ -74,8 +81,10 @@ describe("deterministic dataset and atomic lifecycle", () => {
     });
     expect(await readCurrent(runtime)).toEqual({ releaseId: first.releaseId });
     expect(await readLifecycle(runtime)).toMatchObject({
-      activeReleaseId: first.releaseId,
-      lastKnownGoodReleaseId: alternative.releaseId,
+      stable: {
+        activeReleaseId: first.releaseId,
+        lastKnownGoodReleaseId: alternative.releaseId,
+      },
     });
     await expect(
       promoteDataset(alternative, runtime, { expectedCurrent: null }),
@@ -140,15 +149,28 @@ describe("deterministic dataset and atomic lifecycle", () => {
     const [diagnosticName] = await readdir(diagnosticDirectory);
     const diagnostics = await readFile(path.join(diagnosticDirectory, diagnosticName), "utf8");
     expect(diagnostics).not.toContain("super-secret");
-    expect(diagnostics).toContain("[REDACTED]");
+    expect(JSON.parse(diagnostics)).toEqual({
+      action: "RETRY",
+      active: { available: false, releaseId: null },
+      capability: "UNAVAILABLE",
+      code: "CATALOG_NETWORK_UNAVAILABLE",
+      diagnosticId: recorded.diagnosticId,
+      reason: "NETWORK_UNAVAILABLE",
+      retryable: true,
+      schemaVersion: 1,
+      severity: "warning",
+      title: "Catalog unavailable",
+    });
     const operation = JSON.parse(
       await readFile(path.join(runtime, "operations", `${recorded.operationId}.json`), "utf8"),
     );
     expect(operation).toMatchObject({
-      state: "FAILED",
-      activeReleaseId: null,
-      lastKnownGoodReleaseId: null,
-      diagnosticId: recorded.diagnosticId,
+      stable: { activeReleaseId: null, lastKnownGoodReleaseId: null },
+      latest: {
+        phase: "FAILURE",
+        outcome: "UNAVAILABLE",
+        diagnosticId: recorded.diagnosticId,
+      },
     });
     expect(JSON.stringify(operation)).not.toContain("super-secret");
     expect(await readCurrent(runtime)).toBeUndefined();
@@ -204,7 +226,12 @@ describe("deterministic dataset and atomic lifecycle", () => {
     const changedLock = { ...lock, commit: "e".repeat(40) };
     const candidate = await buildDataset(changedLock, sources, provenance(changedLock));
 
-    for (const point of ["after-release", "after-operation", "before-lifecycle"]) {
+    for (const point of [
+      "after-resolved",
+      "after-release",
+      "after-operation",
+      "before-lifecycle",
+    ]) {
       await expect(
         promoteDataset(candidate, runtime, {
           expectedCurrent: good.releaseId,
@@ -215,9 +242,8 @@ describe("deterministic dataset and atomic lifecycle", () => {
       ).rejects.toThrow(`fault:${point}`);
       expect(await readCurrent(runtime)).toEqual({ releaseId: good.releaseId });
       expect(await readLifecycle(runtime)).toMatchObject({
-        state: "ACTIVE",
-        activeReleaseId: good.releaseId,
-        lastKnownGoodReleaseId: null,
+        stable: { activeReleaseId: good.releaseId, lastKnownGoodReleaseId: null },
+        latest: { phase: "FAILURE", outcome: "UPDATE_FAILED_USING_LKG" },
       });
     }
   });
@@ -233,8 +259,152 @@ describe("deterministic dataset and atomic lifecycle", () => {
           throw new Error("cleanup failed after commit");
         },
       }),
-    ).resolves.toMatchObject({ state: "ACTIVE", activeReleaseId: dataset.releaseId });
+    ).resolves.toMatchObject({
+      stable: { activeReleaseId: dataset.releaseId },
+      latest: { phase: "SUCCESS", outcome: "SUCCESS" },
+    });
     expect(await readCurrent(runtime)).toEqual({ releaseId: dataset.releaseId });
+  });
+
+  it("projects the complete checking/resolved/promoting/success/stale/failure matrix", async () => {
+    const { lock, sources } = await fixtureSet();
+    const runtime = await temp("catalog-matrix-");
+    const dataset = await buildDataset(lock, sources, provenance(lock));
+    const check = await beginCatalogCheck(runtime, { expectedCurrent: null });
+    expect((await readLifecycle(runtime)).latest).toMatchObject({
+      operationId: check.operationId,
+      phase: "CHECKING",
+      outcome: "PENDING",
+    });
+    const observed = [];
+    const success = await promoteDataset(dataset, runtime, {
+      operationId: check.operationId,
+      expectedCurrent: null,
+      fault: async (point) => {
+        if (point === "after-resolved" || point === "after-release")
+          observed.push((await readLifecycle(runtime)).latest.phase);
+      },
+    });
+    expect(observed).toEqual(["RESOLVED", "PROMOTING"]);
+    expect(success).toMatchObject({
+      stable: { activeReleaseId: dataset.releaseId, lastKnownGoodReleaseId: null },
+      latest: { phase: "SUCCESS", outcome: "SUCCESS", capability: "ACTIVE" },
+    });
+
+    const staleCheck = await beginCatalogCheck(runtime, {
+      expectedCurrent: dataset.releaseId,
+    });
+    const stale = await promoteDataset(dataset, runtime, {
+      operationId: staleCheck.operationId,
+      expectedCurrent: dataset.releaseId,
+    });
+    expect(stale).toMatchObject({
+      stable: { activeReleaseId: dataset.releaseId },
+      latest: { phase: "RESOLVED", outcome: "STALE" },
+    });
+
+    const changedLock = { ...lock, commit: "f".repeat(40) };
+    const candidate = await buildDataset(changedLock, sources, provenance(changedLock));
+    const failedCheck = await beginCatalogCheck(runtime, {
+      expectedCurrent: dataset.releaseId,
+    });
+    await expect(
+      promoteDataset(candidate, runtime, {
+        operationId: failedCheck.operationId,
+        expectedCurrent: dataset.releaseId,
+        fault: (point) => {
+          if (point === "before-lifecycle") throw new Error("injected");
+        },
+      }),
+    ).rejects.toThrow("injected");
+    expect(await readLifecycle(runtime)).toMatchObject({
+      stable: { activeReleaseId: dataset.releaseId, lastKnownGoodReleaseId: null },
+      latest: {
+        phase: "FAILURE",
+        outcome: "UPDATE_FAILED_USING_LKG",
+        capability: "LAST_KNOWN_GOOD",
+      },
+    });
+
+    const unavailableRuntime = await temp("catalog-unavailable-");
+    const unavailableCheck = await beginCatalogCheck(unavailableRuntime, {
+      expectedCurrent: null,
+    });
+    await recordOperationalFailure(
+      unavailableRuntime,
+      Object.assign(new Error("offline"), { code: "NETWORK_FAILURE" }),
+      { operationId: unavailableCheck.operationId },
+    );
+    expect(await readLifecycle(unavailableRuntime)).toMatchObject({
+      stable: { activeReleaseId: null, lastKnownGoodReleaseId: null },
+      latest: { phase: "FAILURE", outcome: "UNAVAILABLE", capability: "UNAVAILABLE" },
+    });
+  });
+
+  it("does not let a superseded concurrent check overwrite the latest projection", async () => {
+    const { lock, sources } = await fixtureSet();
+    const runtime = await temp("catalog-concurrency-");
+    const dataset = await buildDataset(lock, sources, provenance(lock));
+    const first = await beginCatalogCheck(runtime, { expectedCurrent: null });
+    const latest = await beginCatalogCheck(runtime, { expectedCurrent: null });
+    await expect(
+      promoteDataset(dataset, runtime, {
+        operationId: first.operationId,
+        expectedCurrent: null,
+      }),
+    ).rejects.toMatchObject({ code: "OPERATION_SUPERSEDED" });
+    expect(await readLifecycle(runtime)).toMatchObject({
+      stable: { activeReleaseId: null, lastKnownGoodReleaseId: null },
+      latest: { operationId: latest.operationId, phase: "CHECKING", outcome: "PENDING" },
+    });
+  });
+
+  it("projects only allowlisted diagnostics for adversarial error corpora", () => {
+    const error = Object.assign(
+      new Error('C:\\secret\\catalog.cat targetId="internal-123" <entryLink/> token=raw-secret'),
+      {
+        code: "XML_INVALID",
+        stack: "STACK C:\\secret\\catalog.cat",
+        details: {
+          path: "/home/user/private.cat",
+          sourceKey: "catalog.cat:internal-123",
+          targetId: "internal-123",
+          xml: "<entryLink/>",
+        },
+      },
+    );
+    const activeReleaseId = "a".repeat(64);
+    const diagnostic = createOperationalDiagnostic(error, activeReleaseId);
+    expect(Object.keys(diagnostic).sort()).toEqual(
+      [
+        "action",
+        "active",
+        "capability",
+        "code",
+        "diagnosticId",
+        "reason",
+        "retryable",
+        "schemaVersion",
+        "severity",
+        "title",
+      ].sort(),
+    );
+    expect(diagnostic).toMatchObject({
+      code: "CATALOG_SOURCE_INVALID",
+      reason: "SOURCE_INVALID",
+      active: { available: true, releaseId: activeReleaseId },
+    });
+    const serialized = JSON.stringify(diagnostic);
+    for (const forbidden of [
+      "secret",
+      "catalog.cat",
+      "internal-123",
+      "entryLink",
+      "raw-secret",
+      "/home/",
+      "STACK",
+    ])
+      expect(serialized).not.toContain(forbidden);
   });
 });
 

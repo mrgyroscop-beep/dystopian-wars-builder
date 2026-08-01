@@ -4,8 +4,10 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { buildDataset } from "./lib/build-dataset.mjs";
 import { fetchLockedSources, verifyCachedSources } from "./lib/fetch-sources.mjs";
-import { CatalogImportError, redact } from "./lib/errors.mjs";
+import { CatalogImportError } from "./lib/errors.mjs";
 import {
+  beginCatalogCheck,
+  createOperationalDiagnostic,
   promoteDataset,
   readCurrent,
   recordOperationalFailure,
@@ -27,6 +29,7 @@ const runtimeRoot = path.resolve(
 );
 let importCommitted = false;
 let requestedReleaseId = null;
+let importOperationId = null;
 
 try {
   if (command === "help") printHelp();
@@ -43,14 +46,22 @@ try {
     print({ command, releaseId: dataset.releaseId, manifest: dataset.manifest });
   } else if (command === "import") {
     const lock = await readSourceLock(lockPath);
+    const expectedCurrent = options.expected
+      ? options.expected === "none"
+        ? null
+        : options.expected
+      : undefined;
+    const check = await beginCatalogCheck(runtimeRoot, {
+      ...(options.expected ? { expectedCurrent } : {}),
+    });
+    importOperationId = check.operationId;
     const provenance = await verifyAndCacheLockedProvenance(lock, cacheRoot);
     const sources = await fetchLockedSources(lock, cacheRoot);
     const dataset = await buildDataset(lock, sources, provenance);
     requestedReleaseId = dataset.releaseId;
     const result = await promoteDataset(dataset, runtimeRoot, {
-      ...(options.expected
-        ? { expectedCurrent: options.expected === "none" ? null : options.expected }
-        : {}),
+      operationId: importOperationId,
+      ...(options.expected ? { expectedCurrent } : {}),
     });
     importCommitted = true;
     print({ command, ...result, manifest: dataset.manifest });
@@ -77,13 +88,17 @@ try {
     try {
       await recordOperationalFailure(runtimeRoot, error, {
         action: "PROMOTE",
+        operationId: importOperationId,
         requestedReleaseId,
       });
     } catch {
       // The primary error remains authoritative; diagnostics never mutate lifecycle.json.
     }
   }
-  process.stderr.write(`${JSON.stringify(redact(serializeError(error)))}\n`);
+  const activeReleaseId = await readCurrent(runtimeRoot)
+    .then((current) => current?.releaseId ?? null)
+    .catch(() => null);
+  process.stderr.write(`${JSON.stringify(createOperationalDiagnostic(error, activeReleaseId))}\n`);
   process.exitCode = 1;
 }
 
@@ -98,14 +113,6 @@ function parseOptions(arguments_) {
     result[match[1]] = match[2];
   }
   return result;
-}
-
-function serializeError(error) {
-  return {
-    code: error && typeof error === "object" && "code" in error ? error.code : "UNEXPECTED",
-    message: error instanceof Error ? error.message : String(error),
-    details: error && typeof error === "object" && "details" in error ? error.details : {},
-  };
 }
 
 function print(value) {

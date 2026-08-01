@@ -68,6 +68,13 @@ describe("source lock and safe content", () => {
     expect(JSON.stringify(fallback)).not.toContain("javascript:");
     expect(JSON.stringify(fallback)).not.toContain("onclick");
 
+    const imageOnly = toSafeRichText('<img src="https://attacker.test/only.png">');
+    expect(imageOnly).toMatchObject({
+      plainText: "",
+      contentUnavailable: true,
+      diagnostics: [{ code: "RICH_TEXT_MEANINGFUL_LOSS", tag: "img" }],
+    });
+
     const nestedTable = toSafeRichText(
       "<table><tr><td>Outer<table><tr><td>Inner</td></tr></table>End</td></tr></table>",
     );

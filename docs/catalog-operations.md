@@ -6,11 +6,17 @@ records requested/resolved source commit/tree/timestamp, per-file
 blob/size/SHA-256, importer/sanitizer contracts, licensing posture, content
 diagnostic counts and per-document inventory. It contains no attempt clock.
 
-Operational state is separate: immutable `operations/<opaque-id>.json` records
-`RESOLVED` or `FAILED` attempts, while redacted details live under
-`diagnostics/<opaque-id>.json`. Lifecycle and operation records expose requested,
-resolved, active and last-known-good release hashes; consumers do not parse
-diagnostic text to determine state.
+Operational state is separate. One atomically replaced `lifecycle.json`
+projection contains a `stable` pointer (active and last-known-good hashes) and a
+`latest` pointer. Latest advances through `CHECKING`, `RESOLVED`, `PROMOTING`,
+`SUCCESS` or `FAILURE` and distinguishes `UPDATE_AVAILABLE`, `STALE`, `SUCCESS`,
+`UPDATE_FAILED_USING_LKG` and `UNAVAILABLE`. An operation ID prevents a
+superseded concurrent check from overwriting the latest projection.
+
+`operations/<opaque-id>.json` retains the latest safe snapshot per operation.
+`diagnostics/<opaque-id>.json` contains only allowlisted code, severity, title,
+reason, capability, action, retryability and active-release metadata. Raw error
+messages/details, paths, source/internal IDs, XML and stacks are never serialized.
 
 ## Promotion safety
 
@@ -22,14 +28,14 @@ diagnostic text to determine state.
 - treat `NETWORK_FAILURE`, integrity, XML, reference, lock and CAS errors as a
   failed update. Do not relabel them as a successful stale refresh.
 
-Promotion writes and verifies a content-addressed release, records the resolved
-operation, then atomically replaces `lifecycle.json` as its final fallible commit
-point. A failure before that replacement cannot change active or
-last-known-good. No operation after it may turn an active candidate into a
-reported failure.
+Promotion updates the observable latest state without changing stable, writes
+and verifies a content-addressed release, then atomically replaces both stable
+and latest in `lifecycle.json` as its final fallible commit point. A failure
+before that replacement cannot change active or last-known-good. No operation
+after it may turn an active candidate into a reported failure.
 
-The CLI emits one JSON diagnostic to stderr. Credential-like keys and signed URL
-query values are redacted. Raw source payloads are not logged.
+The CLI emits the same allowlisted diagnostic projection to stderr. It never
+echoes the underlying exception.
 
 ## Evidence
 

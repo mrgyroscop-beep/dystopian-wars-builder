@@ -112,6 +112,21 @@ describe("streaming XML boundary", () => {
       code: "XML_PARSE_TIMEOUT",
     });
   });
+
+  it("normalizes composed and decomposed Unicode to identical NFC artifacts", async () => {
+    const composed = await parseCatalogSource(
+      await fixture(
+        '<catalogue xmlns="http://www.battlescribe.net/schema/catalogueSchema" id="x" name="Café" revision="1"><description>Café</description></catalogue>',
+      ),
+    );
+    const decomposed = await parseCatalogSource(
+      await fixture(
+        '<catalogue xmlns="http://www.battlescribe.net/schema/catalogueSchema" id="x" name="Cafe\u0301" revision="1"><description>Cafe\u0301</description></catalogue>',
+      ),
+    );
+    expect(decomposed.root).toEqual(composed.root);
+    expect(JSON.stringify(decomposed.root).normalize("NFC")).toBe(JSON.stringify(decomposed.root));
+  });
 });
 
 async function fixture(xml) {

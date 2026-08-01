@@ -62,11 +62,7 @@ export function toSafeRichText(source) {
     type: "document",
     children: blocks,
     plainText,
-    contentUnavailable:
-      plainText.length === 0 &&
-      [...diagnostics.values()].some(
-        (diagnostic) => diagnostic.code === "RICH_TEXT_CONTENT_REMOVED",
-      ),
+    contentUnavailable: plainText.length === 0 && diagnostics.size > 0,
     diagnostics: [...diagnostics.values()].sort((left, right) =>
       `${left.code}:${left.tag}`.localeCompare(`${right.code}:${right.tag}`),
     ),
@@ -78,7 +74,7 @@ export function toSafeRichText(source) {
   }
 
   function appendText(text) {
-    const normalized = text.replace(/\s+/gu, " ");
+    const normalized = text.normalize("NFC").replace(/\s+/gu, " ");
     if (normalized.length === 0) return;
     if (!normalized.trim()) {
       const inline = currentInline();
