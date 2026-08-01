@@ -10,6 +10,11 @@ export const MAX_ARTIFACT_TOTAL_BYTES = 25 * 1024 * 1024;
 export const MAX_MANIFEST_BYTES = 256 * 1024;
 export const WORKER_NAME_PATTERN = /^dwb-pr-([1-9][0-9]*)$/;
 export const SHA_PATTERN = /^[0-9a-f]{40}$/;
+const PREVIEW_BOOTSTRAP_STAGES = new Set([
+  "create-worker",
+  "configure-subdomain",
+  "cleanup-worker",
+]);
 
 const FORBIDDEN_CONFIG_KEYS = [
   "routes",
@@ -389,8 +394,27 @@ export function assertPreviewCapacity(activeWorkerNames, targetName) {
 }
 
 export function redactOperationalError(error) {
+  if (error instanceof PreviewBootstrapError) {
+    return {
+      event: "preview_failure",
+      code: error.code,
+      stage: error.stage,
+    };
+  }
   const code = error instanceof PreviewContractError ? error.code : "PREVIEW_OPERATION_FAILED";
   return { event: "preview_failure", code };
+}
+
+export class PreviewBootstrapError extends Error {
+  constructor(stage) {
+    super("Preview bootstrap operation failed");
+    if (!PREVIEW_BOOTSTRAP_STAGES.has(stage)) {
+      throw new Error("Invalid preview bootstrap stage");
+    }
+    this.name = "PreviewBootstrapError";
+    this.code = "PREVIEW_BOOTSTRAP_FAILED";
+    this.stage = stage;
+  }
 }
 
 export class PreviewContractError extends Error {

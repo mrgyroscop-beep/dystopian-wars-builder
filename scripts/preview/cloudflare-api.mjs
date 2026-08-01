@@ -1,6 +1,72 @@
 import process from "node:process";
 
-import { assertAllowlistedWorkerName } from "./core.mjs";
+import { PreviewBootstrapError, assertAllowlistedWorkerName } from "./core.mjs";
+
+export async function ensurePreviewWorkerForUpload({
+  existedBefore,
+  name,
+  prNumber,
+  bootstrap = bootstrapPreviewWorker,
+}) {
+  assertAllowlistedWorkerName(name, prNumber);
+  if (existedBefore) return false;
+  await bootstrap(name, prNumber);
+  return true;
+}
+
+export async function bootstrapPreviewWorker(name, expectedPrNumber, request = cloudflareRequest) {
+  assertAllowlistedWorkerName(name, expectedPrNumber);
+
+  let worker;
+  try {
+    worker = await request("/workers/workers", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        subdomain: { enabled: true, previews_enabled: true },
+      }),
+    });
+  } catch {
+    throw new PreviewBootstrapError("create-worker");
+  }
+
+  const stage = worker?.name === name ? "configure-subdomain" : "create-worker";
+  if (
+    worker?.name !== name ||
+    worker?.subdomain?.enabled !== true ||
+    worker?.subdomain?.previews_enabled !== true
+  ) {
+    try {
+      await deleteBootstrappedPreviewWorker(name, expectedPrNumber, request);
+    } catch {
+      throw new PreviewBootstrapError("cleanup-worker");
+    }
+    throw new PreviewBootstrapError(stage);
+  }
+}
+
+export async function deleteBootstrappedPreviewWorker(
+  name,
+  expectedPrNumber,
+  request = cloudflareRequest,
+) {
+  assertAllowlistedWorkerName(name, expectedPrNumber);
+  try {
+    await request(`/workers/workers/${encodeURIComponent(name)}`, { method: "DELETE" }, true);
+    const [workerResources, scripts] = await Promise.all([
+      request("/workers/workers"),
+      request("/workers/scripts"),
+    ]);
+    if (
+      normalizeCollection(workerResources).some((worker) => worker?.name === name) ||
+      normalizeCollection(scripts).some((worker) => worker?.id === name)
+    ) {
+      throw new Error("Preview Worker still exists after cleanup");
+    }
+  } catch {
+    throw new PreviewBootstrapError("cleanup-worker");
+  }
+}
 
 export async function listPreviewWorkers() {
   const result = await cloudflareRequest("/workers/scripts");
@@ -34,6 +100,11 @@ export async function latestPreviewVersionTimestamp(name) {
     .filter((value) => !Number.isNaN(value.valueOf()))
     .sort((left, right) => right.valueOf() - left.valueOf());
   return timestamps[0];
+}
+
+function normalizeCollection(value) {
+  if (Array.isArray(value)) return value;
+  return Array.isArray(value?.items) ? value.items : [];
 }
 
 async function cloudflareRequest(pathname, init = {}, acceptNotFound = false) {
