@@ -1,0 +1,59 @@
+import { readFile, writeFile } from "node:fs/promises";
+import process from "node:process";
+
+import {
+  assertCurrentPullRequest,
+  assertTrustedWorkflowRun,
+  redactOperationalError,
+} from "./core.mjs";
+
+try {
+  const event = JSON.parse(await readFile(requiredEnvironment("GITHUB_EVENT_PATH"), "utf8"));
+  const repository = requiredEnvironment("GITHUB_REPOSITORY");
+  const trusted = assertTrustedWorkflowRun(event, repository);
+  const pullRequest = await githubRequest(`/repos/${repository}/pulls/${trusted.prNumber}`);
+  assertCurrentPullRequest(pullRequest, { ...trusted, repository });
+
+  const output = {
+    repository,
+    headRepository: repository,
+    ...trusted,
+  };
+  await writeFile(
+    process.argv[2] ?? "artifacts/preview/trusted-event.json",
+    `${JSON.stringify(output)}\n`,
+    {
+      encoding: "utf8",
+      mode: 0o600,
+    },
+  );
+  console.log(
+    JSON.stringify({
+      event: "trusted_preview_run",
+      prNumber: trusted.prNumber,
+      headSha: trusted.headSha,
+    }),
+  );
+} catch (error) {
+  console.error(JSON.stringify(redactOperationalError(error)));
+  process.exitCode = 1;
+}
+
+async function githubRequest(pathname) {
+  const response = await fetch(`https://api.github.com${pathname}`, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${requiredEnvironment("GITHUB_TOKEN")}`,
+      "User-Agent": "dystopian-wars-preview",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+  });
+  if (!response.ok) throw new Error(`GitHub request failed with status ${response.status}`);
+  return response.json();
+}
+
+function requiredEnvironment(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable ${name}`);
+  return value;
+}

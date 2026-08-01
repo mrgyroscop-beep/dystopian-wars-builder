@@ -7,8 +7,10 @@ import { createAppRoutes } from "./router";
 
 const readHealth = vi.fn<HealthGateway["read"]>().mockResolvedValue({
   status: "ok",
+  environment: "local",
   appVersion: "test-version",
   catalogVersion: "test-catalog",
+  commitSha: "0000000000000000000000000000000000000000",
 });
 
 const testDependencies = {

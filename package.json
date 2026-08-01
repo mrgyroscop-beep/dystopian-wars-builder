@@ -23,10 +23,13 @@
     "test:catalog:policy": "node scripts/catalog/check-policy.mjs",
     "test:catalog:bundle": "node scripts/catalog/check-bundle.mjs",
     "test:worker": "vitest run --config vitest.worker.config.ts",
+    "test:preview": "vitest run --config vitest.preview.config.mjs",
+    "preview:artifact": "node scripts/preview/build-artifact.mjs",
+    "preview:verify": "node scripts/preview/verify-artifact.mjs",
     "test:e2e:smoke": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "catalog": "node scripts/catalog/cli.mjs",
-    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run check:architecture && npm run test:catalog:policy && npm run test:unit && npm run test:catalog && npm run test:worker && npm run build && npm run test:catalog:bundle && npm run test:e2e:smoke"
+    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run check:architecture && npm run test:catalog:policy && npm run test:unit && npm run test:catalog && npm run test:worker && npm run test:preview && npm run build && npm run test:catalog:bundle && npm run test:e2e:smoke"
   },
   "dependencies": {
     "hono": "4.12.33",

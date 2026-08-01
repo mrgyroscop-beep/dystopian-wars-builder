@@ -1,18 +1,22 @@
 import { Hono } from "hono";
 
-import {
-  APP_VERSION,
-  CATALOG_VERSION,
-  healthResponseSchema,
-} from "../src/application/health/health-contract";
+import { healthResponseSchema } from "../src/application/health/health-contract";
+import { applyApiSecurityHeaders, createSafeRequestId, writeSafeErrorLog } from "./security";
 
 const app = new Hono<{ Bindings: Env }>();
+
+app.use("/api/*", async (context, next) => {
+  await next();
+  applyApiSecurityHeaders(context.res.headers);
+});
 
 app.get("/api/health", (context) => {
   const payload = healthResponseSchema.parse({
     status: "ok",
-    appVersion: APP_VERSION,
-    catalogVersion: CATALOG_VERSION,
+    environment: context.env.DEPLOYMENT_ENV,
+    appVersion: context.env.APP_VERSION,
+    catalogVersion: context.env.CATALOG_VERSION,
+    commitSha: context.env.COMMIT_SHA,
   });
 
   context.header("Cache-Control", "no-store");
@@ -31,18 +35,13 @@ app.notFound((context) =>
   ),
 );
 
-app.onError((error, context) => {
-  const requestId = context.req.header("cf-ray") ?? crypto.randomUUID();
-
-  console.error(
-    JSON.stringify({
-      event: "worker_error",
-      requestId,
-      method: context.req.method,
-      path: context.req.path,
-      message: error.message,
-    }),
-  );
+app.onError((_error, context) => {
+  const requestId = createSafeRequestId(context.req.header("cf-ray"));
+  writeSafeErrorLog(console, {
+    requestId,
+    method: context.req.method,
+    route: context.req.path.startsWith("/api/") ? "api" : "other",
+  });
 
   return context.json(
     {
