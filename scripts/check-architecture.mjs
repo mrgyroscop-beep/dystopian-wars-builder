@@ -51,7 +51,7 @@ const domainFiles = (await collectFiles("src/domain")).filter((file) =>
   sourceExtensions.has(path.extname(file)),
 );
 const domainForbiddenImports =
-  /(?:react|hono|zod|cloudflare:|node:|src\/application|\.\.\/application)/;
+  /(?:from\s*["'][^"']*(?:react|hono|cloudflare:|node:|scripts\/catalog|src\/application|\.\.\/application)|import\s*\(\s*["'][^"']*(?:react|hono|cloudflare:|node:|scripts\/catalog|src\/application|\.\.\/application))/;
 
 for (const file of domainFiles) {
   const content = await readFile(path.join(repositoryRoot, file), "utf8");

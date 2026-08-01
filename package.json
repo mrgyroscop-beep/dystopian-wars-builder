@@ -22,6 +22,8 @@
     "test:catalog:real": "node scripts/catalog/real-integration.mjs",
     "test:catalog:policy": "node scripts/catalog/check-policy.mjs",
     "test:catalog:bundle": "node scripts/catalog/check-bundle.mjs",
+    "test:domain": "vitest run src/domain/catalog/catalog.test.ts --config vitest.config.ts",
+    "test:domain:real": "vitest run --config vitest.domain-real.config.mjs",
     "test:worker": "vitest run --config vitest.worker.config.ts",
     "preview:smoke": "node scripts/smoke-preview.mjs",
     "test:e2e:smoke": "playwright test",
