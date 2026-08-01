@@ -53,3 +53,10 @@ paste workflow environment dumps, provider response bodies, authorization/cookie
 headers, local paths, Cloudflare account IDs or raw internal error identifiers into
 issues. User-visible expiry or access errors should state that the preview is
 unavailable and link to the redacted workflow result.
+
+## Bootstrap evidence canary
+
+- 2026-08-01: This documentation-only same-repository change is the auditable canary
+  used to validate the trusted live bootstrap workflow described above. Validation
+  evidence remains workflow-produced; this note intentionally records no preview
+  URL, secret or provider identifier.
