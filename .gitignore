@@ -1,0 +1,37 @@
+# Reference source material is intentionally kept outside Git history.
+*.pdf
+*.PDF
+*.stl
+*.STL
+
+# Local environment and secrets.
+.env
+.env.*
+!.env.example
+*.local
+
+# Dependencies, generated output, test artifacts and caches.
+node_modules/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+.cache/
+.turbo/
+.wrangler/
+
+# Editor and operating-system files.
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temporary files.
+*.log
+*.tmp
+*.temp
+
