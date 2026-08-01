@@ -19,7 +19,7 @@ import {
   deleteBootstrappedPreviewWorker,
   deletePreviewWorker,
   ensurePreviewWorkerForUpload,
-  listPreviewWorkers,
+  listPreviewWorkersForUpload,
 } from "./cloudflare-api.mjs";
 import { parseVersionUploadOutput } from "./wrangler-output.mjs";
 
@@ -30,7 +30,7 @@ const trustedEvent = JSON.parse(
 const previousArtifact = process.argv[4] ? path.resolve(process.argv[4]) : undefined;
 let manifest;
 let existedBefore = false;
-let bootstrapCreated = false;
+let bootstrapOwnershipTag;
 let anyUploadMutationStarted = false;
 let stableAliasMutationStarted = false;
 let previousManifest;
@@ -38,7 +38,7 @@ let previousManifest;
 try {
   manifest = await verifiedManifest(artifact, trustedEvent);
   await assertPullRequestIsCurrent(trustedEvent);
-  const activeWorkers = await listPreviewWorkers();
+  const activeWorkers = await listPreviewWorkersForUpload(manifest.workerName, manifest.prNumber);
   existedBefore = activeWorkers.includes(manifest.workerName);
   assertPreviewCapacity(activeWorkers, manifest.workerName);
   if (existedBefore) {
@@ -57,12 +57,12 @@ try {
     }
   }
 
-  bootstrapCreated = await ensurePreviewWorkerForUpload({
+  bootstrapOwnershipTag = await ensurePreviewWorkerForUpload({
     existedBefore,
     name: manifest.workerName,
     prNumber: manifest.prNumber,
   });
-  if (bootstrapCreated) {
+  if (bootstrapOwnershipTag) {
     anyUploadMutationStarted = true;
     await assertPullRequestIsCurrent(trustedEvent);
   }
@@ -126,8 +126,12 @@ try {
           await deletePreviewWorker(manifest.workerName, manifest.prNumber);
         }
       } else if (recovery === "delete") {
-        if (bootstrapCreated) {
-          await deleteBootstrappedPreviewWorker(manifest.workerName, manifest.prNumber);
+        if (bootstrapOwnershipTag) {
+          await deleteBootstrappedPreviewWorker({
+            name: manifest.workerName,
+            prNumber: manifest.prNumber,
+            ownershipTag: bootstrapOwnershipTag,
+          });
         } else {
           await deletePreviewWorker(manifest.workerName, manifest.prNumber);
         }

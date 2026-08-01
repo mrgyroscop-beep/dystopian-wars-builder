@@ -12,6 +12,7 @@ export const WORKER_NAME_PATTERN = /^dwb-pr-([1-9][0-9]*)$/;
 export const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const PREVIEW_BOOTSTRAP_STAGES = new Set([
   "create-worker",
+  "reconcile-worker",
   "configure-subdomain",
   "cleanup-worker",
 ]);

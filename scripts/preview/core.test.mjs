@@ -356,7 +356,12 @@ describe("preview isolation and lifecycle", () => {
   });
 
   it("emits only allowlisted bootstrap stages in redacted diagnostics", () => {
-    for (const stage of ["create-worker", "configure-subdomain", "cleanup-worker"]) {
+    for (const stage of [
+      "create-worker",
+      "reconcile-worker",
+      "configure-subdomain",
+      "cleanup-worker",
+    ]) {
       const record = redactOperationalError(new PreviewBootstrapError(stage));
       expect(record).toEqual({
         event: "preview_failure",

@@ -183,10 +183,10 @@ describe("preview workflow policy", () => {
     expect(controller.indexOf("ensurePreviewWorkerForUpload")).toBeLessThan(
       controller.indexOf("uploadVersion(manifest, artifact, false)"),
     );
-    expect(controller).toContain("if (bootstrapCreated)");
+    expect(controller).toContain("if (bootstrapOwnershipTag)");
     expect(controller).toContain("deleteBootstrappedPreviewWorker");
-    expect(provider).toContain('request("/workers/workers")');
-    expect(provider).toContain('request("/workers/scripts")');
+    expect(provider).toContain('request, "/workers/workers"');
+    expect(provider).toContain('request, "/workers/scripts"');
     expect(provider).not.toMatch(/wrangler\s+deploy/);
   });
 
