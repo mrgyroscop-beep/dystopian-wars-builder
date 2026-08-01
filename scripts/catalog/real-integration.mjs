@@ -55,13 +55,19 @@ try {
   if (current?.releaseId !== first.releaseId)
     throw new Error("Atomic promotion did not publish the real-source release");
   await verifyRelease(path.join(runtime, "releases", first.releaseId), first.releaseId);
-  const lifecycleManifest = canonicalJson({
+  const lifecycleManifestValue = {
     ...first.manifest,
+    inventory: first.manifest.inventory.map((item) => ({
+      ...item,
+      revision: (BigInt(item.revision) + 1n).toString(),
+    })),
     verificationVariant: "lifecycle-candidate",
-  });
+  };
+  const lifecycleManifest = canonicalJson(lifecycleManifestValue);
   const lifecycleCandidate = {
     ...first,
     releaseId: sha256(lifecycleManifest),
+    manifest: lifecycleManifestValue,
     files: new Map(first.files).set("manifest.json", lifecycleManifest),
   };
   await promoteDataset(lifecycleCandidate, runtime, {

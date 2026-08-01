@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { canonicalJson, sha256 } from "./canonical.mjs";
+import { compareCatalogVersions } from "./catalog-version.mjs";
 import { CatalogImportError } from "./errors.mjs";
 
 const diagnosticRules = Object.freeze({
@@ -57,6 +58,20 @@ const diagnosticRules = Object.freeze({
   PROMOTION_LOCKED: ["CATALOG_UPDATE_BUSY", "info", "CONCURRENT_UPDATE", "RETRY", true],
   OPERATION_SUPERSEDED: ["CATALOG_UPDATE_BUSY", "info", "CONCURRENT_UPDATE", "RETRY", true],
   PROMOTION_CAS_MISMATCH: ["CATALOG_UPDATE_BUSY", "info", "CONCURRENT_UPDATE", "REFRESH", true],
+  CATALOG_VERSION_INCOMPARABLE: [
+    "CATALOG_SOURCE_UNVERIFIED",
+    "error",
+    "SOURCE_UNVERIFIED",
+    "WAIT_FOR_SOURCE",
+    false,
+  ],
+  CATALOG_VERSION_UNKNOWN: [
+    "CATALOG_SOURCE_UNVERIFIED",
+    "error",
+    "SOURCE_UNVERIFIED",
+    "WAIT_FOR_SOURCE",
+    false,
+  ],
 });
 
 export async function beginCatalogCheck(runtimeRoot, options = {}) {
@@ -117,7 +132,13 @@ export async function promoteDataset(dataset, runtimeRoot, options = {}) {
       assertReleaseId(requestedReleaseId, "requested release");
       try {
         const candidateOrder = await compareCandidateOrder(dataset, stableBefore, runtimeRoot);
-        const current = candidateOrder === "CURRENT";
+        if (candidateOrder === "INCOMPARABLE" || candidateOrder === "UNKNOWN")
+          throw new CatalogImportError(
+            `CATALOG_VERSION_${candidateOrder}`,
+            "Catalog version cannot safely replace the active release",
+            {},
+          );
+        const current = candidateOrder === "EQUAL";
         const stale = candidateOrder === "OLDER";
         let latestProjection = project(before, {
           operationId,
@@ -393,45 +414,17 @@ async function prepareRelease(dataset, runtimeRoot) {
 
 async function compareCandidateOrder(dataset, stable, runtimeRoot) {
   if (!stable.activeReleaseId) return "NEWER";
-  if (stable.activeReleaseId === dataset.releaseId) return "CURRENT";
+  if (stable.activeReleaseId === dataset.releaseId) return "EQUAL";
 
   const activeDirectory = path.join(runtimeRoot, "releases", stable.activeReleaseId);
   await verifyRelease(activeDirectory, stable.activeReleaseId);
   const activeManifest = JSON.parse(
     await readFile(path.join(activeDirectory, "manifest.json"), "utf8"),
   );
-  const revisionOrder = compareInventoryRevisions(
-    dataset.manifest.inventory,
-    activeManifest.inventory,
-  );
-  if (revisionOrder !== 0) return revisionOrder < 0 ? "OLDER" : "NEWER";
-
-  const candidateTimestamp = Date.parse(dataset.manifest.source.resolved.commitTimestamp);
-  const activeTimestamp = Date.parse(activeManifest.source.resolved.commitTimestamp);
-  if (!Number.isFinite(candidateTimestamp) || !Number.isFinite(activeTimestamp))
-    throw new CatalogImportError("RELEASE_INVALID", "Catalog release ordering is invalid", {});
-  return candidateTimestamp < activeTimestamp ? "OLDER" : "NEWER";
-}
-
-function compareInventoryRevisions(candidate = [], active = []) {
-  const activeByPath = new Map(active.map((item) => [item.path, item.revision]));
-  let direction = 0;
-  for (const item of candidate) {
-    if (!activeByPath.has(item.path)) return 0;
-    const comparison = compareRevision(item.revision, activeByPath.get(item.path));
-    if (comparison === 0) continue;
-    if (direction !== 0 && direction !== comparison) return 0;
-    direction = comparison;
-  }
-  return candidate.length === active.length ? direction : 0;
-}
-
-function compareRevision(candidate, active) {
-  const left = String(candidate);
-  const right = String(active);
-  if (/^\d+$/u.test(left) && /^\d+$/u.test(right))
-    return BigInt(left) === BigInt(right) ? 0 : BigInt(left) < BigInt(right) ? -1 : 1;
-  return Math.sign(left.localeCompare(right, "en", { numeric: true }));
+  return compareCatalogVersions(dataset, {
+    releaseId: stable.activeReleaseId,
+    manifest: activeManifest,
+  });
 }
 
 async function createOperationId(runtimeRoot) {

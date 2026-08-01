@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildDataset, validateLinkKind } from "./build-dataset.mjs";
+import { canonicalJson, sha256 } from "./canonical.mjs";
 import {
   beginCatalogCheck,
   createOperationalDiagnostic,
@@ -49,7 +50,9 @@ describe("deterministic dataset and atomic lifecycle", () => {
     });
 
     const second = {
-      ...first,
+      ...datasetVariant(first, (manifest) => {
+        for (const item of manifest.inventory) item.revision = "2";
+      }),
       releaseId: createHash("sha256").update("broken").digest("hex"),
     };
     await expect(
@@ -57,7 +60,11 @@ describe("deterministic dataset and atomic lifecycle", () => {
     ).rejects.toMatchObject({ code: "RELEASE_INVALID" });
     expect(await readCurrent(runtime)).toEqual({ releaseId: first.releaseId });
 
-    const alternativeLock = { ...lock, commit: "d".repeat(40) };
+    const alternativeLock = {
+      ...lock,
+      commit: "d".repeat(40),
+      commitTimestamp: "2026-08-02T00:00:00Z",
+    };
     const alternative = await buildDataset(alternativeLock, sources, provenance(alternativeLock));
     await promoteDataset(alternative, runtime, {
       expectedCurrent: first.releaseId,
@@ -86,11 +93,13 @@ describe("deterministic dataset and atomic lifecycle", () => {
         lastKnownGoodReleaseId: alternative.releaseId,
       },
     });
+    const beforeMismatch = await readLifecycle(runtime);
     await expect(
       promoteDataset(alternative, runtime, { expectedCurrent: null }),
     ).rejects.toMatchObject({
       code: "PROMOTION_CAS_MISMATCH",
     });
+    expect(await readLifecycle(runtime)).toEqual(beforeMismatch);
   });
 
   it("does not replace last-known-good after corrupt XML", async () => {
@@ -223,7 +232,11 @@ describe("deterministic dataset and atomic lifecycle", () => {
     const runtime = await temp("catalog-fault-");
     const good = await buildDataset(lock, sources, provenance(lock));
     await promoteDataset(good, runtime, { expectedCurrent: null });
-    const changedLock = { ...lock, commit: "e".repeat(40) };
+    const changedLock = {
+      ...lock,
+      commit: "e".repeat(40),
+      commitTimestamp: "2026-08-02T00:00:00Z",
+    };
     const candidate = await buildDataset(changedLock, sources, provenance(changedLock));
 
     for (const point of [
@@ -303,7 +316,11 @@ describe("deterministic dataset and atomic lifecycle", () => {
       latest: { phase: "RESOLVED", outcome: "SUCCESS" },
     });
 
-    const changedLock = { ...lock, commit: "f".repeat(40) };
+    const changedLock = {
+      ...lock,
+      commit: "f".repeat(40),
+      commitTimestamp: "2026-08-02T00:00:00Z",
+    };
     const candidate = await buildDataset(changedLock, sources, provenance(changedLock));
     const failedCheck = await beginCatalogCheck(runtime, {
       expectedCurrent: dataset.releaseId,
@@ -388,6 +405,105 @@ describe("deterministic dataset and atomic lifecycle", () => {
     });
   });
 
+  it("maps comparator relations to lifecycle without materializing non-newer candidates", async () => {
+    const { lock, sources } = await fixtureSet();
+    const runtime = await temp("catalog-relations-");
+    const active = await buildDataset(lock, sources, provenance(lock));
+    await promoteDataset(active, runtime, { expectedCurrent: null });
+    const stableBefore = (await readLifecycle(runtime)).stable;
+
+    const cases = [
+      [
+        "EQUAL",
+        datasetVariant(active, (manifest) => {
+          manifest.source.resolved.commit = "e".repeat(40);
+          manifest.source.resolved.tree = "f".repeat(40);
+        }),
+        "SUCCESS",
+      ],
+      [
+        "OLDER",
+        datasetVariant(active, (manifest) => {
+          for (const item of manifest.inventory) item.revision = "0";
+          manifest.source.resolved.commitTimestamp = "2030-01-01T00:00:00Z";
+        }),
+        "STALE",
+      ],
+    ];
+    for (const [relation, candidate, outcome] of cases) {
+      const points = [];
+      const result = await promoteDataset(candidate, runtime, {
+        expectedCurrent: active.releaseId,
+        fault: (point) => points.push(point),
+      });
+      expect(result.latest).toMatchObject({ phase: "RESOLVED", outcome });
+      expect(points).toEqual(["after-resolved"]);
+      expect((await readLifecycle(runtime)).stable).toEqual(stableBefore);
+      expect(await releaseNames(runtime)).toEqual([active.releaseId]);
+      if (relation === "OLDER") {
+        const retry = await promoteDataset(candidate, runtime, {
+          expectedCurrent: active.releaseId,
+        });
+        expect(retry.latest).toMatchObject({ phase: "RESOLVED", outcome: "STALE" });
+        expect(retry.latest.operationId).not.toBe(result.latest.operationId);
+      }
+    }
+
+    const rejected = [
+      [
+        "INCOMPARABLE",
+        datasetVariant(active, (manifest) => {
+          manifest.inventory[0].revision = "2";
+          manifest.inventory[1].revision = "0";
+          manifest.source.resolved.commitTimestamp = "2030-01-01T00:00:00Z";
+        }),
+      ],
+      [
+        "UNKNOWN",
+        datasetVariant(active, (manifest) => {
+          manifest.inventory.pop();
+        }),
+      ],
+    ];
+    for (const [relation, candidate] of rejected) {
+      const points = [];
+      await expect(
+        promoteDataset(candidate, runtime, {
+          expectedCurrent: active.releaseId,
+          fault: (point) => points.push(point),
+        }),
+      ).rejects.toMatchObject({ code: `CATALOG_VERSION_${relation}` });
+      expect(points).toEqual([]);
+      expect(await readCurrent(runtime)).toEqual({ releaseId: active.releaseId });
+      expect((await readLifecycle(runtime)).stable).toEqual(stableBefore);
+      expect((await readLifecycle(runtime)).latest).toMatchObject({
+        phase: "FAILURE",
+        outcome: "UPDATE_FAILED_USING_LKG",
+      });
+      expect(await releaseNames(runtime)).toEqual([active.releaseId]);
+    }
+
+    const newer = datasetVariant(active, (manifest) => {
+      for (const item of manifest.inventory) item.revision = "2";
+      manifest.source.resolved.commitTimestamp = "2020-01-01T00:00:00Z";
+    });
+    const points = [];
+    const promoted = await promoteDataset(newer, runtime, {
+      expectedCurrent: active.releaseId,
+      fault: (point) => points.push(point),
+    });
+    expect(promoted).toMatchObject({
+      stable: { activeReleaseId: newer.releaseId, lastKnownGoodReleaseId: active.releaseId },
+      latest: { phase: "SUCCESS", outcome: "SUCCESS" },
+    });
+    expect(points).toEqual([
+      "after-resolved",
+      "after-release",
+      "after-operation",
+      "before-lifecycle",
+    ]);
+  });
+
   it("creates an append-only audit record whenever operationId is null", async () => {
     const runtime = await temp("catalog-append-only-");
     const first = await recordOperationalFailure(runtime, new Error("first"), {
@@ -424,6 +540,19 @@ describe("deterministic dataset and atomic lifecycle", () => {
       stable: { activeReleaseId: null, lastKnownGoodReleaseId: null },
       latest: { operationId: latest.operationId, phase: "CHECKING", outcome: "PENDING" },
     });
+    expect(await releaseNames(runtime)).toEqual([]);
+  });
+
+  it("does not compare or materialize while the promotion lock is held", async () => {
+    const { lock, sources } = await fixtureSet();
+    const runtime = await temp("catalog-lock-contract-");
+    const dataset = await buildDataset(lock, sources, provenance(lock));
+    await mkdir(path.join(runtime, ".promotion-lock"), { recursive: true });
+    await expect(promoteDataset(dataset, runtime, { expectedCurrent: null })).rejects.toMatchObject(
+      { code: "PROMOTION_LOCKED" },
+    );
+    expect(await readLifecycle(runtime)).toBeUndefined();
+    expect(await releaseNames(runtime)).toEqual([]);
   });
 
   it("projects only allowlisted diagnostics for adversarial error corpora", () => {
@@ -507,6 +636,27 @@ async function fixtureSet() {
     },
     sources,
   };
+}
+
+function datasetVariant(dataset, mutate) {
+  const manifest = structuredClone(dataset.manifest);
+  mutate(manifest);
+  const manifestJson = canonicalJson(manifest);
+  return {
+    ...dataset,
+    releaseId: sha256(manifestJson),
+    manifest,
+    files: new Map(dataset.files).set("manifest.json", manifestJson),
+  };
+}
+
+async function releaseNames(runtime) {
+  try {
+    return (await readdir(path.join(runtime, "releases"))).sort();
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") return [];
+    throw error;
+  }
 }
 
 function provenance(lock) {
