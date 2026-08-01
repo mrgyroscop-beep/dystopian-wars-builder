@@ -15,7 +15,12 @@ import {
   readBoundedText,
   redactOperationalError,
 } from "./core.mjs";
-import { deletePreviewWorker, listPreviewWorkers } from "./cloudflare-api.mjs";
+import {
+  deleteBootstrappedPreviewWorker,
+  deletePreviewWorker,
+  ensurePreviewWorkerForUpload,
+  listPreviewWorkersForUpload,
+} from "./cloudflare-api.mjs";
 import { parseVersionUploadOutput } from "./wrangler-output.mjs";
 
 const artifact = path.resolve(process.argv[2] ?? "artifacts/preview/current/package");
@@ -25,6 +30,7 @@ const trustedEvent = JSON.parse(
 const previousArtifact = process.argv[4] ? path.resolve(process.argv[4]) : undefined;
 let manifest;
 let existedBefore = false;
+let bootstrapOwnershipTag;
 let anyUploadMutationStarted = false;
 let stableAliasMutationStarted = false;
 let previousManifest;
@@ -32,7 +38,7 @@ let previousManifest;
 try {
   manifest = await verifiedManifest(artifact, trustedEvent);
   await assertPullRequestIsCurrent(trustedEvent);
-  const activeWorkers = await listPreviewWorkers();
+  const activeWorkers = await listPreviewWorkersForUpload(manifest.workerName, manifest.prNumber);
   existedBefore = activeWorkers.includes(manifest.workerName);
   assertPreviewCapacity(activeWorkers, manifest.workerName);
   if (existedBefore) {
@@ -49,6 +55,16 @@ try {
     ) {
       throw new Error("Previous artifact belongs to a different preview");
     }
+  }
+
+  bootstrapOwnershipTag = await ensurePreviewWorkerForUpload({
+    existedBefore,
+    name: manifest.workerName,
+    prNumber: manifest.prNumber,
+  });
+  if (bootstrapOwnershipTag) {
+    anyUploadMutationStarted = true;
+    await assertPullRequestIsCurrent(trustedEvent);
   }
 
   anyUploadMutationStarted = true;
@@ -110,7 +126,15 @@ try {
           await deletePreviewWorker(manifest.workerName, manifest.prNumber);
         }
       } else if (recovery === "delete") {
-        await deletePreviewWorker(manifest.workerName, manifest.prNumber);
+        if (bootstrapOwnershipTag) {
+          await deleteBootstrappedPreviewWorker({
+            name: manifest.workerName,
+            prNumber: manifest.prNumber,
+            ownershipTag: bootstrapOwnershipTag,
+          });
+        } else {
+          await deletePreviewWorker(manifest.workerName, manifest.prNumber);
+        }
       } else if (recovery === "fail-no-lkg") {
         throw new Error("Alias mutation cannot be recovered without last-known-good");
       } else if (recovery === "skip-stale") {
@@ -119,8 +143,15 @@ try {
         );
       }
     }
-  } catch {
-    console.error(JSON.stringify({ event: "preview_rollback_failed", code: "ROLLBACK_FAILED" }));
+  } catch (recoveryError) {
+    const record = redactOperationalError(recoveryError);
+    console.error(
+      JSON.stringify(
+        record.code === "PREVIEW_BOOTSTRAP_FAILED"
+          ? record
+          : { event: "preview_rollback_failed", code: "ROLLBACK_FAILED" },
+      ),
+    );
   }
   console.error(JSON.stringify(redactOperationalError(error)));
   process.exitCode = 1;

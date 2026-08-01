@@ -177,6 +177,19 @@ describe("preview workflow policy", () => {
     expect(controller).toContain("await getCurrentPullRequest(trustedEvent)");
   });
 
+  it("bootstraps only before a first version and verifies resource cleanup on failure", async () => {
+    const controller = await readFile(path.resolve("scripts/preview/deploy.mjs"), "utf8");
+    const provider = await readFile(path.resolve("scripts/preview/cloudflare-api.mjs"), "utf8");
+    expect(controller.indexOf("ensurePreviewWorkerForUpload")).toBeLessThan(
+      controller.indexOf("uploadVersion(manifest, artifact, false)"),
+    );
+    expect(controller).toContain("if (bootstrapOwnershipTag)");
+    expect(controller).toContain("deleteBootstrappedPreviewWorker");
+    expect(provider).toContain('request, "/workers/workers"');
+    expect(provider).toContain('request, "/workers/scripts"');
+    expect(provider).not.toMatch(/wrangler\s+deploy/);
+  });
+
   it("bounds artifact metadata before privileged reads", async () => {
     for (const name of ["verify-artifact.mjs", "deploy.mjs"]) {
       const controller = await readFile(path.resolve("scripts/preview", name), "utf8");

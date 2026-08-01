@@ -5,6 +5,7 @@ import {
   MAX_ARTIFACT_FILES,
   MAX_ARTIFACT_TOTAL_BYTES,
   MAX_ACTIVE_PREVIEWS,
+  PreviewBootstrapError,
   assertAllowlistedWorkerName,
   assertArtifactBounds,
   assertChecksumDocument,
@@ -352,5 +353,23 @@ describe("preview isolation and lifecycle", () => {
     const record = redactOperationalError(error);
     expect(record).toEqual({ event: "preview_failure", code: "PREVIEW_OPERATION_FAILED" });
     expect(JSON.stringify(record)).not.toMatch(/secret|token|authorization|account|123/i);
+  });
+
+  it("emits only allowlisted bootstrap stages in redacted diagnostics", () => {
+    for (const stage of [
+      "create-worker",
+      "reconcile-worker",
+      "configure-subdomain",
+      "cleanup-worker",
+    ]) {
+      const record = redactOperationalError(new PreviewBootstrapError(stage));
+      expect(record).toEqual({
+        event: "preview_failure",
+        code: "PREVIEW_BOOTSTRAP_FAILED",
+        stage,
+      });
+      expect(JSON.stringify(record)).not.toMatch(/path|token|account|provider|stderr|[0-9]{4,}/i);
+    }
+    expect(() => new PreviewBootstrapError("C:\\secret\\account-123")).toThrow(/bootstrap stage/);
   });
 });
