@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  required-ci:
+    name: Required CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate repository governance
+        shell: pwsh
+        run: ./scripts/validate-bootstrap.ps1
+
+      - name: Set up Node.js for application mode
+        if: ${{ hashFiles('package.json') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm ci
+
+      - name: Build
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm run build
+
+      - name: Lint
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm run lint
+
+      - name: Unit tests
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm run test:unit
+
+      - name: E2E smoke test
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm run test:e2e:smoke
