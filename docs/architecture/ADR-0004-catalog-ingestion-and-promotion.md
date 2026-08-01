@@ -14,7 +14,9 @@ redistribution licence in scope for this project.
 
 ## Decision
 
-- Pin a full commit, tree, Git blob and SHA-256 for an exact ten-file allowlist.
+- Pin a full commit, commit timestamp, tree, Git blob, byte size and SHA-256 for
+  an exact ten-file allowlist; verify commit/tree/blob provenance through the
+  immutable GitHub API before accepting raw bytes.
 - Fetch only immutable raw GitHub paths with redirects disabled, byte/time
   limits, a content-verified cache and redacted diagnostics.
 - Parse in Node with `saxes`. Reject DTD/entity declarations, processing
@@ -22,14 +24,21 @@ redistribution licence in scope for this project.
 - Preserve duplicate IDs in deterministic document scope. A `targetId` resolves
   first within its document and then uniquely across the complete source set;
   unresolved or ambiguous references fail the whole build.
-- Represent description/comment content as a safe rich-text AST containing only
-  paragraphs and text. Raw HTML is never emitted.
+- Validate catalogue/category/entry/info links against their exact target node
+  kinds after deterministic resolution.
+- Represent description/comment content as a safe rich-text AST supporting
+  paragraphs, strong text, line breaks and tables. Emit deterministic plain
+  fallback plus meaningful-loss/content-unavailable diagnostics. Raw HTML is
+  never emitted.
 - Canonicalize keys and source order. The artifact manifest has no clock field;
   its SHA-256 is the release ID. Attempt time and outcome live only in the
   operational record.
-- Publish to a content-addressed staging directory, verify it, rename it and
-  atomically replace `current.json` under a lock and compare-and-swap guard.
-  Older releases remain available for rollback.
+- Publish to a content-addressed staging directory, verify it, rename it, record
+  the resolved operation and atomically replace authoritative `lifecycle.json`
+  as the final fallible commit point under a lock and compare-and-swap guard.
+  Requested/resolved/active/last-known-good hashes and explicit lifecycle states
+  are separate from redacted opaque diagnostics. Older releases remain
+  available for rollback.
 - Keep importer dependencies out of browser and Worker bundles. Do not commit or
   deploy upstream/generated data until redistribution rights are confirmed.
 

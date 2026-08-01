@@ -20,6 +20,16 @@ export async function fetchLockedSources(lock, cacheRoot, options = {}) {
     const file = path.join(destination, safeCacheName(source.path));
     const cached = await readVerified(file, source.sha256);
     if (cached) {
+      if (cached.byteLength !== source.bytes)
+        throw new CatalogImportError(
+          "SOURCE_SIZE_MISMATCH",
+          "Cached source size differs from lock",
+          {
+            path: source.path,
+            expected: source.bytes,
+            actual: cached.byteLength,
+          },
+        );
       totalBytes += cached.byteLength;
       if (totalBytes > MAX_TOTAL_BYTES) throw limitError("source set", MAX_TOTAL_BYTES);
       results.push({ ...source, file, bytes: cached.byteLength, cache: "hit" });
@@ -27,6 +37,16 @@ export async function fetchLockedSources(lock, cacheRoot, options = {}) {
     }
 
     const bytes = await downloadSource(lock, source, fetchImpl);
+    if (bytes.byteLength !== source.bytes)
+      throw new CatalogImportError(
+        "SOURCE_SIZE_MISMATCH",
+        "Downloaded source size differs from lock",
+        {
+          path: source.path,
+          expected: source.bytes,
+          actual: bytes.byteLength,
+        },
+      );
     totalBytes += bytes.byteLength;
     if (totalBytes > MAX_TOTAL_BYTES) throw limitError("source set", MAX_TOTAL_BYTES);
     await atomicWrite(file, bytes);

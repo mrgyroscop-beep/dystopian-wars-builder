@@ -13,6 +13,7 @@ import {
   verifyRelease,
 } from "./lib/promotion.mjs";
 import { readSourceLock } from "./lib/source-lock.mjs";
+import { readCachedProvenance, verifyAndCacheLockedProvenance } from "./lib/verify-provenance.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const command = process.argv[2] ?? "help";
@@ -24,26 +25,34 @@ const cacheRoot = path.resolve(options.cache ?? path.join(repositoryRoot, ".cach
 const runtimeRoot = path.resolve(
   options.runtime ?? path.join(repositoryRoot, "data/generated/runtime"),
 );
+let importCommitted = false;
+let requestedReleaseId = null;
 
 try {
   if (command === "help") printHelp();
   else if (command === "fetch") {
     const lock = await readSourceLock(lockPath);
-    print({ command, sources: await fetchLockedSources(lock, cacheRoot) });
+    const provenance = await verifyAndCacheLockedProvenance(lock, cacheRoot);
+    print({ command, provenance, sources: await fetchLockedSources(lock, cacheRoot) });
   } else if (command === "build") {
     const lock = await readSourceLock(lockPath);
     const sources = await verifyCachedSources(lock, cacheRoot);
-    const dataset = await buildDataset(lock, sources);
+    const provenance = await readCachedProvenance(lock, cacheRoot);
+    const dataset = await buildDataset(lock, sources, provenance);
+    requestedReleaseId = dataset.releaseId;
     print({ command, releaseId: dataset.releaseId, manifest: dataset.manifest });
   } else if (command === "import") {
     const lock = await readSourceLock(lockPath);
+    const provenance = await verifyAndCacheLockedProvenance(lock, cacheRoot);
     const sources = await fetchLockedSources(lock, cacheRoot);
-    const dataset = await buildDataset(lock, sources);
+    const dataset = await buildDataset(lock, sources, provenance);
+    requestedReleaseId = dataset.releaseId;
     const result = await promoteDataset(dataset, runtimeRoot, {
       ...(options.expected
         ? { expectedCurrent: options.expected === "none" ? null : options.expected }
         : {}),
     });
+    importCommitted = true;
     print({ command, ...result, manifest: dataset.manifest });
   } else if (command === "verify") {
     const current = await readCurrent(runtimeRoot);
@@ -64,11 +73,14 @@ try {
     throw new CatalogImportError("CLI_COMMAND", "Unknown catalog command", { command });
   }
 } catch (error) {
-  if (command === "import") {
+  if (command === "import" && !importCommitted) {
     try {
-      await recordOperationalFailure(runtimeRoot, error);
+      await recordOperationalFailure(runtimeRoot, error, {
+        action: "PROMOTE",
+        requestedReleaseId,
+      });
     } catch {
-      // The primary error remains authoritative; diagnostics must never mutate current.json.
+      // The primary error remains authoritative; diagnostics never mutate lifecycle.json.
     }
   }
   process.stderr.write(`${JSON.stringify(redact(serializeError(error)))}\n`);

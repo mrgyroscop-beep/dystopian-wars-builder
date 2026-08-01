@@ -27,17 +27,55 @@ describe("source lock and safe content", () => {
 
   it("converts embedded markup to a structured text-only AST", () => {
     const result = toSafeRichText(
-      '<p>Hello <strong>captain</strong></p><script data-token="secret">steal()</script><br>Ready',
+      "<p>Hello <strong>captain</strong><br>Ready</p><table><tr><th>Ship</th><td>Akita</td></tr></table>",
     );
-    expect(result).toEqual({
-      type: "document",
-      children: [
-        { type: "paragraph", children: [{ type: "text", value: "Hello captain" }] },
-        { type: "paragraph", children: [{ type: "text", value: "Ready" }] },
-      ],
+    expect(result.plainText).toBe("Hello captain\nReady\nShip\tAkita");
+    expect(result.children[0].children.map((child) => child.type)).toEqual([
+      "text",
+      "strong",
+      "lineBreak",
+      "text",
+    ]);
+    expect(result.children[1]).toMatchObject({
+      type: "table",
+      rows: [{ cells: [{ header: true }, { header: false }] }],
     });
     expect(JSON.stringify(result)).not.toContain("<strong>");
-    expect(JSON.stringify(result)).not.toContain("steal");
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("uses deterministic plain fallback and reports hostile or lossy content", () => {
+    const unavailable = toSafeRichText(
+      '<script src="https://attacker.test/x" onload="steal()">secret</script>',
+    );
+    expect(unavailable).toMatchObject({
+      plainText: "",
+      contentUnavailable: true,
+      diagnostics: [{ code: "RICH_TEXT_CONTENT_REMOVED", tag: "script" }],
+    });
+    expect(JSON.stringify(unavailable)).not.toContain("attacker");
+    expect(JSON.stringify(unavailable)).not.toContain("steal");
+
+    const fallback = toSafeRichText(
+      '<marquee onclick="steal()">Important</marquee><img src="javascript:steal()" alt="Diagram">',
+    );
+    expect(fallback.plainText).toBe("ImportantDiagram");
+    expect(fallback.contentUnavailable).toBe(false);
+    expect(fallback.diagnostics.map((item) => item.code)).toEqual([
+      "RICH_TEXT_MEANINGFUL_LOSS",
+      "RICH_TEXT_MEANINGFUL_LOSS",
+    ]);
+    expect(JSON.stringify(fallback)).not.toContain("javascript:");
+    expect(JSON.stringify(fallback)).not.toContain("onclick");
+
+    const nestedTable = toSafeRichText(
+      "<table><tr><td>Outer<table><tr><td>Inner</td></tr></table>End</td></tr></table>",
+    );
+    expect(nestedTable.plainText).toContain("Outer");
+    expect(nestedTable.diagnostics).toContainEqual({
+      code: "RICH_TEXT_MEANINGFUL_LOSS",
+      tag: "nested-table",
+    });
   });
 
   it("redacts credentials and signed query values", () => {

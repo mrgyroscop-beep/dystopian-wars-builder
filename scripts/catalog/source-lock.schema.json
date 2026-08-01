@@ -3,11 +3,12 @@
   "title": "Dystopian Wars catalog source lock",
   "type": "object",
   "additionalProperties": false,
-  "required": ["repository", "commit", "tree", "files"],
+  "required": ["repository", "commit", "tree", "commitTimestamp", "files"],
   "properties": {
     "repository": { "const": "Nord0rk/Dystopian-Wars-4.0" },
     "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "tree": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "commitTimestamp": { "type": "string", "format": "date-time" },
     "files": {
       "type": "array",
       "minItems": 10,
@@ -16,13 +17,14 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "blob", "sha256"],
+        "required": ["path", "blob", "bytes", "sha256"],
         "properties": {
           "path": {
             "type": "string",
             "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._ /()-]+\\.(?:gst|cat)$"
           },
           "blob": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "bytes": { "type": "integer", "minimum": 1, "maximum": 4194304 },
           "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
         }
       }

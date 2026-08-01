@@ -98,6 +98,7 @@ function makeLock(body) {
       {
         path: "Dystopian Wars 4.0.gst",
         blob: "c".repeat(40),
+        bytes: body.byteLength,
         sha256: createHash("sha256").update(body).digest("hex"),
       },
     ],

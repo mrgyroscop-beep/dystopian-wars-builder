@@ -1,7 +1,8 @@
 # Dystopian Wars catalogue importer
 
 This directory is a Node-only trust boundary. It downloads the ten `.gst`/`.cat`
-files named in `source-lock.json`, verifies their bytes, parses them with a
+files named in `source-lock.json`, verifies GitHub commit/tree/blob provenance
+and raw bytes, parses them with a
 streaming SAX parser, validates references and writes deterministic normalized
 artifacts. Nothing here may be imported by `src` or `worker`.
 
@@ -26,9 +27,10 @@ verified cache is intentionally required.
 
 ## Updating upstream
 
-1. Review an exact upstream commit and its recursive Git tree.
+1. Review an exact upstream commit, timestamp and its recursive Git tree.
 2. Confirm the expected one `.gst` plus nine `.cat` inventory.
-3. Calculate SHA-256 from the raw bytes and update every lock entry.
+3. Record Git blob/byte size, calculate SHA-256 from the raw bytes and update
+   every lock entry.
 4. Run `npm run test:catalog`, then `npm run test:catalog:real` twice.
 5. Review the manifest/inventory evidence and the upstream licensing decision.
 
