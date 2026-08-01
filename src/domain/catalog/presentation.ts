@@ -1,4 +1,4 @@
-import type { RichTextInline, SafePresentation } from "./types";
+import type { RichTextBlock, RichTextInline, SafePresentation } from "./types";
 
 const removedContainers =
   /<(script|style|iframe|object|embed|svg|math)\b[^>]*>[\s\S]*?<\/\1\s*>/giu;
@@ -34,12 +34,102 @@ export function toSafePresentation(value: unknown): SafePresentation {
 
 export function presentationFromNode(
   value: unknown,
-  richText?: { readonly plainText?: string; readonly contentUnavailable?: boolean },
+  richText?: {
+    readonly plainText?: string;
+    readonly contentUnavailable?: boolean;
+    readonly children?: readonly unknown[];
+    readonly diagnostics?: readonly { readonly code?: string }[];
+  },
 ): SafePresentation {
   const safe = toSafePresentation(richText?.plainText ?? value);
-  return richText?.contentUnavailable && safe.plainText.length === 0
-    ? { ...safe, contentUnavailable: true }
-    : safe;
+  const blocks = richText?.children ? safeBlocks(richText.children) : safe.blocks;
+  const diagnostics = new Set([
+    ...safe.diagnostics,
+    ...(richText?.diagnostics ?? []).flatMap((diagnostic) =>
+      diagnostic.code ? [diagnostic.code] : [],
+    ),
+  ]);
+  return {
+    ...safe,
+    blocks,
+    contentUnavailable: (richText?.contentUnavailable ?? false) && safe.plainText.length === 0,
+    diagnostics: [...diagnostics].sort(),
+  };
+}
+
+function safeBlocks(children: readonly unknown[]): readonly RichTextBlock[] {
+  const blocks: RichTextBlock[] = [];
+  for (const candidate of children) {
+    const block = record(candidate);
+    if (block?.type === "paragraph") {
+      blocks.push({ type: "paragraph", children: safeInline(array(block.children)) });
+      continue;
+    }
+    if (block?.type === "table") {
+      blocks.push({
+        type: "table",
+        rows: array(block.rows).flatMap((rowCandidate) => {
+          const row = record(rowCandidate);
+          if (row?.type !== "tableRow") return [];
+          return [
+            {
+              type: "tableRow" as const,
+              cells: array(row.cells).flatMap((cellCandidate) => {
+                const cell = record(cellCandidate);
+                if (cell?.type !== "tableCell") return [];
+                return [
+                  {
+                    type: "tableCell" as const,
+                    header: cell.header === true,
+                    children: safeInline(array(cell.children)),
+                  },
+                ];
+              }),
+            },
+          ];
+        }),
+      });
+    }
+  }
+  return blocks;
+}
+
+function safeInline(children: readonly unknown[]): readonly RichTextInline[] {
+  const inlines: RichTextInline[] = [];
+  for (const candidate of children) {
+    const inline = record(candidate);
+    if (inline?.type === "lineBreak") {
+      inlines.push({ type: "lineBreak" });
+      continue;
+    }
+    if (
+      (inline?.type === "text" || inline?.type === "strong") &&
+      typeof inline.value === "string"
+    ) {
+      const value = sanitizeInlineText(inline.value);
+      if (value) inlines.push({ type: inline.type, value });
+    }
+  }
+  return inlines;
+}
+
+function sanitizeInlineText(value: string): string {
+  return decodeEntities(value)
+    .replace(removedContainers, " ")
+    .replace(executableProtocol, "blocked:")
+    .replace(tags, " ")
+    .replace(/\r\n?/gu, "\n")
+    .normalize("NFC");
+}
+
+function record(value: unknown): Readonly<Record<string, unknown>> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Readonly<Record<string, unknown>>)
+    : null;
+}
+
+function array(value: unknown): readonly unknown[] {
+  return Array.isArray(value) ? value : [];
 }
 
 function decodeEntities(value: string): string {

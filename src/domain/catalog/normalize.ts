@@ -9,6 +9,8 @@ import {
 import { presentationFromNode, toSafePresentation } from "./presentation";
 import {
   DOMAIN_SCHEMA_VERSION,
+  type DomainEntityBase,
+  type DomainVocabulary,
   type CatalogNormalizationInput,
   type CostAmount,
   type DomainCatalog,
@@ -18,16 +20,19 @@ import {
   type EntityKind,
   type EvaluatorExpression,
   type LosslessDocument,
+  type LosslessExtension,
   type LosslessNode,
   type MigrationAlias,
   type NormalizationOptions,
   type Placement,
   type PlacementOverlay,
   type Provenance,
+  type ReferenceResolution,
   type Slot,
   type SlotId,
   type SourceNodeId,
 } from "./types";
+import { PINNED_DW4_VOCABULARY } from "./vocabulary";
 
 const structuralContainers = new Set([
   "attributeTypes",
@@ -59,6 +64,7 @@ const structuralContainers = new Set([
   "sharedSelectionEntryGroups",
 ]);
 const linkTags = new Set(["catalogueLink", "categoryLink", "entryLink", "infoLink"]);
+const fieldTags = new Set(["attribute", "characteristic"]);
 const expressionKinds = new Set<EntityKind>([
   "Constraint",
   "Condition",
@@ -110,7 +116,7 @@ interface NodeContext {
 }
 
 interface MutableEntity extends Omit<
-  DomainEntity,
+  DomainEntityBase<EntityKind>,
   | "categoryIds"
   | "costIds"
   | "constraintIds"
@@ -130,6 +136,8 @@ interface MutableEntity extends Omit<
   profileIds: EntityId[];
   ruleIds: EntityId[];
   slotIds: SlotId[];
+  amount?: CostAmount;
+  expression?: EvaluatorExpression;
 }
 
 interface MutableSlot extends Omit<Slot, "placementIds"> {
@@ -138,7 +146,13 @@ interface MutableSlot extends Omit<Slot, "placementIds"> {
 
 export class DomainNormalizationError extends Error {
   constructor(readonly diagnostics: readonly DomainDiagnostic[]) {
-    super("Domain catalog normalization failed");
+    super(
+      diagnostics.some((diagnostic) => diagnostic.code.includes("IDENTITY_COLLISION"))
+        ? "Domain catalog normalization failed: identity collision"
+        : diagnostics.some((diagnostic) => diagnostic.code.includes("REFERENCE"))
+          ? "Domain catalog normalization failed: reference resolution"
+          : "Domain catalog normalization failed",
+    );
     this.name = "DomainNormalizationError";
   }
 }
@@ -150,12 +164,15 @@ export function normalizeCatalog(
   validateInput(input);
   options.observeMemoryCheckpoint?.();
   const diagnostics: DomainDiagnostic[] = [];
+  const vocabulary = options.vocabulary ?? PINNED_DW4_VOCABULARY;
+  const referencePolicy = options.referencePolicy ?? "fatal";
   const entities = new Map<string, MutableEntity>();
   const placements = new Map<string, Placement>();
   const slots = new Map<string, MutableSlot>();
   const aliases = new Map<string, MigrationAlias>();
   const contexts = new Map<string, NodeContext>();
   const upstreamIndex = new Map<string, NodeContext[]>();
+  const identityIndex = new Map<string, string>();
   const rootEntityIds: EntityId[] = [];
 
   for (const document of input.graph.documents) {
@@ -169,6 +186,7 @@ export function normalizeCatalog(
     if (!context.kind || !context.entityId) continue;
     const node = context.node;
     const entity: MutableEntity = {
+      contractVersion: 1,
       id: context.entityId,
       kind: context.kind,
       sourceTag: node.tag,
@@ -177,6 +195,7 @@ export function normalizeCatalog(
       ...descriptionOf(node),
       attributes: safeAttributes(node.attributes),
       fields: fieldsOf(context, contexts, input),
+      extensions: extensionsOf(context, contexts, input),
       categoryIds: [],
       costIds: [],
       constraintIds: [],
@@ -207,11 +226,17 @@ export function normalizeCatalog(
       const id = slotId(entity.id);
       entity.slotIds.push(id);
       slots.set(id, {
+        contractVersion: 1,
         id,
         ownerId: entity.id,
         kind: context.kind,
         label: entity.label,
         placementIds: [],
+        semantics: {
+          contractVersion: 1,
+          selection: "option",
+          evaluation: "deferred-to-kan-32",
+        },
         provenance: entity.provenance,
       });
     }
@@ -233,7 +258,7 @@ export function normalizeCatalog(
     schemaVersion: DOMAIN_SCHEMA_VERSION,
     contentVersion: "unversioned",
     source: input.source,
-    entities: sortedRecord(entities),
+    entities: sortedRecord(entities) as unknown as Record<string, DomainEntity>,
     placements: sortedRecord(placements),
     slots: sortedRecord(slots),
     aliases: sortedRecord(aliases),
@@ -249,7 +274,25 @@ export function normalizeCatalog(
   ): void {
     const upstreamId = upstreamIdFromKey(node.key, node.attributes.id);
     const id = sourceNodeId(rootId, node.tag, upstreamId, parseOccurrence(node.key));
-    const kind = kindOf(node, ownerKind);
+    const locator = `${document.path}:${node.key}`;
+    const existingIdentity = identityIndex.get(id);
+    if (existingIdentity) {
+      diagnostics.push({
+        code: "CANONICAL_IDENTITY_COLLISION",
+        severity: "fatal",
+        sourceNodeId: id,
+        detail: { first: existingIdentity, second: locator },
+      });
+    } else identityIndex.set(id, locator);
+    const existingContext = contexts.get(node.key);
+    if (existingContext)
+      diagnostics.push({
+        code: "SOURCE_NODE_IDENTITY_COLLISION",
+        severity: "fatal",
+        sourceNodeId: id,
+        detail: { first: existingContext.document.path, second: document.path },
+      });
+    const kind = kindOf(node, ownerKind, vocabulary);
     const context = { document, rootId, node, id, entityId: kind ? entityId(id) : null, kind };
     contexts.set(node.key, context);
     if (node.attributes.id && context.entityId) {
@@ -285,6 +328,7 @@ export function normalizeCatalog(
         true,
         false,
         null,
+        null,
       );
       placements.set(placement.id, placement);
       if (ownerSlot) slots.get(ownerSlot)?.placementIds.push(placement.id);
@@ -294,6 +338,7 @@ export function normalizeCatalog(
     if (linkTags.has(context.node.tag) && ownerId) {
       const candidates = resolveTarget(context.node, contexts, upstreamIndex);
       const definitionId = candidates.length === 1 ? (candidates[0]?.entityId ?? null) : null;
+      const resolution = referenceResolution(context, candidates);
       const placement = createPlacement(
         context,
         contexts,
@@ -306,6 +351,7 @@ export function normalizeCatalog(
         candidates.length === 1 && definitionId !== null,
         candidates.length > 1,
         candidates.length === 1 ? (candidates[0]?.id ?? null) : null,
+        resolution,
       );
       placements.set(placement.id, placement);
       if (ownerSlot) slots.get(ownerSlot)?.placementIds.push(placement.id);
@@ -313,7 +359,7 @@ export function normalizeCatalog(
       else {
         diagnostics.push({
           code: candidates.length > 1 ? "AMBIGUOUS_REFERENCE" : "UNRESOLVED_REFERENCE",
-          severity: "warning",
+          severity: referencePolicy === "fatal" ? "fatal" : "warning",
           sourceNodeId: context.id,
           detail: { target: context.node.attributes.targetId ?? "", candidates: candidates.length },
         });
@@ -348,12 +394,42 @@ export function normalizeCatalog(
     }
     if (!existing)
       aliases.set(alias, {
+        contractVersion: 1,
         alias,
+        label: toSafePresentation(rawAlias),
         entityIds: [target],
         ambiguous: false,
         provenance: provenanceOf(context, input),
         explicit: true,
       });
+  }
+
+  function referenceResolution(
+    context: NodeContext,
+    candidates: readonly NodeContext[],
+  ): ReferenceResolution {
+    const upstreamId = context.node.attributes.targetId ?? "";
+    const resolved = candidates.length === 1 ? candidates[0] : undefined;
+    if (resolved?.entityId)
+      return {
+        contractVersion: 1,
+        state: "resolved",
+        upstreamId,
+        entityId: resolved.entityId,
+        sourceNodeId: resolved.id,
+        chain: [context.id, resolved.id],
+      };
+    if (candidates.length > 1)
+      return {
+        contractVersion: 1,
+        state: "ambiguous",
+        upstreamId,
+        candidateEntityIds: candidates.flatMap((candidate) =>
+          candidate.entityId ? [candidate.entityId] : [],
+        ),
+        chain: [context.id, ...candidates.map((candidate) => candidate.id)],
+      };
+    return { contractVersion: 1, state: "unresolved", upstreamId, chain: [context.id] };
   }
 }
 
@@ -362,14 +438,16 @@ function isSlotKind(kind: EntityKind): kind is Slot["kind"] {
 }
 
 export function parseCostAmount(value: string | undefined): CostAmount {
-  if (value === undefined || value.trim() === "") return { state: "missing" };
+  if (value === undefined || value.trim() === "") return { contractVersion: 1, state: "missing" };
   const normalized = value.trim().normalize("NFC");
   if (/^(?:n\/?a|not[ -]?applicable)$/iu.test(normalized))
-    return { state: "not-applicable", raw: normalized };
+    return { contractVersion: 1, state: "not-applicable", raw: normalized };
   if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/u.test(normalized))
-    return { state: "unknown", raw: normalized };
+    return { contractVersion: 1, state: "unknown", raw: normalized };
   const canonical = canonicalDecimal(normalized);
-  return canonical === "0" ? { state: "zero", value: "0" } : { state: "value", value: canonical };
+  return canonical === "0"
+    ? { contractVersion: 1, state: "zero", value: "0" }
+    : { contractVersion: 1, state: "value", value: canonical };
 }
 
 function canonicalDecimal(value: string): string {
@@ -384,7 +462,11 @@ function canonicalDecimal(value: string): string {
   return magnitude === "0" ? "0" : `${negative ? "-" : ""}${magnitude}`;
 }
 
-function kindOf(node: LosslessNode, ownerKind: EntityKind | null = null): EntityKind | null {
+function kindOf(
+  node: LosslessNode,
+  ownerKind: EntityKind | null,
+  vocabulary: DomainVocabulary,
+): EntityKind | null {
   switch (node.tag) {
     case "gameSystem":
       return "GameSystem";
@@ -397,7 +479,7 @@ function kindOf(node: LosslessNode, ownerKind: EntityKind | null = null): Entity
     case "categoryLink":
       return ownerKind === "Battlefleet" ? "BattlefleetElement" : null;
     case "selectionEntry": {
-      const semantic = semanticNamedKind(node.attributes.name);
+      const semantic = vocabularyKind(node.attributes.id, vocabulary);
       return (
         semantic ??
         (node.attributes.type === "unit"
@@ -408,9 +490,14 @@ function kindOf(node: LosslessNode, ownerKind: EntityKind | null = null): Entity
       );
     }
     case "selectionEntryGroup":
-      return semanticSlotKind(node.attributes.name);
+      return (
+        vocabularyKind(node.attributes.id, vocabulary) ??
+        (containsWeaponProfile(node, vocabulary) ? "Hardpoint" : "OptionSlot")
+      );
     case "profile":
-      return /weapon/iu.test(node.attributes.typeName ?? "") ? "Weapon" : "Profile";
+      return vocabulary.weaponProfileTypeIds.has(node.attributes.typeId ?? "")
+        ? "Weapon"
+        : "Profile";
     case "rule":
       return "Rule";
     case "costType":
@@ -432,23 +519,19 @@ function kindOf(node: LosslessNode, ownerKind: EntityKind | null = null): Entity
   }
 }
 
-function semanticSlotKind(name: string | undefined): EntityKind {
-  return (
-    semanticNamedKind(name) ??
-    (/battlefleet|element/iu.test(name?.normalize("NFC") ?? "")
-      ? "BattlefleetElement"
-      : "OptionSlot")
-  );
+function vocabularyKind(id: string | undefined, vocabulary: DomainVocabulary): Slot["kind"] | null {
+  if (!id) return null;
+  if (vocabulary.generatorIds.has(id)) return "Generator";
+  if (vocabulary.attachmentIds.has(id)) return "Attachment";
+  if (vocabulary.escortIds.has(id)) return "Escort";
+  if (vocabulary.doctrineIds.has(id)) return "Doctrine";
+  return null;
 }
 
-function semanticNamedKind(name: string | undefined): Slot["kind"] | null {
-  const value = name?.normalize("NFC") ?? "";
-  if (/hardpoint/iu.test(value)) return "Hardpoint";
-  if (/generator/iu.test(value)) return "Generator";
-  if (/attachment/iu.test(value)) return "Attachment";
-  if (/escort/iu.test(value)) return "Escort";
-  if (/doctrine/iu.test(value)) return "Doctrine";
-  return null;
+function containsWeaponProfile(node: LosslessNode, vocabulary: DomainVocabulary): boolean {
+  if (node.tag === "profile" && vocabulary.weaponProfileTypeIds.has(node.attributes.typeId ?? ""))
+    return true;
+  return (node.children ?? []).some((child) => containsWeaponProfile(child, vocabulary));
 }
 
 function identityQuality(node: LosslessNode): DomainEntity["identityQuality"] {
@@ -481,8 +564,10 @@ function fieldsOf(
       return;
     }
     if (new Set(["alias", "comment", "description"]).has(node.tag)) return;
+    if (!fieldTags.has(node.tag)) return;
     if (!childContext) return;
     fields.push({
+      contractVersion: 1,
       sourceTag: node.tag,
       order: order++,
       label: toSafePresentation(node.attributes.name ?? node.tag),
@@ -493,6 +578,63 @@ function fieldsOf(
   };
   for (const child of context.node.children ?? []) visit(child);
   return fields;
+}
+
+function extensionsOf(
+  context: NodeContext,
+  contexts: ReadonlyMap<string, NodeContext>,
+  input: CatalogNormalizationInput,
+): readonly LosslessExtension[] {
+  const handledFields = new Set(["alias", "attribute", "characteristic", "comment", "description"]);
+  const extensions: LosslessExtension[] = [];
+  let order = 0;
+  const visit = (node: LosslessNode): void => {
+    const childContext = contexts.get(node.key);
+    if (childContext?.entityId) return;
+    if (structuralContainers.has(node.tag)) {
+      for (const child of node.children ?? []) visit(child);
+      return;
+    }
+    if (handledFields.has(node.tag) || linkTags.has(node.tag)) {
+      for (const child of node.children ?? []) visit(child);
+      return;
+    }
+    if (!childContext) return;
+    extensions.push(extensionOf(childContext, input, order++));
+  };
+  for (const child of context.node.children ?? []) visit(child);
+  return extensions;
+}
+
+function extensionOf(
+  context: NodeContext,
+  input: CatalogNormalizationInput,
+  order: number,
+): LosslessExtension {
+  return {
+    contractVersion: 1,
+    sourceTag: context.node.tag,
+    order,
+    attributes: safeAttributes(context.node.attributes),
+    value: presentationFromNode(context.node.text, context.node.richText),
+    children: (context.node.children ?? []).map((child, childOrder) =>
+      extensionOf(
+        {
+          ...context,
+          node: child,
+          id: sourceNodeId(
+            context.rootId,
+            child.tag,
+            upstreamIdFromKey(child.key, child.attributes.id),
+            parseOccurrence(child.key),
+          ),
+        },
+        input,
+        childOrder,
+      ),
+    ),
+    provenance: provenanceOf(context, input),
+  };
 }
 
 function safeAttributes(
@@ -557,15 +699,47 @@ function expressionOf(
       .sort(([left], [right]) => left.localeCompare(right)),
   );
   return {
+    contractVersion: 1,
     operator,
     field,
     scope,
     value: attributes.value ?? null,
     references,
+    referenceResolutions: attributes.childId
+      ? [expressionResolution(attributes.childId, context, candidates)]
+      : [],
     flags,
     evaluable: reasons.length === 0,
     unevaluableReasons: reasons,
   };
+}
+
+function expressionResolution(
+  upstreamId: string,
+  context: NodeContext,
+  candidates: readonly NodeContext[],
+): ReferenceResolution {
+  const target = candidates.length === 1 ? candidates[0] : undefined;
+  if (target?.entityId)
+    return {
+      contractVersion: 1,
+      state: "resolved",
+      upstreamId,
+      entityId: target.entityId,
+      sourceNodeId: target.id,
+      chain: [context.id, target.id],
+    };
+  if (candidates.length > 1)
+    return {
+      contractVersion: 1,
+      state: "ambiguous",
+      upstreamId,
+      candidateEntityIds: candidates.flatMap((candidate) =>
+        candidate.entityId ? [candidate.entityId] : [],
+      ),
+      chain: [context.id, ...candidates.map((candidate) => candidate.id)],
+    };
+  return { contractVersion: 1, state: "unresolved", upstreamId, chain: [context.id] };
 }
 
 function isKnownField(value: string): boolean {
@@ -613,9 +787,11 @@ function createPlacement(
   resolved: boolean,
   ambiguous: boolean,
   targetSourceNodeId: SourceNodeId | null,
+  resolution: ReferenceResolution | null,
 ): Placement {
   const overlay = overlayOf(context, contexts);
   return {
+    contractVersion: 1,
     id: placementId(ownerId, context.id, order, linkKind),
     ownerId,
     definitionId,
@@ -625,6 +801,7 @@ function createPlacement(
     resolved,
     ambiguous,
     targetSourceNodeId,
+    resolution,
     overlay,
     provenance: provenanceOf(context, input),
   };

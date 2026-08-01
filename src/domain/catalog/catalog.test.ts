@@ -4,9 +4,12 @@ import {
   chunkDomainCatalog,
   domainCatalogSchema,
   MAX_CHUNK_BYTES,
+  loadDomainCatalog,
   normalizeCatalog,
   parseCostAmount,
+  persistChunkedCatalog,
   reconstructDomainCatalog,
+  sourceNodeId,
   toSafePresentation,
   type CatalogNormalizationInput,
   type ContentHasher,
@@ -124,7 +127,7 @@ describe("normalized catalog contract", () => {
       flags: { includeChildSelections: "true" },
       references: [],
     });
-    expect(condition.expression!.unevaluableReasons).toEqual([
+    expect(condition.expression.unevaluableReasons).toEqual([
       "UNKNOWN_OPERATOR",
       "UNKNOWN_FIELD",
       "UNKNOWN_SCOPE",
@@ -185,7 +188,7 @@ describe("normalized catalog contract", () => {
       evaluable: true,
       references: ["dw4:root:selectionEntry:target"],
     });
-    expect(condition.expression!.field).toBe("89fa-eeaa-958f-ca32");
+    expect(condition.expression.field).toBe("89fa-eeaa-958f-ca32");
     const alias = Object.values(catalog.aliases)[0]!;
     expect(alias).toMatchObject({ ambiguous: true, explicit: true });
     expect(alias.entityIds).toEqual(["dw4:root:rule:r1", "dw4:root:rule:r2"]);
@@ -230,29 +233,31 @@ describe("normalized catalog contract", () => {
   });
 
   it("reports dangling and ambiguous references without inventing targets", () => {
-    const catalog = normalize(
-      root([
-        node("selectionEntries", {}, [
-          node("selectionEntry", { id: "dup", type: "upgrade", name: "A" }, [], "dup", 1),
-          node("selectionEntry", { id: "dup", type: "upgrade", name: "B" }, [], "dup", 2),
-          node("selectionEntry", { id: "owner", type: "unit", name: "Owner" }, [
-            node("entryLinks", {}, [
-              node("entryLink", {
-                id: "a",
-                targetId: "dup",
-                type: "selectionEntry",
-                name: "Ambiguous",
-              }),
-              node("entryLink", {
-                id: "b",
-                targetId: "absent",
-                type: "selectionEntry",
-                name: "Dangling",
-              }),
-            ]),
+    const rootNode = root([
+      node("selectionEntries", {}, [
+        node("selectionEntry", { id: "dup", type: "upgrade", name: "A" }, [], "dup", 1),
+        node("selectionEntry", { id: "dup", type: "upgrade", name: "B" }, [], "dup", 2),
+        node("selectionEntry", { id: "owner", type: "unit", name: "Owner" }, [
+          node("entryLinks", {}, [
+            node("entryLink", {
+              id: "a",
+              targetId: "dup",
+              type: "selectionEntry",
+              name: "Ambiguous",
+            }),
+            node("entryLink", {
+              id: "b",
+              targetId: "absent",
+              type: "selectionEntry",
+              name: "Dangling",
+            }),
           ]),
         ]),
       ]),
+    ]);
+    const catalog = normalizeCatalog(
+      { source, graph: { schemaVersion: 2, documents: [{ ...document, root: rootNode }] } },
+      { referencePolicy: "report" },
     );
     const references = Object.values(catalog.placements).filter(
       (placement) => placement.linkKind === "reference",
@@ -273,12 +278,12 @@ describe("normalized catalog contract", () => {
   });
 
   it.each([
-    [undefined, { state: "missing" }],
-    ["N/A", { state: "not-applicable", raw: "N/A" }],
-    ["future", { state: "unknown", raw: "future" }],
-    ["0.000", { state: "zero", value: "0" }],
-    ["001.5000", { state: "unknown", raw: "001.5000" }],
-    ["350.5000", { state: "value", value: "350.5" }],
+    [undefined, { contractVersion: 1, state: "missing" }],
+    ["N/A", { contractVersion: 1, state: "not-applicable", raw: "N/A" }],
+    ["future", { contractVersion: 1, state: "unknown", raw: "future" }],
+    ["0.000", { contractVersion: 1, state: "zero", value: "0" }],
+    ["001.5000", { contractVersion: 1, state: "unknown", raw: "001.5000" }],
+    ["350.5000", { contractVersion: 1, state: "value", value: "350.5" }],
   ])("preserves explicit cost state for %s", (raw, expected) => {
     expect(parseCostAmount(raw)).toEqual(expected);
   });
@@ -358,6 +363,234 @@ describe("normalized catalog contract", () => {
         expect(entity.amount?.state).toMatch(/zero|value/);
       }
     }
+  });
+
+  it("encodes canonical ID segments injectively and rejects graph identity collisions", () => {
+    expect(sourceNodeId("root", "tag", "a b")).not.toBe(sourceNodeId("root", "tag", "a-b"));
+    expect(sourceNodeId("root", "tag", "x~2")).not.toBe(sourceNodeId("root", "tag", "x", 2));
+    expect(sourceNodeId("r:1", "tag", "x")).not.toBe(sourceNodeId("r", "1:tag", "x"));
+
+    const duplicateDocument = root([
+      node("selectionEntries", {}, [
+        node("selectionEntry", { id: "same", type: "unit", name: "One" }, [], "same"),
+      ]),
+    ]);
+    const input: CatalogNormalizationInput = {
+      source,
+      graph: {
+        schemaVersion: 2,
+        documents: [
+          { ...document, path: "one.cat", root: duplicateDocument },
+          { ...document, path: "two.cat", root: structuredClone(duplicateDocument) },
+        ],
+      },
+    };
+    expect(() => normalizeCatalog(input)).toThrow(/identity collision/iu);
+    const repeated = node("selectionEntry", { id: "repeat", type: "unit", name: "Repeat" });
+    expect(() => normalize(root([node("selectionEntries", {}, [repeated, repeated])]))).toThrow(
+      /identity collision/iu,
+    );
+  });
+
+  it("rejects tampered indexes, lookup coverage and broken reference closure", async () => {
+    const catalog = normalize(
+      root([
+        node("selectionEntries", {}, [
+          node("selectionEntry", { id: "unit", type: "unit", name: "Unit" }),
+        ]),
+      ]),
+    );
+    const chunked = await chunkDomainCatalog(catalog, hasher);
+    await expect(
+      reconstructDomainCatalog(
+        {
+          ...chunked,
+          index: { ...chunked.index, contentVersion: "0".repeat(64) },
+        },
+        hasher,
+      ),
+    ).rejects.toThrow(/index|content version/iu);
+    await expect(
+      reconstructDomainCatalog(
+        {
+          ...chunked,
+          index: { ...chunked.index, entityChunkById: {} },
+        },
+        hasher,
+      ),
+    ).rejects.toThrow(/lookup|index|content version/iu);
+
+    const placementId = Object.keys(catalog.placements)[0]!;
+    const broken = {
+      ...catalog,
+      placements: {
+        ...catalog.placements,
+        [placementId]: {
+          ...catalog.placements[placementId]!,
+          ownerId: "dw4:missing:owner:id" as never,
+        },
+      },
+    };
+    await expect(
+      reconstructDomainCatalog(await chunkDomainCatalog(broken, hasher), hasher),
+    ).rejects.toThrow(/closure/iu);
+  });
+
+  it("uses structural vocabulary rather than display labels", () => {
+    const structuralHardpoint = node(
+      "selectionEntryGroup",
+      { id: "slot", name: "Completely arbitrary" },
+      [
+        node("selectionEntries", {}, [
+          node("selectionEntry", { id: "option", type: "upgrade", name: "Choice" }, [
+            node("profiles", {}, [
+              node("profile", {
+                id: "weapon",
+                typeId: "9882-7112-4aa5-ffc1",
+                typeName: "Not a display hint",
+                name: "Profile",
+              }),
+            ]),
+          ]),
+        ]),
+      ],
+    );
+    const catalog = normalize(
+      root([
+        node("selectionEntryGroups", {}, [
+          structuralHardpoint,
+          node("selectionEntryGroup", { id: "fake", name: "Hardpoint Generator Escort" }),
+        ]),
+      ]),
+    );
+    expect(
+      Object.values(catalog.entities).find((entity) => entity.id.endsWith(":slot"))?.kind,
+    ).toBe("Hardpoint");
+    expect(
+      Object.values(catalog.entities).find((entity) => entity.id.endsWith(":fake"))?.kind,
+    ).toBe("OptionSlot");
+    expect(
+      Object.values(catalog.entities).find((entity) => entity.id.endsWith(":weapon"))?.kind,
+    ).toBe("Weapon");
+  });
+
+  it("preserves safe rich-text AST, extensions and reportable unresolved resolution chains", () => {
+    const future = {
+      ...node("futureExtension", { mode: "future" }),
+      text: "kept",
+      children: [{ ...node("futureChild", { flag: "yes" }), text: "nested" }],
+    };
+    const linked = node("selectionEntry", { id: "owner", type: "unit", name: "Owner" }, [
+      node("description", {}, [], "description"),
+      future,
+      node("profiles", {}, [
+        node("profile", { id: "profile", name: "Profile" }, [
+          node("characteristics", {}, [
+            node("characteristic", { name: "Known field" }, [
+              { ...node("futureFieldChild", { mode: "nested" }), text: "preserved" },
+            ]),
+          ]),
+        ]),
+      ]),
+      node("entryLinks", {}, [
+        node("entryLink", {
+          id: "missing-link",
+          targetId: "missing",
+          type: "selectionEntry",
+          name: "Missing",
+        }),
+      ]),
+    ]);
+    const description = linked.children![0]! as LosslessNode & { richText: unknown };
+    (description as { richText: unknown }).richText = {
+      type: "document",
+      children: [
+        { type: "paragraph", children: [{ type: "strong", value: "Bold" }, { type: "lineBreak" }] },
+        {
+          type: "table",
+          rows: [
+            {
+              type: "tableRow",
+              cells: [
+                { type: "tableCell", header: true, children: [{ type: "text", value: "Cell" }] },
+              ],
+            },
+          ],
+        },
+      ],
+      plainText: "Bold\nCell",
+      contentUnavailable: false,
+      diagnostics: [],
+    };
+    const input = root([node("selectionEntries", {}, [linked])]);
+    expect(() => normalize(input)).toThrow(/reference/iu);
+    const catalog = normalizeCatalog(
+      { source, graph: { schemaVersion: 2, documents: [{ ...document, root: input }] } },
+      { referencePolicy: "report" },
+    );
+    const owner = Object.values(catalog.entities).find((entity) => entity.id.endsWith(":owner"))!;
+    expect(owner.description?.blocks.map((block) => block.type)).toEqual(["paragraph", "table"]);
+    expect(owner.extensions).toEqual([
+      expect.objectContaining({
+        sourceTag: "futureExtension",
+        children: [expect.objectContaining({ sourceTag: "futureChild" })],
+      }),
+    ]);
+    const profile = Object.values(catalog.entities).find((entity) =>
+      entity.id.endsWith(":profile"),
+    )!;
+    expect(profile.extensions).toHaveLength(1);
+    expect(profile.extensions[0]?.sourceTag).toBe("futureFieldChild");
+    expect(profile.extensions[0]?.value.plainText).toBe("preserved");
+    const unresolved = Object.values(catalog.placements).find(
+      (placement) => placement.linkKind === "reference",
+    )!;
+    expect(unresolved.resolution).toMatchObject({
+      state: "unresolved",
+      upstreamId: "missing",
+      chain: [unresolved.provenance.sourceNodeId],
+    });
+  });
+
+  it("persists and loads a validated indexed repository", async () => {
+    const catalog = normalize(
+      root([
+        node("selectionEntries", {}, [
+          node("selectionEntry", { id: "unit", type: "unit", name: "Unit" }),
+        ]),
+      ]),
+    );
+    const chunked = await chunkDomainCatalog(catalog, hasher);
+    const indexes = new Map<string, typeof chunked.index>();
+    const storedChunks = new Map<string, string>();
+    const port = {
+      contractVersion: 1 as const,
+      writeChunk(sha256: string, value: string) {
+        storedChunks.set(sha256, value);
+        return Promise.resolve();
+      },
+      writeIndex(index: typeof chunked.index) {
+        indexes.set(index.contentVersion, index);
+        return Promise.resolve();
+      },
+      loadIndex(contentVersion: string) {
+        const index = indexes.get(contentVersion);
+        if (!index) return Promise.reject(new Error("missing index"));
+        return Promise.resolve(index);
+      },
+      loadChunk(sha256: string) {
+        const value = storedChunks.get(sha256);
+        if (!value) return Promise.reject(new Error("missing chunk"));
+        return Promise.resolve(value);
+      },
+    };
+    await persistChunkedCatalog(chunked, port);
+    const loaded = await loadDomainCatalog(chunked.index.contentVersion, port, hasher);
+    expect(loaded.contentVersion).toBe(chunked.index.contentVersion);
+    const target = Object.keys(loaded.entities)[0]!;
+    const started = performance.now();
+    for (let index = 0; index < 10_000; index += 1) expect(loaded.entities[target]).toBeDefined();
+    expect((performance.now() - started) / 10_000).toBeLessThan(50);
   });
 });
 

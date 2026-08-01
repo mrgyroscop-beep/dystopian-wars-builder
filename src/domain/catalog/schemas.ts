@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DOMAIN_SCHEMA_VERSION, entityKinds } from "./types";
 
+const contractVersion = z.literal(1);
 const brandedId = z.string().regex(/^dw4:[^:]+:[^:]+:[^:]+/u);
 const sourcePin = z
   .object({
@@ -10,24 +11,35 @@ const sourcePin = z
     commitTimestamp: z.iso.datetime({ offset: true }),
   })
   .strict();
-const presentation = z
+const inline = z
+  .object({ type: z.enum(["text", "strong", "lineBreak"]), value: z.string().optional() })
+  .strict();
+const paragraph = z.object({ type: z.literal("paragraph"), children: z.array(inline) }).strict();
+const table = z
   .object({
-    plainText: z.string(),
-    blocks: z.array(
+    type: z.literal("table"),
+    rows: z.array(
       z
         .object({
-          type: z.literal("paragraph"),
-          children: z.array(
+          type: z.literal("tableRow"),
+          cells: z.array(
             z
               .object({
-                type: z.enum(["text", "strong", "lineBreak"]),
-                value: z.string().optional(),
+                type: z.literal("tableCell"),
+                header: z.boolean(),
+                children: z.array(inline),
               })
               .strict(),
           ),
         })
         .strict(),
     ),
+  })
+  .strict();
+const presentation = z
+  .object({
+    plainText: z.string(),
+    blocks: z.array(z.union([paragraph, table])),
     contentUnavailable: z.boolean(),
     diagnostics: z.array(z.string()),
   })
@@ -45,29 +57,88 @@ const provenance = z
   })
   .strict();
 const costAmount = z.discriminatedUnion("state", [
-  z.object({ state: z.literal("missing") }).strict(),
-  z.object({ state: z.literal("unknown"), raw: z.string() }).strict(),
-  z.object({ state: z.literal("not-applicable"), raw: z.string() }).strict(),
-  z.object({ state: z.literal("zero"), value: z.literal("0") }).strict(),
+  z.object({ contractVersion, state: z.literal("missing") }).strict(),
+  z.object({ contractVersion, state: z.literal("unknown"), raw: z.string() }).strict(),
+  z.object({ contractVersion, state: z.literal("not-applicable"), raw: z.string() }).strict(),
+  z.object({ contractVersion, state: z.literal("zero"), value: z.literal("0") }).strict(),
   z
-    .object({ state: z.literal("value"), value: z.string().regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/u) })
+    .object({
+      contractVersion,
+      state: z.literal("value"),
+      value: z.string().regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/u),
+    })
+    .strict(),
+]);
+const resolution = z.discriminatedUnion("state", [
+  z
+    .object({
+      contractVersion,
+      state: z.literal("resolved"),
+      upstreamId: z.string(),
+      entityId: brandedId,
+      sourceNodeId: brandedId,
+      chain: z.array(brandedId),
+    })
+    .strict(),
+  z
+    .object({
+      contractVersion,
+      state: z.literal("unresolved"),
+      upstreamId: z.string(),
+      chain: z.array(brandedId),
+    })
+    .strict(),
+  z
+    .object({
+      contractVersion,
+      state: z.literal("ambiguous"),
+      upstreamId: z.string(),
+      candidateEntityIds: z.array(brandedId),
+      chain: z.array(brandedId),
+    })
     .strict(),
 ]);
 const expression = z
   .object({
+    contractVersion,
     operator: z.string().nullable(),
     field: z.string().nullable(),
     scope: z.string().nullable(),
     value: z.string().nullable(),
     references: z.array(brandedId),
+    referenceResolutions: z.array(resolution),
     flags: z.record(z.string(), z.string()),
     evaluable: z.boolean(),
     unevaluableReasons: z.array(z.string()),
   })
   .strict();
-
-export const domainEntitySchema = z
+const extension: z.ZodType = z.lazy(() =>
+  z
+    .object({
+      contractVersion,
+      sourceTag: z.string().min(1),
+      order: z.number().int().nonnegative(),
+      attributes: z.record(z.string(), z.string()),
+      value: presentation,
+      children: z.array(extension),
+      provenance,
+    })
+    .strict(),
+);
+const field = z
   .object({
+    contractVersion,
+    sourceTag: z.string().min(1),
+    order: z.number().int().nonnegative(),
+    label: presentation,
+    value: presentation,
+    attributes: z.record(z.string(), z.string()),
+    provenance,
+  })
+  .strict();
+const entityBase = z
+  .object({
+    contractVersion,
     id: brandedId,
     kind: z.enum(entityKinds),
     sourceTag: z.string().min(1),
@@ -75,18 +146,8 @@ export const domainEntitySchema = z
     label: presentation,
     description: presentation.optional(),
     attributes: z.record(z.string(), z.string()),
-    fields: z.array(
-      z
-        .object({
-          sourceTag: z.string().min(1),
-          order: z.number().int().nonnegative(),
-          label: presentation,
-          value: presentation,
-          attributes: z.record(z.string(), z.string()),
-          provenance,
-        })
-        .strict(),
-    ),
+    fields: z.array(field),
+    extensions: z.array(extension),
     categoryIds: z.array(brandedId),
     costIds: z.array(brandedId),
     constraintIds: z.array(brandedId),
@@ -96,14 +157,54 @@ export const domainEntitySchema = z
     profileIds: z.array(brandedId),
     ruleIds: z.array(brandedId),
     slotIds: z.array(z.string()),
-    amount: costAmount.optional(),
-    expression: expression.optional(),
     provenance,
   })
   .strict();
 
+const plainEntity = <
+  Kind extends Exclude<
+    (typeof entityKinds)[number],
+    "Cost" | "Constraint" | "ConditionGroup" | "Condition" | "Modifier" | "Repeat"
+  >,
+>(
+  kind: Kind,
+) => entityBase.extend({ kind: z.literal(kind) });
+const expressionEntity = <
+  Kind extends "Constraint" | "ConditionGroup" | "Condition" | "Modifier" | "Repeat",
+>(
+  kind: Kind,
+) => entityBase.extend({ kind: z.literal(kind), expression });
+
+export const domainEntitySchema = z.discriminatedUnion("kind", [
+  plainEntity("GameSystem"),
+  plainEntity("Faction"),
+  plainEntity("Battlefleet"),
+  plainEntity("BattlefleetElement"),
+  plainEntity("Category"),
+  plainEntity("Unit"),
+  plainEntity("Model"),
+  plainEntity("Profile"),
+  plainEntity("Weapon"),
+  plainEntity("OptionSlot"),
+  plainEntity("Option"),
+  plainEntity("Hardpoint"),
+  plainEntity("Generator"),
+  plainEntity("Attachment"),
+  plainEntity("Escort"),
+  plainEntity("Doctrine"),
+  plainEntity("Rule"),
+  plainEntity("CostType"),
+  entityBase.extend({ kind: z.literal("Cost"), amount: costAmount }),
+  expressionEntity("Constraint"),
+  expressionEntity("ConditionGroup"),
+  expressionEntity("Condition"),
+  expressionEntity("Modifier"),
+  expressionEntity("Repeat"),
+]);
+
 export const placementSchema = z
   .object({
+    contractVersion,
     id: z.string().min(1),
     ownerId: brandedId,
     definitionId: brandedId.nullable(),
@@ -113,6 +214,7 @@ export const placementSchema = z
     resolved: z.boolean(),
     ambiguous: z.boolean(),
     targetSourceNodeId: brandedId.nullable(),
+    resolution: resolution.nullable(),
     overlay: z
       .object({
         categoryIds: z.array(brandedId),
@@ -139,6 +241,7 @@ export const domainCatalogSchema = z
       z.string(),
       z
         .object({
+          contractVersion,
           id: z.string(),
           ownerId: brandedId,
           kind: z.enum([
@@ -151,6 +254,13 @@ export const domainCatalogSchema = z
           ]),
           label: presentation,
           placementIds: z.array(z.string()),
+          semantics: z
+            .object({
+              contractVersion,
+              selection: z.literal("option"),
+              evaluation: z.literal("deferred-to-kan-32"),
+            })
+            .strict(),
           provenance,
         })
         .strict(),
@@ -159,7 +269,9 @@ export const domainCatalogSchema = z
       z.string(),
       z
         .object({
+          contractVersion,
           alias: brandedId,
+          label: presentation,
           entityIds: z.array(brandedId).min(1),
           ambiguous: z.boolean(),
           provenance,

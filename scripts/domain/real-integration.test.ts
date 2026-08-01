@@ -12,7 +12,9 @@ import {
   canonicalJson,
   chunkDomainCatalog,
   MAX_CHUNK_BYTES,
+  loadDomainCatalog,
   normalizeCatalog,
+  persistChunkedCatalog,
   reconstructDomainCatalog,
   type ContentHasher,
   type DomainCatalog,
@@ -119,16 +121,18 @@ describe("pinned real domain model", () => {
     expect(
       modelCosts.some(
         (cost) =>
+          cost.kind === "Cost" &&
           cost.label.plainText === "Points" &&
-          cost.amount?.state === "value" &&
+          cost.amount.state === "value" &&
           cost.amount.value === "350",
       ),
     ).toBe(true);
     expect(
       modelCosts.some(
         (cost) =>
+          cost.kind === "Cost" &&
           cost.label.plainText === "VP per Model" &&
-          cost.amount?.state === "value" &&
+          cost.amount.state === "value" &&
           cost.amount.value === "9",
       ),
     ).toBe(true);
@@ -136,7 +140,7 @@ describe("pinned real domain model", () => {
     const hardpoints = unitPlacements
       .map((id) => first.entities[id])
       .filter((entity) => entity?.kind === "Hardpoint");
-    expect(hardpoints.map((entity) => entity!.label.plainText).sort()).toEqual([
+    expect(hardpoints.map((entity) => entity.label.plainText).sort()).toEqual([
       "Heavy Hardpoint: FPS",
       "Heavy Hardpoint: FPS",
       "Heavy Hardpoint: FPS",
@@ -154,7 +158,9 @@ describe("pinned real domain model", () => {
     expect(
       entities.some((entity) => entity.kind === "Profile" && entity.label.plainText === "Akita"),
     ).toBe(true);
-    expect(entities.some((entity) => entity.expression && "effectiveValue" in entity)).toBe(false);
+    expect(entities.some((entity) => "expression" in entity && "effectiveValue" in entity)).toBe(
+      false,
+    );
   });
 
   it("has unique identities, reference closure and deterministic reconstruction", async () => {
@@ -166,6 +172,34 @@ describe("pinned real domain model", () => {
     expect(chunks.index.chunks.every((chunk) => chunk.bytes <= MAX_CHUNK_BYTES)).toBe(true);
     const reconstructed = await reconstructDomainCatalog(chunks, hasher);
     expect({ ...reconstructed, contentVersion: "unversioned" }).toEqual(first);
+    const indexes = new Map<string, typeof chunks.index>();
+    const storedChunks = new Map<string, string>();
+    const repository = {
+      contractVersion: 1 as const,
+      writeChunk(sha256: string, value: string) {
+        storedChunks.set(sha256, value);
+        return Promise.resolve();
+      },
+      writeIndex(index: typeof chunks.index) {
+        indexes.set(index.contentVersion, index);
+        return Promise.resolve();
+      },
+      loadIndex(contentVersion: string) {
+        const index = indexes.get(contentVersion);
+        if (!index) return Promise.reject(new Error("missing persisted index"));
+        return Promise.resolve(index);
+      },
+      loadChunk(sha256: string) {
+        const value = storedChunks.get(sha256);
+        if (!value) return Promise.reject(new Error("missing persisted chunk"));
+        return Promise.resolve(value);
+      },
+    };
+    await persistChunkedCatalog(chunks, repository);
+    const loaded = await loadDomainCatalog(chunks.index.contentVersion, repository, hasher);
+    expect(loaded).toEqual(reconstructed);
+    for (const id of Object.keys(loaded.entities))
+      expect(chunks.index.entityChunkById[id]).toMatch(/^[0-9a-f]{64}$/u);
   });
 
   it("meets normalization, heap, index and lookup budgets", async () => {
@@ -203,6 +237,8 @@ describe("pinned real domain model", () => {
       peakHeapBytes,
       peakHeapMeasurement: "normalizer-checkpoints",
       sourcePayloadPublished: false,
+      persistedRoundTrip: true,
+      indexedLookupBudgetMs: 50,
     };
     const evidenceDirectory = path.join(repositoryRoot, "artifacts");
     await mkdir(evidenceDirectory, { recursive: true });

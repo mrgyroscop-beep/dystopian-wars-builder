@@ -59,6 +59,9 @@ jobs:
       - name: Catalog importer real-source, reproducibility and lifecycle evidence
         run: npm run test:catalog:real
 
+      - name: Domain model real-source, persistence and lookup budgets
+        run: npm run test:domain:real
+
       - name: Worker integration tests
         run: npm run test:worker
 

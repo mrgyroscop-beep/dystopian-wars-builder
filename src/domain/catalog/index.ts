@@ -4,3 +4,4 @@ export * from "./normalize";
 export * from "./presentation";
 export * from "./schemas";
 export * from "./types";
+export * from "./vocabulary";

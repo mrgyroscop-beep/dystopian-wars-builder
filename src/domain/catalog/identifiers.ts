@@ -1,7 +1,5 @@
 import type { EntityId, PlacementId, SlotId, SourceNodeId } from "./types";
 
-const unsafe = /[^A-Za-z0-9._-]+/gu;
-
 export function sourceNodeId(
   rootId: string,
   tag: string,
@@ -42,10 +40,10 @@ export function upstreamIdFromKey(nodeKey: string, explicitId?: string): string 
 }
 
 function segment(value: string): string {
-  const normalized = value
-    .normalize("NFC")
-    .trim()
-    .replace(unsafe, "-")
-    .replace(/^-+|-+$/gu, "");
-  return normalized || "missing";
+  const normalized = value.normalize("NFC");
+  if (normalized.length === 0) return "%";
+  return encodeURIComponent(normalized).replace(
+    /[!'()*~]/gu,
+    (character) => `%${character.codePointAt(0)!.toString(16).toUpperCase()}`,
+  );
 }

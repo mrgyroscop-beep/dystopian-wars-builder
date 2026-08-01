@@ -29,7 +29,7 @@
     "test:e2e:smoke": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "catalog": "node scripts/catalog/cli.mjs",
-    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run check:architecture && npm run test:catalog:policy && npm run test:unit && npm run test:catalog && npm run test:worker && npm run build && npm run test:catalog:bundle && npm run test:e2e:smoke"
+    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run check:architecture && npm run test:catalog:policy && npm run test:unit && npm run test:catalog && npm run test:domain:real && npm run test:worker && npm run build && npm run test:catalog:bundle && npm run test:e2e:smoke"
   },
   "dependencies": {
     "hono": "4.12.33",
