@@ -1,7 +1,78 @@
+import { execFileSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+const reviewSha = resolveReviewSha();
+
+function resolveReviewSha(): string {
+  const candidate =
+    process.env.REVIEW_SHA ?? execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" });
+  const normalized = candidate.trim().toLowerCase();
+
+  if (!/^[0-9a-f]{40}$/.test(normalized)) {
+    throw new Error(`Review SHA must be a full 40-character commit SHA, received: ${candidate}`);
+  }
+
+  return normalized;
+}
+
+interface EvidenceDescriptor {
+  route: string;
+  state: string;
+  viewport: { name: string; width: number; height: number };
+}
+
+async function collectDomEvidence(page: Page) {
+  return page.evaluate(() => ({
+    h1Count: document.querySelectorAll("h1").length,
+    headerCount: document.querySelectorAll("header.site-header").length,
+    navCount: document.querySelectorAll("nav[aria-label='Основная навигация']").length,
+    mainCount: document.querySelectorAll("main").length,
+    viewportWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    title: document.title,
+    h1: document.querySelector("h1")?.textContent?.trim() ?? null,
+  }));
+}
+
+async function captureReviewEvidence(
+  page: Page,
+  descriptor: EvidenceDescriptor,
+  directory: string,
+  basename: string,
+) {
+  const dom = await collectDomEvidence(page);
+  const metadata = {
+    reviewSha,
+    route: descriptor.route,
+    state: descriptor.state,
+    viewport: descriptor.viewport,
+    dom,
+  };
+
+  expect(dom.h1Count).toBe(1);
+  expect(dom.headerCount).toBe(1);
+  expect(dom.navCount).toBe(1);
+  expect(dom.mainCount).toBe(1);
+  expect(dom.scrollWidth).toBeLessThanOrEqual(dom.viewportWidth);
+
+  await mkdir(directory, { recursive: true });
+  await Promise.all([
+    page.screenshot({
+      path: path.join(directory, `${basename}.png`),
+      fullPage: true,
+    }),
+    writeFile(
+      path.join(directory, `${basename}.json`),
+      `${JSON.stringify(metadata, null, 2)}\n`,
+      "utf8",
+    ),
+  ]);
+
+  return metadata;
+}
 
 test("supports SPA routes, keyboard navigation and browser history", async ({ page }) => {
   await page.goto("/");
@@ -82,35 +153,59 @@ for (const viewport of evidenceViewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto("/rosters/scaffold-demo");
 
-    const domEvidence = await page.evaluate(() => ({
-      h1Count: document.querySelectorAll("h1").length,
-      headerCount: document.querySelectorAll("header.site-header").length,
-      navCount: document.querySelectorAll("nav[aria-label='Основная навигация']").length,
-      mainCount: document.querySelectorAll("main").length,
-      viewportWidth: document.documentElement.clientWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-    }));
-
-    expect(domEvidence.h1Count).toBe(1);
-    expect(domEvidence.headerCount).toBe(1);
-    expect(domEvidence.navCount).toBe(1);
-    expect(domEvidence.mainCount).toBe(1);
-    expect(domEvidence.scrollWidth).toBeLessThanOrEqual(domEvidence.viewportWidth);
-
     const screenshotDirectory = path.resolve("artifacts/screenshots");
     const a11yDirectory = path.resolve("artifacts/a11y");
-    await Promise.all([
-      mkdir(screenshotDirectory, { recursive: true }),
-      mkdir(a11yDirectory, { recursive: true }),
-    ]);
-    await page.screenshot({
-      path: path.join(screenshotDirectory, `${viewport.name}.png`),
-      fullPage: true,
-    });
+    const metadata = await captureReviewEvidence(
+      page,
+      { route: "/rosters/scaffold-demo", state: "workspace", viewport },
+      screenshotDirectory,
+      viewport.name,
+    );
+    await mkdir(a11yDirectory, { recursive: true });
     await writeFile(
       path.join(a11yDirectory, `${viewport.name}.json`),
-      `${JSON.stringify(domEvidence, null, 2)}\n`,
+      `${JSON.stringify(metadata, null, 2)}\n`,
       "utf8",
     );
   });
+}
+
+const reviewViewports = [
+  { name: "desktop-1280x800", width: 1280, height: 800 },
+  { name: "mobile-360x800", width: 360, height: 800 },
+] as const;
+
+const routeEvidence = [
+  { slug: "library", route: "/", state: "default" },
+  { slug: "new-roster", route: "/rosters/new", state: "default" },
+  { slug: "settings", route: "/settings", state: "success" },
+  { slug: "not-found", route: "/does-not-exist", state: "not-found" },
+  { slug: "library-loading", route: "/?state=loading", state: "loading" },
+  { slug: "library-empty", route: "/?state=empty", state: "empty" },
+  { slug: "library-error", route: "/?state=error", state: "error" },
+  { slug: "library-success", route: "/?state=success", state: "success" },
+] as const;
+
+for (const viewport of reviewViewports) {
+  for (const evidence of routeEvidence) {
+    test(`captures ${evidence.slug} evidence at ${viewport.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto(evidence.route);
+      await expect(page.locator("h1")).toBeVisible();
+
+      if (evidence.route.startsWith("/?state=")) {
+        await expect(page.locator(`[data-state="${evidence.state}"]`)).toBeVisible();
+      }
+      if (evidence.slug === "settings") {
+        await expect(page.getByText("Доступен")).toBeVisible();
+      }
+
+      await captureReviewEvidence(
+        page,
+        { route: evidence.route, state: evidence.state, viewport },
+        path.resolve("artifacts/review-evidence", evidence.slug),
+        viewport.name,
+      );
+    });
+  }
 }

@@ -57,4 +57,13 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: E2E smoke test
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: npm run test:e2e:smoke
+
+      - name: Upload reproducible review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/
+          if-no-files-found: error

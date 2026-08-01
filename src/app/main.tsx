@@ -2,8 +2,13 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 
-import { router } from "./router";
+import { createHttpHealthGateway } from "../infrastructure/health/http-health-gateway";
+import { createAppRouter } from "./router";
 import "./styles.css";
+
+const router = createAppRouter({
+  healthGateway: createHttpHealthGateway(),
+});
 
 const rootElement = document.getElementById("root");
 

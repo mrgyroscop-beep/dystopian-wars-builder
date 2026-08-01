@@ -1,23 +1,29 @@
 import { useEffect, useState } from "react";
 
-import { getHealth, type HealthResponse } from "../application/health/health-contract";
+import {
+  getHealth,
+  type HealthGateway,
+  type HealthResponse,
+} from "../application/health/health-contract";
 import { useDocumentTitle } from "../app/useDocumentTitle";
-import { createHttpHealthGateway } from "../infrastructure/health/http-health-gateway";
 
 type HealthState =
   | { kind: "loading" }
   | { kind: "success"; data: HealthResponse }
   | { kind: "error"; message: string };
 
-export function SettingsRoute() {
+interface SettingsRouteProps {
+  healthGateway: HealthGateway;
+}
+
+export function SettingsRoute({ healthGateway }: SettingsRouteProps) {
   useDocumentTitle("Настройки");
   const [health, setHealth] = useState<HealthState>({ kind: "loading" });
 
   useEffect(() => {
     const controller = new AbortController();
-    const gateway = createHttpHealthGateway();
 
-    getHealth(gateway, controller.signal).then(
+    getHealth(healthGateway, controller.signal).then(
       (data) => setHealth({ kind: "success", data }),
       (error: unknown) => {
         if (!controller.signal.aborted) {
@@ -28,7 +34,7 @@ export function SettingsRoute() {
     );
 
     return () => controller.abort();
-  }, []);
+  }, [healthGateway]);
 
   return (
     <div className="section-stack">

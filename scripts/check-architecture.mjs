@@ -71,6 +71,19 @@ for (const file of bundleFiles) {
   }
 }
 
+const viewFiles = [...(await collectFiles("src/routes")), ...(await collectFiles("src/ui"))].filter(
+  (file) => sourceExtensions.has(path.extname(file)),
+);
+const infrastructureImport =
+  /(?:from\s*["'][^"']*infrastructure(?:\/|["'])|import\s*\(\s*["'][^"']*infrastructure(?:\/|["']))/;
+
+for (const file of viewFiles) {
+  const content = await readFile(path.join(repositoryRoot, file), "utf8");
+  if (infrastructureImport.test(content)) {
+    errors.push(`Route/UI boundary imports infrastructure directly: ${file}`);
+  }
+}
+
 if (errors.length > 0) {
   for (const error of errors) {
     console.error(error);

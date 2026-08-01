@@ -72,7 +72,9 @@ npm run test:e2e:smoke
 
 `typecheck` first verifies that `worker-configuration.d.ts` still matches
 `wrangler.jsonc`; regenerate it with `npm run types:generate` after any binding
-change. E2E creates ignored screenshots and DOM evidence under `artifacts/`.
+change. E2E creates ignored screenshots and JSON metadata under `artifacts/`.
+Each review-evidence sidecar records the route, fixture state, viewport and exact
+review commit SHA; CI publishes the directory as a workflow artifact.
 
 ## Architecture
 

@@ -1,11 +1,24 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { appRoutes } from "./router";
+import type { HealthGateway } from "../application/health/health-contract";
+import { createAppRoutes } from "./router";
+
+const readHealth = vi.fn<HealthGateway["read"]>().mockResolvedValue({
+  status: "ok",
+  appVersion: "test-version",
+  catalogVersion: "test-catalog",
+});
+
+const testDependencies = {
+  healthGateway: { read: readHealth } satisfies HealthGateway,
+};
 
 function renderRoute(path: string) {
-  const testRouter = createMemoryRouter(appRoutes, { initialEntries: [path] });
+  const testRouter = createMemoryRouter(createAppRoutes(testDependencies), {
+    initialEntries: [path],
+  });
   return render(<RouterProvider router={testRouter} />);
 }
 
@@ -33,5 +46,14 @@ describe("application routes", () => {
 
     expect(screen.getByRole("heading", { level: 1, name: "Черновик флота" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Состав" })).toBeVisible();
+  });
+
+  it("uses the HealthGateway injected by the application composition root", async () => {
+    readHealth.mockClear();
+    renderRoute("/settings");
+
+    expect(await screen.findByText("test-version")).toBeVisible();
+    expect(screen.getByText("test-catalog")).toBeVisible();
+    expect(readHealth).toHaveBeenCalledOnce();
   });
 });

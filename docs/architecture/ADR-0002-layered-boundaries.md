@@ -20,10 +20,12 @@ React UI/routes → application use cases/ports → pure domain
              infrastructure adapters
 ```
 
-Composition roots (`src/app` and `worker`) select adapters. Runtime validation
-with Zod is restricted to external boundaries such as HTTP payloads and route
-parameters. Domain code imports no React, browser, Hono, Cloudflare, Node or XML
-APIs. `scripts/check-architecture.mjs` enforces the most important seams.
+Composition roots (`src/app` and `worker`) select adapters and inject application
+ports. Routes and reusable UI cannot import infrastructure adapters directly.
+Runtime validation with Zod is restricted to external boundaries such as HTTP
+payloads and route parameters. Domain code imports no React, browser, Hono,
+Cloudflare, Node or XML APIs. `scripts/check-architecture.mjs` enforces the most
+important seams.
 
 ## Consequences
 
