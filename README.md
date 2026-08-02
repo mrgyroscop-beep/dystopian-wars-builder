@@ -6,8 +6,8 @@ Cloudflare Worker API on the same local origin through the Cloudflare Vite
 plugin.
 
 The application shell is accompanied by a Node-only, deterministic catalogue
-importer. Game-domain adapters, functional rosters, authentication, D1, custom
-domains and production data belong to later Jira tasks.
+importer. Game-domain adapters, functional rosters, authentication, D1 and
+production deployment belong to later Jira tasks.
 
 Reference PDF and STL files may remain beside the checkout for research. They
 are ignored by Git and must never be committed or uploaded to the repository.
@@ -85,12 +85,13 @@ change. E2E creates ignored screenshots and JSON metadata under `artifacts/`.
 Each review-evidence sidecar records the route, fixture state, viewport and exact
 review commit SHA; CI publishes the directory as a workflow artifact.
 
-Cloudflare Workers Builds deploys non-production branches as Worker versions and
-posts the native branch and commit preview URLs to pull requests. GitHub Actions
-does not receive Cloudflare credentials and contains no custom preview controller.
-Verify a deployed URL with `npm run preview:smoke -- <url> <commit-sha>`. See
-[preview operations](docs/preview-operations.md) and
-[ADR-0005](docs/architecture/ADR-0005-cloudflare-workers-build-previews.md).
+After `Required CI`, one small same-repository preview job uploads a native
+Cloudflare Worker version with the stable `pr-N` alias and verifies it. There is no
+custom deployment controller, per-PR Worker, artifact transport, rollback package or
+cleanup service. Verify a deployed URL manually with
+`npm run preview:smoke -- <url> <commit-sha>`. See [preview
+operations](docs/preview-operations.md) and
+[ADR-0005](docs/architecture/ADR-0005-simple-cloudflare-previews.md).
 
 ## Architecture
 
@@ -114,7 +115,7 @@ See [ADR-0001](docs/architecture/ADR-0001-cloudflare-spa-worker.md),
 [ADR-0002](docs/architecture/ADR-0002-layered-boundaries.md),
 [ADR-0003](docs/architecture/ADR-0003-catalog-import-seam.md) and
 [ADR-0004](docs/architecture/ADR-0004-catalog-ingestion-and-promotion.md), and
-[ADR-0005](docs/architecture/ADR-0005-cloudflare-workers-build-previews.md).
+[ADR-0005](docs/architecture/ADR-0005-simple-cloudflare-previews.md).
 
 ## Release and rollback
 

@@ -1,8 +1,8 @@
 # Release and rollback
 
-This repository uses immutable `main` commits as release inputs. Cloudflare Workers
-Builds deploys successful `main` builds to the Worker. Custom domains, production
-data and migrations still require their own explicitly authorised Jira issues.
+This repository uses immutable `main` commits as release inputs. KAN-39 preview
+versions are not promoted to production. Production deployment, custom domains,
+production data and migrations require their own explicitly authorised Jira issues.
 
 ## Release checklist
 

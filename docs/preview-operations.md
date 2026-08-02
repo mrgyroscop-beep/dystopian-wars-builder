@@ -1,44 +1,48 @@
 # Pull-request preview operations
 
-KAN-39 uses Cloudflare Workers Builds directly. GitHub Actions runs only
-`Required CI`; there is no credentialed preview workflow, custom Worker per pull
-request, rollback package or cleanup controller in this repository.
+KAN-39 uses one Cloudflare Worker and one small preview job in the existing CI
+workflow. There is no separate deployment controller, custom Worker per pull request,
+artifact attestation, rollback package or cleanup service.
 
-## Cloudflare project settings
+Native Workers Builds previews are unavailable on this Cloudflare account, so the
+preview job calls the supported `wrangler versions upload` command directly.
 
-Connect `mrgyroscop-beep/dystopian-wars-builder` to the
-`dystopian-wars-builder` Worker and configure:
+## One-time settings
 
-- production branch: `main`;
-- build command: `npm run build`;
-- production deploy command:
-  `npx wrangler deploy --var COMMIT_SHA:$WORKERS_CI_COMMIT_SHA --var DEPLOYMENT_ENV:production`;
-- builds for non-production branches: enabled;
-- non-production deploy command:
-  `npx wrangler versions upload --var COMMIT_SHA:$WORKERS_CI_COMMIT_SHA --var DEPLOYMENT_ENV:preview`.
+- Worker: `dystopian-wars-builder`;
+- `workers_dev` and `preview_urls`: enabled in `wrangler.jsonc`;
+- GitHub environment: `preview`;
+- environment secrets: `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`;
+- token scope: Worker script upload for the target account.
 
-`wrangler.jsonc` explicitly enables `workers_dev` and `preview_urls`. Workers
-Builds supplies `WORKERS_CI_COMMIT_SHA` and creates the branch alias and immutable
-version URL. Cloudflare posts both URLs to the pull request.
+Only same-repository pull requests run the preview job. Fork pull requests run
+`Required CI` without Cloudflare credentials.
 
-## Verification
+## Normal operation
 
-After both `Required CI` and the Workers Build succeed, verify either preview URL:
+After `Required CI` succeeds, the `Preview` job:
+
+1. checks out the exact pull-request commit;
+2. installs locked dependencies and builds the application;
+3. runs `wrangler versions upload --preview-alias pr-N` against the single Worker;
+4. verifies `/`, `/api/health` and an unknown `/api/*` route.
+
+The stable URL is
+`https://pr-N-dystopian-wars-builder.mrgyroscop.workers.dev`. The health response
+must report the exact pull-request SHA. The uploaded version is not promoted to the
+active production deployment.
+
+Run the same smoke manually when needed:
 
 ```powershell
-npm run preview:smoke -- https://preview.example.workers.dev <40-character-sha>
+npm run preview:smoke -- https://pr-N-dystopian-wars-builder.mrgyroscop.workers.dev <40-character-sha>
 ```
 
-The smoke command retries for propagation, then checks `/`, `/api/health` and an
-unknown `/api/*` route. The health response must report the exact commit SHA.
+## Failure and retention
 
-## Failure and cleanup
-
-- A failed Workers Build does not replace the active `main` deployment.
-- Rerun or push a fix; do not add Cloudflare credentials to GitHub Actions.
-- Cloudflare owns preview versions and branch aliases. No repository janitor deletes
-  Workers or account resources.
-- Roll back production with a reviewed Git revert and a new successful `main` build.
-
-Provider configuration and build logs are available under the Worker's **Settings >
-Build** and **Deployments** pages.
+- Push a fix or rerun the job after a transient failure.
+- A failed preview does not replace the active Worker deployment.
+- Cloudflare retains at most the 1000 most recent aliases; this repository does not
+  run a destructive janitor.
+- Production deployment, custom domains, DNS and application data remain out of
+  scope for KAN-39.

@@ -82,3 +82,52 @@ jobs:
           name: review-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/
           if-no-files-found: error
+
+  preview:
+    name: Preview
+    needs: required-ci
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: preview
+      url: https://pr-${{ github.event.pull_request.number }}-dystopian-wars-builder.mrgyroscop.workers.dev
+
+    steps:
+      - name: Check out pull-request commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload native Worker preview version
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: >-
+          npx wrangler versions upload
+          --preview-alias "pr-${{ github.event.pull_request.number }}"
+          --var "APP_VERSION:0.1.0"
+          --var "CATALOG_VERSION:not-imported"
+          --var "COMMIT_SHA:${{ github.event.pull_request.head.sha }}"
+          --var "DEPLOYMENT_ENV:preview"
+
+      - name: Smoke preview
+        run: >-
+          npm run preview:smoke --
+          "https://pr-${{ github.event.pull_request.number }}-dystopian-wars-builder.mrgyroscop.workers.dev"
+          "${{ github.event.pull_request.head.sha }}"
