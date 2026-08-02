@@ -82,7 +82,7 @@ if (Test-Path -LiteralPath ".github/pull_request_template.md") {
 
 if (Test-Path -LiteralPath "CONTRIBUTING.md") {
     $contributing = Get-Content -LiteralPath "CONTRIBUTING.md" -Raw
-    foreach ($marker in @("codex/KAN-XX-short-description", "Required CI", "independent approval", "pull request")) {
+    foreach ($marker in @("codex/KAN-XX-short-description", "Required CI", "review the final diff", "pull request")) {
         if (-not $contributing.Contains($marker)) {
             Add-ValidationError "CONTRIBUTING marker is missing: $marker"
         }

@@ -1,55 +1,48 @@
 # Pull-request preview operations
 
-This runbook covers only KAN-39 preview infrastructure. It must not be used to deploy
-production routes, custom domains, DNS or application data.
+KAN-39 uses one Cloudflare Worker and one small preview job in the existing CI
+workflow. There is no separate deployment controller, custom Worker per pull request,
+artifact attestation, rollback package or cleanup service.
 
-## One-time bootstrap
+Native Workers Builds previews are unavailable on this Cloudflare account, so the
+preview job calls the supported `wrangler versions upload` command directly.
 
-1. Enable the account Workers subdomain and Worker version preview URLs.
-2. Create a `preview` GitHub environment. Restrict deployment branches to the
-   protected default branch and require an appropriate reviewer if policy demands it.
-3. Add environment secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
-   The token must be a separate least-privilege Workers Scripts token for the preview
-   account; do not reuse a production or general-purpose token.
-4. Keep the repository `Required CI` branch protection enabled. Do not make the
-   privileged workflow a pull-request code path.
+## One-time settings
 
-Never print secret values while confirming bootstrap. A missing environment or
-expired token is an external bootstrap failure, not permission to put credentials in
-repository variables, artifacts or local `.env` files.
+- Worker: `dystopian-wars-builder`;
+- `workers_dev` and `preview_urls`: enabled in `wrangler.jsonc`;
+- GitHub environment: `preview`;
+- environment secrets: `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`;
+- token scope: Worker script upload for the target account.
+
+Only same-repository pull requests run the preview job. Fork pull requests run
+`Required CI` without Cloudflare credentials.
 
 ## Normal operation
 
-For a trusted same-repository PR, `Required CI` publishes
-`preview-bundle-<40-char SHA>`. `Preview deploy` then publishes:
+After `Required CI` succeeds, the `Preview` job:
 
-- stable URL: current verified head of the PR;
-- immutable version URL and Worker version ID: exact deployed build;
-- `/api/health` evidence containing `environment=preview` and the full commit SHA;
-- `preview-evidence-<SHA>` with CI run, URLs, expiry and smoke result.
+1. checks out the exact pull-request commit;
+2. installs locked dependencies and builds the application;
+3. runs `wrangler versions upload --preview-alias pr-N` against the single Worker;
+4. verifies `/`, `/api/health` and an unknown `/api/*` route.
 
-The deployment is successful only after root, deep link, hashed asset, health, JSON
-API 404, security headers and both URLs pass smoke. Existing Required CI Playwright
-evidence supplies route/state, accessibility and responsive screenshots for the same
-SHA. The controller checks the PR head again after smoke so a superseded run cannot
-publish success.
+The stable URL is
+`https://pr-N-dystopian-wars-builder.mrgyroscop.workers.dev`. The health response
+must report the exact pull-request SHA. The uploaded version is not promoted to the
+active production deployment.
 
-## Cleanup, expiry and recovery
+Run the same smoke manually when needed:
 
-- PR close or merge deletes only `dwb-pr-<PR number>` and is idempotent.
-- The daily janitor deletes only allowlisted previews whose newest version is at
-  least seven days old.
-- The controller refuses a 21st active preview, while updating an existing PR remains
-  allowed.
-- Failed first deploy: delete that exact allowlisted Worker.
-- Failed update: restore and smoke the retained `preview-last-good-pr-<number>` inert
-  package. A rollback failure leaves a redacted `ROLLBACK_FAILED` event and requires
-  operator attention; it never falls back to a production deployment.
+```powershell
+npm run preview:smoke -- https://pr-N-dystopian-wars-builder.mrgyroscop.workers.dev <40-character-sha>
+```
 
-## Safe diagnosis
+## Failure and retention
 
-Use artifact names, PR number, exact commit SHA and the public preview URLs. Do not
-paste workflow environment dumps, provider response bodies, authorization/cookie
-headers, local paths, Cloudflare account IDs or raw internal error identifiers into
-issues. User-visible expiry or access errors should state that the preview is
-unavailable and link to the redacted workflow result.
+- Push a fix or rerun the job after a transient failure.
+- A failed preview does not replace the active Worker deployment.
+- Cloudflare retains at most the 1000 most recent aliases; this repository does not
+  run a destructive janitor.
+- Production deployment, custom domains, DNS and application data remain out of
+  scope for KAN-39.

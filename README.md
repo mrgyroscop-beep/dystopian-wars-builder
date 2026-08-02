@@ -47,7 +47,7 @@ Static asset fallback serves `index.html` for deep SPA links, while
 2. Create a Jira-linked branch named `codex/KAN-XX-short-description`.
 3. Commit changes with the Jira key in every commit subject.
 4. Open a pull request and complete the repository template.
-5. Wait for `Required CI` and an independent approval before merging.
+5. Review the final diff and wait for `Required CI` before merging.
 
 Direct work on `main`, force-pushes and merge commits are not part of the
 supported process. See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete
@@ -85,12 +85,13 @@ change. E2E creates ignored screenshots and JSON metadata under `artifacts/`.
 Each review-evidence sidecar records the route, fixture state, viewport and exact
 review commit SHA; CI publishes the directory as a workflow artifact.
 
-Trusted same-repository pull requests also produce a credential-free inert preview
-bundle. After the preview environment is bootstrapped, the protected deployment
-controller publishes a stable PR URL plus an immutable exact-version URL and verifies
-the full SHA through `/api/health` before reporting success. Forks remain CI-only.
-See [preview operations](docs/preview-operations.md) and
-[ADR-0005](docs/architecture/ADR-0005-trusted-pr-previews.md).
+After `Required CI`, one small same-repository preview job uploads a native
+Cloudflare Worker version with the stable `pr-N` alias and verifies it. There is no
+custom deployment controller, per-PR Worker, artifact transport, rollback package or
+cleanup service. Verify a deployed URL manually with
+`npm run preview:smoke -- <url> <commit-sha>`. See [preview
+operations](docs/preview-operations.md) and
+[ADR-0005](docs/architecture/ADR-0005-simple-cloudflare-previews.md).
 
 ## Architecture
 
@@ -114,7 +115,7 @@ See [ADR-0001](docs/architecture/ADR-0001-cloudflare-spa-worker.md),
 [ADR-0002](docs/architecture/ADR-0002-layered-boundaries.md),
 [ADR-0003](docs/architecture/ADR-0003-catalog-import-seam.md) and
 [ADR-0004](docs/architecture/ADR-0004-catalog-ingestion-and-promotion.md), and
-[ADR-0005](docs/architecture/ADR-0005-trusted-pr-previews.md).
+[ADR-0005](docs/architecture/ADR-0005-simple-cloudflare-previews.md).
 
 ## Release and rollback
 
