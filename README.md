@@ -33,7 +33,7 @@ printed by Vite (normally `http://localhost:5173`). Useful endpoints:
 
 - `/` — local roster-library placeholder and state fixtures;
 - `/?state=loading|empty|error|success` — deterministic UI fixtures;
-- `/rosters/new` — creation seam;
+- `/rosters/new` — validated local roster creation flow;
 - `/rosters/scaffold-demo` — responsive builder shell;
 - `/settings` — live same-origin health status;
 - `/api/health` — Worker JSON health endpoint.

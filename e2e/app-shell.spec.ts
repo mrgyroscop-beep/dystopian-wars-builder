@@ -211,3 +211,38 @@ for (const viewport of reviewViewports) {
     });
   }
 }
+
+test("creates, persists and restores a demonstration fleet", async ({ page }) => {
+  const viewport = { name: "desktop-1280x800", width: 1280, height: 800 } as const;
+  await page.setViewportSize(viewport);
+  await page.goto("/rosters/new");
+  await page.getByLabel("Название флота").fill("Northern Squadron");
+  await page.getByLabel("Фракция").selectOption("demo-empire");
+  await page.locator('select[name="battlefleetId"]').selectOption("demo-empire-patrol");
+  await expect(page.getByRole("heading", { name: "Harbour Patrol" })).toBeVisible();
+  await captureReviewEvidence(
+    page,
+    { route: "/rosters/new", state: "battlefleet-selected", viewport },
+    path.resolve("artifacts/review-evidence/new-roster-selected"),
+    viewport.name,
+  );
+  const mobileViewport = { name: "mobile-360x800", width: 360, height: 800 } as const;
+  await page.setViewportSize(mobileViewport);
+  await captureReviewEvidence(
+    page,
+    { route: "/rosters/new", state: "battlefleet-selected", viewport: mobileViewport },
+    path.resolve("artifacts/review-evidence/new-roster-selected"),
+    mobileViewport.name,
+  );
+  await page.getByRole("button", { name: "Создать и открыть состав" }).click();
+
+  await expect(page).toHaveURL(/\/rosters\/[a-f0-9-]+$/u);
+  await expect(page.getByRole("heading", { level: 1, name: "Northern Squadron" })).toBeVisible();
+  await expect(page.getByText("Flagship Element")).toBeVisible();
+  const savedId = page.url().split("/").pop()!;
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "Northern Squadron" })).toBeVisible();
+  expect(
+    await page.evaluate((key) => window.localStorage.getItem(`dwb.roster.v1.${key}`), savedId),
+  ).not.toBeNull();
+});

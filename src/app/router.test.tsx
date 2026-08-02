@@ -3,6 +3,7 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { HealthGateway } from "../application/health/health-contract";
+import type { StoredRoster } from "../application/rosters/create-roster";
 import { createAppRoutes } from "./router";
 
 const readHealth = vi.fn<HealthGateway["read"]>().mockResolvedValue({
@@ -13,8 +14,49 @@ const readHealth = vi.fn<HealthGateway["read"]>().mockResolvedValue({
   commitSha: "0000000000000000000000000000000000000000",
 });
 
+const storedRosters = new Map<string, StoredRoster>();
+const rosterRepository = {
+  contractVersion: 1 as const,
+  save: vi.fn((roster: StoredRoster) => {
+    storedRosters.set(roster.id, roster);
+    return Promise.resolve();
+  }),
+  read: vi.fn((id: string) => Promise.resolve(storedRosters.get(id) ?? null)),
+};
+const rosterCreation = {
+  setupGateway: {
+    contractVersion: 1 as const,
+    load: () =>
+      Promise.resolve({
+        contractVersion: 1 as const,
+        contentVersion: "test-catalog",
+        mode: "current" as const,
+        notice: null,
+        factions: [
+          {
+            id: "empire",
+            label: "Empire",
+            battlefleets: [
+              {
+                id: "patrol",
+                factionId: "empire",
+                label: "Patrol Fleet",
+                summary: "A test Battlefleet.",
+                requiredElements: [{ id: "flagship", label: "Flagship Element", minimum: 1 }],
+              },
+            ],
+          },
+        ],
+      }),
+  },
+  rosterRepository,
+  createId: () => "created-roster",
+  now: () => "2026-08-02T10:00:00.000Z",
+};
 const testDependencies = {
   healthGateway: { read: readHealth } satisfies HealthGateway,
+  rosterCreation,
+  rosterRepository,
 };
 
 function renderRoute(path: string) {
@@ -57,5 +99,20 @@ describe("application routes", () => {
     expect(await screen.findByText("test-version")).toBeVisible();
     expect(screen.getByText("test-catalog")).toBeVisible();
     expect(readHealth).toHaveBeenCalledOnce();
+  });
+
+  it("creates a roster, saves it locally and opens its mandatory elements", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/rosters/new");
+
+    await user.type(await screen.findByLabelText("Название флота"), "Northern Fleet");
+    await user.selectOptions(screen.getByLabelText("Фракция"), "empire");
+    await user.selectOptions(screen.getByLabelText("Battlefleet"), "patrol");
+    await user.click(screen.getByRole("button", { name: "Создать и открыть состав" }));
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Northern Fleet" })).toBeVisible();
+    expect(screen.getByText("Flagship Element")).toBeVisible();
+    expect(rosterRepository.save).toHaveBeenCalled();
   });
 });
