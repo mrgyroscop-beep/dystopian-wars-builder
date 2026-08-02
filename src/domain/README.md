@@ -8,7 +8,16 @@ normalization and canonical serialization remain platform-neutral.
 
 The normalized layer preserves source semantics and provenance. It does not
 calculate effective cardinality, availability, totals, validation results, or
-modifier effects; those evaluator responsibilities belong to KAN-32.
+modifier effects.
+
+KAN-32 implements those responsibilities in `roster/` as one pure,
+deterministic `evaluateRoster(catalog, roster)` boundary. The roster contains
+stable selection-instance, definition, placement, slot, parent, and force IDs.
+The result exposes exact decimal-string Points/VP totals and contributions,
+effective slot cardinality, contextual option availability, and sorted problems
+with exact instance/entity/placement/slot targets. Unsupported expressions and
+unknown amounts fail closed as `indeterminate`; they are never defaulted to
+zero, available, or valid.
 
 Shared definitions are referenced by placements. A placement owns its local
 costs, constraints, modifiers, categories, source order, and provenance, so a
