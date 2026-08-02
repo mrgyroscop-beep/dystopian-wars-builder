@@ -2,7 +2,17 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { z } from "zod";
 
-import type { RosterRepository, StoredRoster } from "../application/rosters/create-roster";
+import {
+  filterCatalogItems,
+  fleetCategories,
+  openRosterWorkspace,
+  WorkspaceCommandError,
+  type CatalogItemReadModel,
+  type FleetCategory,
+  type RosterWorkspaceDependencies,
+  type RosterWorkspaceReadModel,
+  type RosterWorkspaceSession,
+} from "../application/rosters/workspace";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 
 const rosterIdSchema = z
@@ -12,149 +22,656 @@ const rosterIdSchema = z
   .max(80)
   .regex(/^[a-zA-Z0-9_-]+$/u);
 
-type RosterState =
+type RouteState =
   | { readonly kind: "loading" }
-  | { readonly kind: "ready"; readonly roster: StoredRoster }
-  | { readonly kind: "missing"; readonly id: string };
+  | {
+      readonly kind: "ready";
+      readonly session: RosterWorkspaceSession;
+      readonly model: RosterWorkspaceReadModel;
+    }
+  | { readonly kind: "missing" }
+  | { readonly kind: "error" };
+
+type WorkspaceView = "catalog" | "composition" | "context";
 
 export function RosterWorkspaceRoute({
-  rosterRepository,
+  dependencies,
 }: {
-  readonly rosterRepository: RosterRepository;
+  readonly dependencies: RosterWorkspaceDependencies;
 }) {
   const params = useParams();
   const parsedRosterId = rosterIdSchema.safeParse(params.rosterId);
-  const rosterId =
-    parsedRosterId.success && parsedRosterId.data !== "scaffold-demo" ? parsedRosterId.data : null;
-  const [state, setState] = useState<RosterState>({ kind: "loading" });
-  const title = state.kind === "ready" ? state.roster.name : "Состав флота";
+  const rosterId = parsedRosterId.success ? parsedRosterId.data : null;
+  const [state, setState] = useState<RouteState>({ kind: "loading" });
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<FleetCategory | "all">("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState("");
+  const [activeView, setActiveView] = useState<WorkspaceView>("composition");
+  const [busy, setBusy] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+  const [commandError, setCommandError] = useState<string | null>(null);
+  const [issueReturnId, setIssueReturnId] = useState<string | null>(null);
+  const title = state.kind === "ready" ? state.model.roster.name : "Состав флота";
   useDocumentTitle(title);
 
   useEffect(() => {
     let active = true;
     if (!rosterId) return () => undefined;
-    void rosterRepository.read(rosterId).then(
-      (roster) => {
+    void openRosterWorkspace(rosterId, dependencies).then(
+      (session) => {
         if (active)
-          setState(roster ? { kind: "ready", roster } : { kind: "missing", id: rosterId });
+          setState(
+            session ? { kind: "ready", session, model: session.model } : { kind: "missing" },
+          );
       },
       () => {
-        if (active) setState({ kind: "missing", id: rosterId });
+        if (active) setState({ kind: "error" });
       },
     );
     return () => {
       active = false;
     };
-  }, [rosterId, rosterRepository]);
+  }, [dependencies, rosterId]);
 
-  if (!parsedRosterId.success) return <InvalidRoster />;
-  if (parsedRosterId.data === "scaffold-demo") return <ScaffoldWorkspace />;
-  if (
-    state.kind === "loading" ||
-    (state.kind === "ready" && state.roster.id !== rosterId) ||
-    (state.kind === "missing" && state.id !== rosterId)
+  if (!parsedRosterId.success || state.kind === "missing") return <InvalidRoster />;
+  if (state.kind === "loading") return <LoadingWorkspace />;
+  if (state.kind === "error") return <UnavailableWorkspace />;
+
+  const { model, session } = state;
+  const filtered = filterCatalogItems(model.catalog, query, category);
+  const selected = model.catalog.find((item) => item.id === selectedId) ?? null;
+
+  async function execute(
+    command: Parameters<RosterWorkspaceSession["execute"]>[0],
+    success: string,
+    focusId?: string,
   ) {
-    return (
-      <div className="section-stack">
-        <div className="page-header">
-          <p className="eyebrow">Локальный состав</p>
-          <h1>Открываем флот</h1>
-          <p className="page-lead" role="status">
-            Читаем сохранённый черновик на этом устройстве…
-          </p>
-        </div>
-      </div>
+    setBusy(true);
+    setCommandError(null);
+    try {
+      const next = await session.execute(command);
+      setState({ kind: "ready", session, model: next });
+      setAnnouncement(success);
+      if (focusId)
+        requestAnimationFrame(() =>
+          document.getElementById(focusId)?.focus({ preventScroll: true }),
+        );
+    } catch (error) {
+      setCommandError(
+        error instanceof WorkspaceCommandError
+          ? error.message
+          : "Команду не удалось выполнить. Локальный состав не изменён.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openPreview(item: CatalogItemReadModel) {
+    setSelectedId(item.id);
+    setSelectedTarget(
+      item.eligibleTargets.length === 1 ? item.eligibleTargets[0]!.elementInstanceId : "",
+    );
+    setCommandError(null);
+    setActiveView("context");
+  }
+
+  async function addSelected() {
+    if (!selected) return;
+    await execute(
+      {
+        type: "add",
+        definitionId: selected.id,
+        ...(selectedTarget ? { targetElementInstanceId: selectedTarget } : {}),
+      },
+      `${selected.name} добавлен в состав.`,
+      `catalog-item-${safeId(selected.id)}`,
     );
   }
-  if (state.kind === "missing") return <InvalidRoster />;
 
-  const { roster } = state;
+  async function retrySave() {
+    setBusy(true);
+    const next = await session.retrySave();
+    setState({ kind: "ready", session, model: next });
+    setAnnouncement(
+      next.summary.persistence === "saved-local"
+        ? "Состав сохранён на устройстве."
+        : "Повторное сохранение не удалось; изменения остаются в памяти.",
+    );
+    setBusy(false);
+  }
+
+  function followIssue(problemId: string, targetId: string) {
+    setIssueReturnId(`issue-${safeId(problemId)}`);
+    const target = document.getElementById(targetId);
+    target?.scrollIntoView({ block: "center" });
+    target?.focus({ preventScroll: true });
+  }
+
+  function returnToIssue() {
+    const source = issueReturnId;
+    if (!source) return;
+    document.getElementById(source)?.focus();
+    setIssueReturnId(null);
+  }
+
+  return (
+    <div className="fleet-workspace" data-active-view={activeView}>
+      <header className="fleet-workspace__heading">
+        <div>
+          <p className="eyebrow">
+            {model.roster.faction} · {model.roster.battlefleet}
+          </p>
+          <h1>{model.roster.name}</h1>
+        </div>
+        <Link className="button button--secondary" to="/rosters/new">
+          Новый флот
+        </Link>
+      </header>
+
+      <nav className="workspace-view-switcher" aria-label="Области билдера">
+        {(["composition", "catalog", "context"] as const).map((view) => (
+          <button
+            aria-current={activeView === view ? "page" : undefined}
+            key={view}
+            onClick={() => setActiveView(view)}
+            type="button"
+          >
+            {view === "composition" ? "Состав" : view === "catalog" ? "Каталог" : "Контекст"}
+          </button>
+        ))}
+      </nav>
+
+      <WorkspaceSummary busy={busy} model={model} />
+
+      {model.summary.persistence === "save-error" ? (
+        <div className="system-message system-message--error" role="alert">
+          <div>
+            <strong>Не удалось сохранить на устройстве</strong>
+            <p>Текущий состав остаётся в памяти. Повторите сохранение или не закрывайте вкладку.</p>
+          </div>
+          <button
+            className="button button--secondary"
+            disabled={busy}
+            onClick={() => void retrySave()}
+            type="button"
+          >
+            Повторить
+          </button>
+        </div>
+      ) : null}
+
+      {commandError ? (
+        <p className="system-message system-message--error" role="alert">
+          {commandError}
+        </p>
+      ) : null}
+      <p className="sr-only" aria-live="polite">
+        {announcement}
+      </p>
+
+      <div className="builder-grid">
+        <CatalogPane
+          category={category}
+          filtered={filtered}
+          onCategory={setCategory}
+          onPreview={openPreview}
+          query={query}
+          selectedId={selectedId}
+          setQuery={setQuery}
+          total={model.catalog.length}
+        />
+
+        <CompositionPane
+          busy={busy}
+          model={model}
+          onDelete={(instanceId, name, elementId) =>
+            void execute(
+              { type: "delete", instanceId },
+              `${name} удалён из состава.`,
+              `fleet-element-${safeId(elementId)}`,
+            )
+          }
+          onDuplicate={(instanceId, name) =>
+            void execute({ type: "duplicate", instanceId }, `${name}: создана новая копия.`)
+          }
+          onReturnToIssue={returnToIssue}
+          returnTarget={issueReturnId}
+        />
+
+        <ContextPane
+          busy={busy}
+          model={model}
+          onAdd={() => void addSelected()}
+          onFollowIssue={followIssue}
+          onTarget={setSelectedTarget}
+          selected={selected}
+          selectedTarget={selectedTarget}
+        />
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceSummary({
+  busy,
+  model,
+}: {
+  readonly busy: boolean;
+  readonly model: RosterWorkspaceReadModel;
+}) {
+  const persistenceState = busy ? "saving" : model.summary.persistence;
+  const persistenceLabel = busy ? "Сохранение…" : model.summary.persistenceLabel;
+  return (
+    <dl
+      className="workspace-summary workspace-summary--sticky"
+      id="workspace-summary"
+      aria-label="Сводка флота"
+    >
+      <div className="summary-item">
+        <dt>Points</dt>
+        <dd>
+          {model.summary.points} / {model.summary.pointsLimit}
+        </dd>
+      </div>
+      <div className="summary-item">
+        <dt>VP</dt>
+        <dd>
+          {model.summary.victoryPoints} / {model.summary.victoryPointsLimit}
+        </dd>
+      </div>
+      <div className="summary-item" data-axis="validity" data-state={model.summary.validity}>
+        <dt>Состав</dt>
+        <dd>
+          <span aria-hidden="true">{model.summary.validity === "valid" ? "✓" : "!"}</span>{" "}
+          {model.summary.validityLabel}
+        </dd>
+      </div>
+      <div className="summary-item" data-axis="persistence" data-state={persistenceState}>
+        <dt>Сохранение</dt>
+        <dd>
+          <span aria-hidden="true">{persistenceState === "saved-local" ? "✓" : "↻"}</span>{" "}
+          {persistenceLabel}
+        </dd>
+      </div>
+      <div
+        className="summary-item"
+        data-axis="availability"
+        data-state={model.summary.availability}
+      >
+        <dt>Система</dt>
+        <dd>
+          <span aria-hidden="true">●</span> {model.summary.availabilityLabel}
+        </dd>
+      </div>
+    </dl>
+  );
+}
+
+function CatalogPane({
+  category,
+  filtered,
+  onCategory,
+  onPreview,
+  query,
+  selectedId,
+  setQuery,
+  total,
+}: {
+  readonly category: FleetCategory | "all";
+  readonly filtered: readonly CatalogItemReadModel[];
+  readonly onCategory: (value: FleetCategory | "all") => void;
+  readonly onPreview: (item: CatalogItemReadModel) => void;
+  readonly query: string;
+  readonly selectedId: string | null;
+  readonly setQuery: (value: string) => void;
+  readonly total: number;
+}) {
+  return (
+    <section className="builder-pane catalog-pane" aria-labelledby="catalog-title">
+      <div className="builder-pane__header">
+        <p className="eyebrow">{total} учебных записей</p>
+        <h2 id="catalog-title">Каталог</h2>
+      </div>
+      <div className="catalog-toolbar">
+        <label>
+          <span>Поиск</span>
+          <input
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Название, роль, платформа"
+            type="search"
+            value={query}
+          />
+        </label>
+        <label>
+          <span>Категория</span>
+          <select
+            onChange={(event) => onCategory(event.target.value as FleetCategory | "all")}
+            value={category}
+          >
+            <option value="all">Все категории</option>
+            {fleetCategories.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <p className="catalog-result-count" role="status">
+        Найдено: {filtered.length}
+      </p>
+      <div className="catalog-list" aria-label="Результаты каталога">
+        {filtered.length ? (
+          filtered.map((item) => (
+            <button
+              aria-pressed={selectedId === item.id}
+              className="catalog-row"
+              data-availability={item.availability.state}
+              id={`catalog-item-${safeId(item.id)}`}
+              key={item.id}
+              onClick={() => onPreview(item)}
+              type="button"
+            >
+              <span className="catalog-row__name">
+                <strong>{item.name}</strong>
+                <small>
+                  {item.category} · {item.platform}
+                </small>
+              </span>
+              <span className="catalog-row__cost">
+                <b>{item.points} P</b>
+                <small>{item.victoryPoints} VP</small>
+              </span>
+              <span className="catalog-row__state">
+                <span aria-hidden="true">
+                  {item.availability.state === "available" ? "○" : "!"}
+                </span>
+                {item.availability.state === "available"
+                  ? "Доступен"
+                  : item.availability.state === "unavailable"
+                    ? "Недоступен"
+                    : "Нужно проверить"}
+              </span>
+            </button>
+          ))
+        ) : (
+          <div className="no-results" data-state="no-results">
+            <strong>Ничего не найдено</strong>
+            <p>Измените запрос или сбросьте категорию.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function CompositionPane({
+  busy,
+  model,
+  onDelete,
+  onDuplicate,
+  onReturnToIssue,
+  returnTarget,
+}: {
+  readonly busy: boolean;
+  readonly model: RosterWorkspaceReadModel;
+  readonly onDelete: (instanceId: string, name: string, elementId: string) => void;
+  readonly onDuplicate: (instanceId: string, name: string) => void;
+  readonly onReturnToIssue: () => void;
+  readonly returnTarget: string | null;
+}) {
+  return (
+    <section className="builder-pane composition-pane" aria-labelledby="composition-title">
+      <div className="builder-pane__header">
+        <p className="eyebrow">Главная область</p>
+        <h2 id="composition-title">Состав</h2>
+      </div>
+      <div className="element-list">
+        {model.elements.map((element) => (
+          <section
+            className="fleet-element"
+            id={`fleet-element-${safeId(element.id)}`}
+            key={element.id}
+            tabIndex={-1}
+            aria-labelledby={`fleet-element-title-${safeId(element.id)}`}
+          >
+            <header>
+              <div>
+                <h3 id={`fleet-element-title-${safeId(element.id)}`}>{element.label}</h3>
+                <p>
+                  {element.instances.length} / {element.minimum} обязательно
+                </p>
+              </div>
+              <span
+                className={
+                  element.instances.length >= element.minimum
+                    ? "element-state element-state--ready"
+                    : "element-state element-state--error"
+                }
+              >
+                <span aria-hidden="true">
+                  {element.instances.length >= element.minimum ? "✓" : "!"}
+                </span>
+                {element.instances.length >= element.minimum ? "Заполнен" : "Нужен корабль"}
+              </span>
+            </header>
+            {returnTarget ? (
+              <button className="issue-return" onClick={onReturnToIssue} type="button">
+                ← Вернуться к проблеме
+              </button>
+            ) : null}
+            {element.instances.length ? (
+              <ul className="roster-instance-list">
+                {element.instances.map((instance) => (
+                  <li id={`roster-instance-${safeId(instance.id)}`} key={instance.id} tabIndex={-1}>
+                    <span>
+                      <strong>{instance.name}</strong>
+                      <small>
+                        {instance.points} Points · {instance.victoryPoints} VP
+                      </small>
+                    </span>
+                    <span className="instance-actions">
+                      <button
+                        disabled={busy}
+                        onClick={() => onDuplicate(instance.id, instance.name)}
+                        type="button"
+                      >
+                        Копировать
+                      </button>
+                      <button
+                        disabled={busy}
+                        onClick={() => onDelete(instance.id, instance.name, element.id)}
+                        type="button"
+                      >
+                        Удалить
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="element-empty">
+                <span aria-hidden="true">＋</span>
+                <p>Добавьте подходящий корабль из каталога.</p>
+              </div>
+            )}
+          </section>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ContextPane({
+  busy,
+  model,
+  onAdd,
+  onFollowIssue,
+  onTarget,
+  selected,
+  selectedTarget,
+}: {
+  readonly busy: boolean;
+  readonly model: RosterWorkspaceReadModel;
+  readonly onAdd: () => void;
+  readonly onFollowIssue: (problemId: string, targetId: string) => void;
+  readonly onTarget: (value: string) => void;
+  readonly selected: CatalogItemReadModel | null;
+  readonly selectedTarget: string;
+}) {
+  return (
+    <aside className="builder-pane context-pane" aria-labelledby="context-title">
+      <div className="builder-pane__header">
+        <p className="eyebrow">Preview и проблемы</p>
+        <h2 id="context-title">Контекст</h2>
+      </div>
+      {selected ? (
+        <article className="catalog-preview">
+          <p className="preview-category">
+            {selected.category} · {selected.role}
+          </p>
+          <h3>{selected.name}</h3>
+          <dl>
+            <div>
+              <dt>Points</dt>
+              <dd>{selected.points}</dd>
+            </div>
+            <div>
+              <dt>VP</dt>
+              <dd>{selected.victoryPoints}</dd>
+            </div>
+            <div>
+              <dt>Платформа</dt>
+              <dd>{selected.platform}</dd>
+            </div>
+            <div>
+              <dt>Флот</dt>
+              <dd>{selected.nation}</dd>
+            </div>
+          </dl>
+          <p>{selected.preview}</p>
+          {selected.availability.reason ? (
+            <p className="availability-reason" role="note">
+              <strong>
+                {selected.availability.state === "unavailable" ? "Недоступен" : "Нужно проверить"}.
+              </strong>{" "}
+              {selected.availability.reason}
+            </p>
+          ) : null}
+          {selected.eligibleTargets.length > 1 ? (
+            <fieldset className="target-chooser">
+              <legend>Добавить в Battlefleet Element</legend>
+              {selected.eligibleTargets.map((target) => (
+                <label key={target.elementInstanceId}>
+                  <input
+                    checked={selectedTarget === target.elementInstanceId}
+                    name="target-element"
+                    onChange={() => onTarget(target.elementInstanceId)}
+                    type="radio"
+                  />
+                  {target.elementLabel}
+                </label>
+              ))}
+            </fieldset>
+          ) : selected.eligibleTargets.length === 1 ? (
+            <p className="one-click-target">
+              Будет добавлен в {selected.eligibleTargets[0]!.elementLabel}.
+            </p>
+          ) : null}
+          <button
+            className="button preview-add"
+            disabled={
+              busy ||
+              selected.availability.state !== "available" ||
+              (selected.eligibleTargets.length > 1 && !selectedTarget)
+            }
+            onClick={onAdd}
+            type="button"
+          >
+            {selected.availability.state === "available"
+              ? "Добавить в состав"
+              : "Добавление недоступно"}
+          </button>
+        </article>
+      ) : (
+        <div className="context-empty">
+          <span aria-hidden="true">↗</span>
+          <h3>Выберите корабль</h3>
+          <p>Preview не меняет состав, totals или сохранённую копию.</p>
+        </div>
+      )}
+
+      <section className="problem-center" aria-labelledby="problem-center-title">
+        <header>
+          <h3 id="problem-center-title">Проблемы состава</h3>
+          <span>
+            {model.summary.errorCount} ошибок · {model.summary.warningCount} предупреждений
+          </span>
+        </header>
+        {model.problems.length ? (
+          <ul>
+            {model.problems.map((problem) => (
+              <li key={problem.id}>
+                <button
+                  id={`issue-${safeId(problem.id)}`}
+                  onClick={() => onFollowIssue(problem.id, problem.targetId)}
+                  type="button"
+                >
+                  <span className="problem-severity" aria-hidden="true">
+                    !
+                  </span>
+                  <span>
+                    <strong>{problem.title}</strong>
+                    <small>
+                      {problem.locationLabel} · {problem.reason}
+                    </small>
+                    <em>{problem.guidance}</em>
+                  </span>
+                  <b aria-hidden="true">→</b>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="problem-empty">
+            <span aria-hidden="true">✓</span>
+            <p>Проверяемых проблем нет.</p>
+          </div>
+        )}
+      </section>
+    </aside>
+  );
+}
+
+function LoadingWorkspace() {
   return (
     <div className="section-stack">
-      <div className="page-header workspace-heading">
-        <p className="eyebrow">
-          {roster.faction.label} · {roster.battlefleet.label}
-        </p>
-        <h1>{roster.name}</h1>
-        <p className="page-lead">
-          Основа сохранена локально. Добавление кораблей появится на следующем этапе; обязательный
-          каркас уже виден и не потеряется после обновления страницы.
+      <div className="page-header">
+        <p className="eyebrow">Локальный состав</p>
+        <h1>Открываем флот</h1>
+        <p className="page-lead" role="status">
+          Читаем состав и безопасный каталог…
         </p>
       </div>
+    </div>
+  );
+}
 
-      <dl className="workspace-summary" aria-label="Сводка флота">
-        <div className="summary-item">
-          <dt>Points</dt>
-          <dd>0 / {roster.limits.points}</dd>
-        </div>
-        <div className="summary-item">
-          <dt>VP</dt>
-          <dd>0 / {roster.limits.victoryPoints}</dd>
-        </div>
-        <div className="summary-item">
-          <dt>Состояние</dt>
-          <dd>Нужен состав</dd>
-        </div>
-        <div className="summary-item">
-          <dt>Сохранение</dt>
-          <dd className="saved-value">Локально ✓</dd>
-        </div>
-      </dl>
-
-      <div className="workspace-grid">
-        <section className="panel workspace-column" aria-labelledby="catalog-title">
-          <div>
-            <p className="eyebrow">Battlefleet</p>
-            <h2 id="catalog-title">{roster.battlefleet.label}</h2>
-          </div>
-          <p className="panel__copy">Каталог кораблей и фильтры появятся в KAN-34.</p>
-          <Link className="button button--secondary" to="/rosters/new">
-            Создать другой флот
-          </Link>
-        </section>
-
-        <section className="panel workspace-column" aria-labelledby="composition-title">
-          <div>
-            <p className="eyebrow">Пустой состав</p>
-            <h2 id="composition-title">Обязательные элементы</h2>
-          </div>
-          {roster.requiredElements.length ? (
-            <ul className="required-composition">
-              {roster.requiredElements.map((element) => (
-                <li key={element.id}>
-                  <span className="required-composition__signal" aria-hidden="true" />
-                  <span>
-                    <strong>{element.label}</strong>
-                    <small>Нужно добавить в состав</small>
-                  </span>
-                  <b>×{element.minimum}</b>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="state-panel" data-state="empty">
-              <span className="state-panel__symbol" aria-hidden="true">
-                ○
-              </span>
-              <h3>Обязательных элементов нет</h3>
-              <p>Состав готов к добавлению кораблей.</p>
-            </div>
-          )}
-        </section>
-
-        <aside className="panel workspace-column" aria-labelledby="editor-title">
-          <div>
-            <p className="eyebrow">Готовность</p>
-            <h2 id="editor-title">Следующий шаг</h2>
-          </div>
-          <p className="panel__copy">
-            Добавьте корабли в обязательные элементы, когда станет доступен каталог KAN-34.
-          </p>
-          <div className="route-note">
-            Черновик: <code>{roster.id}</code>
-          </div>
-        </aside>
+function UnavailableWorkspace() {
+  return (
+    <div className="section-stack">
+      <div className="page-header">
+        <p className="eyebrow">Системная доступность</p>
+        <h1>Каталог недоступен</h1>
+        <p className="page-lead" role="alert">
+          Локальный состав не изменён. Обновите страницу, чтобы повторить загрузку.
+        </p>
       </div>
+      <Link className="button" to="/">
+        К библиотеке
+      </Link>
     </div>
   );
 }
@@ -165,7 +682,7 @@ function InvalidRoster() {
       <div className="page-header">
         <p className="eyebrow">Некорректная ссылка</p>
         <h1>Флот не найден</h1>
-        <p className="page-lead">В локальном хранилище нет подходящего черновика.</p>
+        <p className="page-lead">В локальном хранилище нет подходящего флота.</p>
       </div>
       <Link className="button" to="/">
         К библиотеке
@@ -174,66 +691,6 @@ function InvalidRoster() {
   );
 }
 
-function ScaffoldWorkspace() {
-  return (
-    <div className="section-stack">
-      <div className="page-header">
-        <p className="eyebrow">Демонстрационный маршрут</p>
-        <h1>Черновик флота</h1>
-        <p className="page-lead">Три области показывают будущую композицию билдера.</p>
-      </div>
-      <dl className="workspace-summary" aria-label="Сводка флота">
-        <div className="summary-item">
-          <dt>Points</dt>
-          <dd>0 / 1 000</dd>
-        </div>
-        <div className="summary-item">
-          <dt>VP</dt>
-          <dd>0</dd>
-        </div>
-        <div className="summary-item">
-          <dt>Состояние</dt>
-          <dd>Нужен состав</dd>
-        </div>
-        <div className="summary-item">
-          <dt>Сохранение</dt>
-          <dd>Только fixture</dd>
-        </div>
-      </dl>
-      <div className="workspace-grid">
-        <section className="panel workspace-column" aria-labelledby="catalog-title">
-          <div>
-            <p className="eyebrow">Область 1</p>
-            <h2 id="catalog-title">Каталог</h2>
-          </div>
-          <p className="panel__copy">Поиск, фильтры и доступные корабли появятся в KAN-34.</p>
-          <ul className="placeholder-list">
-            <li>Flagship</li>
-            <li>Line</li>
-            <li>Support</li>
-          </ul>
-        </section>
-        <section className="panel workspace-column" aria-labelledby="composition-title">
-          <div>
-            <p className="eyebrow">Главная область</p>
-            <h2 id="composition-title">Состав</h2>
-          </div>
-          <div className="state-panel" data-state="empty">
-            <span className="state-panel__symbol" aria-hidden="true">
-              ○
-            </span>
-            <h3>Battlefleet Elements пусты</h3>
-            <p>Создайте флот, чтобы увидеть обязательные элементы.</p>
-          </div>
-        </section>
-        <aside className="panel workspace-column" aria-labelledby="editor-title">
-          <div>
-            <p className="eyebrow">Область 3</p>
-            <h2 id="editor-title">Редактор</h2>
-          </div>
-          <p className="panel__copy">Настройка корабля появится в KAN-35—36.</p>
-        </aside>
-      </div>
-    </div>
-  );
+function safeId(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/gu, "-");
 }

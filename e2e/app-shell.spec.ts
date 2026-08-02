@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
+import axe from "axe-core";
 
 const reviewSha = resolveReviewSha();
 
@@ -96,7 +97,7 @@ test("supports SPA routes, keyboard navigation and browser history", async ({ pa
 
 test("serves a deep SPA link and a controlled 404", async ({ page }) => {
   await page.goto("/rosters/scaffold-demo");
-  await expect(page.getByRole("heading", { level: 1, name: "Черновик флота" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Каталог" })).toBeVisible();
 
   await page.goto("/does-not-exist");
@@ -133,7 +134,8 @@ test("keeps the roster workspace usable with 200% text scaling", async ({ page }
     element.style.fontSize = "200%";
   });
 
-  await expect(page.getByRole("heading", { level: 1, name: "Черновик флота" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
+  await page.getByRole("button", { name: "Каталог", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Каталог" })).toBeVisible();
 
   const dimensions = await page.evaluate(() => ({
@@ -145,7 +147,11 @@ test("keeps the roster workspace usable with 200% text scaling", async ({ page }
 });
 
 const evidenceViewports = [
+  { name: "desktop-1440x900", width: 1440, height: 900 },
+  { name: "desktop-1366x768", width: 1366, height: 768 },
   { name: "desktop-1280x800", width: 1280, height: 800 },
+  { name: "desktop-1200x800", width: 1200, height: 800 },
+  { name: "tablet-1024x768", width: 1024, height: 768 },
   { name: "tablet-768x1024", width: 768, height: 1024 },
   { name: "mobile-360x800", width: 360, height: 800 },
 ] as const;
@@ -234,15 +240,98 @@ test("creates, persists and restores a demonstration fleet", async ({ page }) =>
     path.resolve("artifacts/review-evidence/new-roster-selected"),
     mobileViewport.name,
   );
+  await page.setViewportSize(viewport);
   await page.getByRole("button", { name: "Создать и открыть состав" }).click();
 
   await expect(page).toHaveURL(/\/rosters\/[a-f0-9-]+$/u);
   await expect(page.getByRole("heading", { level: 1, name: "Northern Squadron" })).toBeVisible();
-  await expect(page.getByText("Flagship Element")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Flagship Element" })).toBeVisible();
+  await expect(page.getByText("112 учебных записей")).toBeVisible();
   const savedId = page.url().split("/").pop()!;
+
+  const beforePreview = await page.evaluate(
+    (key) => window.localStorage.getItem(`dwb.roster.v1.${key}`),
+    savedId,
+  );
+  await page.getByLabel("Поиск").fill("Asterion Demonstrator");
+  await page.getByRole("button", { name: /Asterion Demonstrator/u }).click();
+  await expect(
+    page.getByRole("heading", { level: 3, name: "Asterion Demonstrator" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate((key) => window.localStorage.getItem(`dwb.roster.v1.${key}`), savedId),
+  ).toBe(beforePreview);
+
+  await page.getByRole("button", { name: "Добавить в состав" }).click();
+  await expect(page.getByText("45 / 1000")).toBeVisible();
+  await expect(
+    page.locator(".roster-instance-list").getByText("Asterion Demonstrator", { exact: true }),
+  ).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { level: 1, name: "Northern Squadron" })).toBeVisible();
+  await expect(page.getByText("45 / 1000")).toBeVisible();
+  await page.getByRole("button", { name: "Копировать" }).click();
+  await expect(page.getByText("90 / 1000")).toBeVisible();
+
+  const persisted = await page.evaluate((key) => {
+    const value = window.localStorage.getItem(`dwb.roster.v1.${key}`)!;
+    return JSON.parse(value) as { roster: { instances: Record<string, unknown> } };
+  }, savedId);
+  const shipIds = Object.keys(persisted.roster.instances).filter(
+    (id) => !id.startsWith("structure-"),
+  );
+  expect(new Set(shipIds).size).toBe(2);
+
+  await page.getByRole("button", { name: "Удалить" }).first().click();
+  await expect(page.getByText("45 / 1000")).toBeVisible();
   expect(
     await page.evaluate((key) => window.localStorage.getItem(`dwb.roster.v1.${key}`), savedId),
   ).not.toBeNull();
+});
+
+test("requires an explicit target and keeps unavailable ships previewable", async ({ page }) => {
+  await page.goto("/rosters/scaffold-demo");
+  await expect(page.getByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
+
+  await page.getByLabel("Поиск").fill("Pattern 017");
+  await page.getByRole("button", { name: /Pattern 017/u }).click();
+  const add = page.getByRole("button", { name: "Добавить в состав" });
+  await expect(add).toBeDisabled();
+  await expect(page.getByRole("group", { name: "Добавить в Battlefleet Element" })).toBeVisible();
+  await page.getByRole("radio", { name: "Line Element" }).check();
+  await expect(add).toBeEnabled();
+  await add.click();
+  await expect(
+    page.locator(".roster-instance-list").getByText("Patrol Pattern 017", { exact: true }),
+  ).toBeVisible();
+
+  await page.getByLabel("Поиск").fill("Pattern 029");
+  await page.getByRole("button", { name: /Pattern 029/u }).click();
+  await expect(page.getByText(/не входит в выбранный Harbour Patrol/u)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Добавление недоступно" })).toBeDisabled();
+});
+
+test("has no serious or critical Axe violations in the builder reference state", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/rosters/scaffold-demo");
+  await expect(page.getByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
+  await page.addScriptTag({ content: axe.source });
+  const violations = await page.evaluate(async () => {
+    const runtime = (
+      window as unknown as {
+        axe: {
+          run(root: Document): Promise<{
+            violations: Array<{ id: string; impact: string | null; help: string }>;
+          }>;
+        };
+      }
+    ).axe;
+    const result = await runtime.run(document);
+    return result.violations.filter(
+      (violation) => violation.impact === "serious" || violation.impact === "critical",
+    );
+  });
+  expect(violations).toEqual([]);
 });
