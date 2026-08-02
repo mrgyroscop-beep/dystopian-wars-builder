@@ -15,6 +15,19 @@ costs, constraints, modifiers, categories, source order, and provenance, so a
 shared definition is never cloned or mutated. Unknown evaluator-sensitive
 operators, fields, or scopes remain present and are marked `evaluable:false`.
 
+Consumers receive explicit `identity`, `labels`, typed cost semantics, declarative
+slot cardinality, and full source/import/schema provenance contracts. Rich text
+is exposed as safe paragraph, list, table, emphasis, strong, line-break, and
+resolved/unresolved reference nodes; unsupported input remains visible through
+diagnostics and the plain-text fallback.
+
+Persistence uses the `dwb-domain-catalog` envelope. Core, glossary, and eight
+faction indexes are content-addressed, while entity records are assigned by
+successive SHA-256 bytes and split again only when a 512 KiB bucket budget is
+exceeded. Repository loading validates the manifest, payload schemas, hashes,
+bucket membership, lookup coverage, views, and full reference closure before
+returning a catalogue.
+
 Upstream redistribution is not licensed yet. Real `.cat`/`.gst` inputs may be
 used only from ignored caches for pinned integration checks. Domain fixtures
 in Git are synthetic, and committed evidence contains hashes, counts, and

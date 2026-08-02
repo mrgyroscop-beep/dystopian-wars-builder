@@ -42,13 +42,13 @@ export function presentationFromNode(
   },
 ): SafePresentation {
   const safe = toSafePresentation(richText?.plainText ?? value);
-  const blocks = richText?.children ? safeBlocks(richText.children) : safe.blocks;
   const diagnostics = new Set([
     ...safe.diagnostics,
     ...(richText?.diagnostics ?? []).flatMap((diagnostic) =>
       diagnostic.code ? [diagnostic.code] : [],
     ),
   ]);
+  const blocks = richText?.children ? safeBlocks(richText.children, diagnostics) : safe.blocks;
   return {
     ...safe,
     blocks,
@@ -57,12 +57,18 @@ export function presentationFromNode(
   };
 }
 
-function safeBlocks(children: readonly unknown[]): readonly RichTextBlock[] {
+function safeBlocks(
+  children: readonly unknown[],
+  diagnostics: Set<string>,
+): readonly RichTextBlock[] {
   const blocks: RichTextBlock[] = [];
   for (const candidate of children) {
     const block = record(candidate);
     if (block?.type === "paragraph") {
-      blocks.push({ type: "paragraph", children: safeInline(array(block.children)) });
+      blocks.push({
+        type: "paragraph",
+        children: safeInline(array(block.children), diagnostics),
+      });
       continue;
     }
     if (block?.type === "table") {
@@ -81,7 +87,7 @@ function safeBlocks(children: readonly unknown[]): readonly RichTextBlock[] {
                   {
                     type: "tableCell" as const,
                     header: cell.header === true,
-                    children: safeInline(array(cell.children)),
+                    children: safeInline(array(cell.children), diagnostics),
                   },
                 ];
               }),
@@ -89,12 +95,45 @@ function safeBlocks(children: readonly unknown[]): readonly RichTextBlock[] {
           ];
         }),
       });
+      continue;
     }
+    if (
+      block?.type === "list" ||
+      block?.type === "orderedList" ||
+      block?.type === "unorderedList"
+    ) {
+      blocks.push({
+        type: "list",
+        ordered: block.type === "orderedList" || block.ordered === true,
+        items: array(block.items ?? block.children).flatMap((itemCandidate) => {
+          const item = record(itemCandidate);
+          if (item?.type !== "listItem") {
+            diagnostics.add("PRESENTATION_UNSUPPORTED_LIST_ITEM");
+            return [];
+          }
+          const children = array(item.children).flatMap((child) => {
+            const nested = record(child);
+            return nested?.type === "paragraph" ? array(nested.children) : [child];
+          });
+          return [
+            {
+              type: "listItem" as const,
+              children: safeInline(children, diagnostics),
+            },
+          ];
+        }),
+      });
+      continue;
+    }
+    diagnostics.add("PRESENTATION_UNSUPPORTED_BLOCK");
   }
   return blocks;
 }
 
-function safeInline(children: readonly unknown[]): readonly RichTextInline[] {
+function safeInline(
+  children: readonly unknown[],
+  diagnostics: Set<string>,
+): readonly RichTextInline[] {
   const inlines: RichTextInline[] = [];
   for (const candidate of children) {
     const inline = record(candidate);
@@ -103,12 +142,34 @@ function safeInline(children: readonly unknown[]): readonly RichTextInline[] {
       continue;
     }
     if (
-      (inline?.type === "text" || inline?.type === "strong") &&
-      typeof inline.value === "string"
+      (inline?.type === "text" || inline?.type === "strong" || inline?.type === "emphasis") &&
+      (typeof inline.value === "string" || Array.isArray(inline.children))
     ) {
-      const value = sanitizeInlineText(inline.value);
+      const rawValue =
+        typeof inline.value === "string"
+          ? inline.value
+          : array(inline.children)
+              .map((child) => record(child)?.value)
+              .filter((value): value is string => typeof value === "string")
+              .join("");
+      const value = sanitizeInlineText(rawValue);
       if (value) inlines.push({ type: inline.type, value });
+      continue;
     }
+    if (inline?.type === "reference") {
+      const targetValue = inline.targetEntityId ?? inline.targetId ?? inline.target ?? "";
+      const target = typeof targetValue === "string" ? sanitizeInlineText(targetValue) : "";
+      const rawLabel = typeof inline.value === "string" ? inline.value : target;
+      const value = sanitizeInlineText(rawLabel);
+      const state =
+        inline.resolved === true || typeof inline.targetEntityId === "string"
+          ? "resolved"
+          : "unresolved";
+      if (state === "unresolved") diagnostics.add("PRESENTATION_REFERENCE_UNRESOLVED");
+      inlines.push({ type: "reference", value, reference: { state, target } });
+      continue;
+    }
+    diagnostics.add("PRESENTATION_UNSUPPORTED_INLINE");
   }
   return inlines;
 }

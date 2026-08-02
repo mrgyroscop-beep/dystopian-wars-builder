@@ -36,7 +36,7 @@ export const entityKinds = [
 ] as const;
 
 export type EntityKind = (typeof entityKinds)[number];
-export type IdentityQuality = "stable" | "duplicate" | "synthetic";
+export type IdentityQuality = "upstream" | "scoped" | "synthetic";
 export type Severity = "warning" | "fatal";
 
 export interface DomainDiagnostic {
@@ -47,8 +47,12 @@ export interface DomainDiagnostic {
 }
 
 export interface RichTextInline {
-  readonly type: "text" | "strong" | "lineBreak";
+  readonly type: "text" | "strong" | "emphasis" | "lineBreak" | "reference";
   readonly value?: string;
+  readonly reference?: {
+    readonly state: "resolved" | "unresolved";
+    readonly target: string;
+  };
 }
 
 export interface RichTextParagraph {
@@ -72,7 +76,18 @@ export interface RichTextTable {
   readonly rows: readonly RichTextTableRow[];
 }
 
-export type RichTextBlock = RichTextParagraph | RichTextTable;
+export interface RichTextListItem {
+  readonly type: "listItem";
+  readonly children: readonly RichTextInline[];
+}
+
+export interface RichTextList {
+  readonly type: "list";
+  readonly ordered: boolean;
+  readonly items: readonly RichTextListItem[];
+}
+
+export type RichTextBlock = RichTextParagraph | RichTextTable | RichTextList;
 
 export interface SafePresentation {
   readonly plainText: string;
@@ -97,6 +112,31 @@ export interface Provenance {
   readonly sourceNodeId: SourceNodeId;
   readonly sourceTag: string;
   readonly upstreamId: string | null;
+  readonly occurrence: number;
+  readonly xmlPath: string;
+  readonly resolutionChain: readonly SourceNodeId[];
+  readonly sourceRevision: string;
+  readonly importRevision: number;
+  readonly schemaRevision: typeof DOMAIN_SCHEMA_VERSION;
+}
+
+export interface DomainLabels {
+  readonly contractVersion: 1;
+  readonly canonicalLabel: string;
+  readonly sourceLabel: string | null;
+  readonly aliases: readonly string[];
+  readonly locale: "und";
+  readonly fallbackLabel: string;
+}
+
+export interface DomainIdentity {
+  readonly contractVersion: 1;
+  readonly canonicalId: EntityId;
+  readonly sourceNodeId: SourceNodeId;
+  readonly upstreamId: string | null;
+  readonly occurrence: number;
+  readonly quality: IdentityQuality;
+  readonly migrationAliasIds: readonly EntityId[];
 }
 
 export type CostAmount =
@@ -168,7 +208,9 @@ export interface DomainEntityBase<Kind extends EntityKind> {
   readonly kind: Kind;
   readonly sourceTag: string;
   readonly identityQuality: IdentityQuality;
+  readonly identity: DomainIdentity;
   readonly label: SafePresentation;
+  readonly labels: DomainLabels;
   readonly description?: SafePresentation;
   readonly attributes: Readonly<Record<string, string>>;
   readonly fields: readonly DomainField[];
@@ -203,7 +245,20 @@ export type Escort = DomainEntityBase<"Escort">;
 export type Doctrine = DomainEntityBase<"Doctrine">;
 export type Rule = DomainEntityBase<"Rule">;
 export type CostType = DomainEntityBase<"CostType">;
-export type Cost = DomainEntityBase<"Cost"> & { readonly amount: CostAmount };
+export interface CostSemantics {
+  readonly contractVersion: 1;
+  readonly amount: CostAmount;
+  readonly costTypeId: EntityId | null;
+  readonly sourceCostTypeId: string | null;
+  readonly resource: "points" | "victory-points" | "other" | "unknown";
+  readonly role: "base" | "delta" | "limit" | "unknown";
+  readonly scope: string | null;
+}
+
+export type Cost = DomainEntityBase<"Cost"> & {
+  readonly amount: CostAmount;
+  readonly semantics: CostSemantics;
+};
 export type Constraint = DomainEntityBase<"Constraint"> & {
   readonly expression: EvaluatorExpression;
 };
@@ -275,6 +330,19 @@ export interface Slot {
   readonly kind: "OptionSlot" | "Hardpoint" | "Generator" | "Attachment" | "Escort" | "Doctrine";
   readonly label: SafePresentation;
   readonly placementIds: readonly PlacementId[];
+  readonly optionPlacementIds: readonly PlacementId[];
+  readonly cardinality: {
+    readonly contractVersion: 1;
+    readonly minimum: CostAmount;
+    readonly maximum: CostAmount;
+    readonly effective: "deferred-to-kan-32";
+  };
+  readonly costIds: readonly EntityId[];
+  readonly constraintIds: readonly EntityId[];
+  readonly conditionIds: readonly EntityId[];
+  readonly modifierIds: readonly EntityId[];
+  readonly hidden: boolean;
+  readonly helper: boolean;
   readonly semantics: {
     readonly contractVersion: 1;
     readonly selection: "option";
@@ -362,19 +430,38 @@ export interface ContentHasher {
 
 export interface CatalogChunk {
   readonly id: string;
-  readonly kind: "entities" | "placements" | "slots" | "aliases" | "diagnostics" | "metadata";
+  readonly kind:
+    | "entities"
+    | "placements"
+    | "slots"
+    | "aliases"
+    | "diagnostics"
+    | "metadata"
+    | "core"
+    | "glossary"
+    | "faction-index";
+  readonly bucket?: string;
   readonly sha256: string;
   readonly bytes: number;
   readonly value: string;
 }
 
 export interface CatalogIndex {
+  readonly format: "dwb-domain-catalog";
+  readonly manifestVersion: 1;
   readonly schemaVersion: typeof DOMAIN_SCHEMA_VERSION;
   readonly contentVersion: string;
+  readonly sourceSchemaVersion: number;
+  readonly sourceCommit: string;
   readonly chunks: readonly Omit<CatalogChunk, "value">[];
   readonly entityChunkById: Readonly<Record<string, string>>;
   readonly placementChunkById: Readonly<Record<string, string>>;
   readonly slotChunkById: Readonly<Record<string, string>>;
+  readonly views: {
+    readonly coreChunk: string;
+    readonly glossaryChunk: string;
+    readonly factionIndexChunks: Readonly<Record<string, string>>;
+  };
 }
 
 export interface ChunkedDomainCatalog {

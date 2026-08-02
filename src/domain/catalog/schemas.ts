@@ -12,8 +12,21 @@ const sourcePin = z
   })
   .strict();
 const inline = z
-  .object({ type: z.enum(["text", "strong", "lineBreak"]), value: z.string().optional() })
-  .strict();
+  .object({
+    type: z.enum(["text", "strong", "emphasis", "lineBreak", "reference"]),
+    value: z.string().optional(),
+    reference: z
+      .object({ state: z.enum(["resolved", "unresolved"]), target: z.string() })
+      .strict()
+      .optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.type === "reference" && !value.reference)
+      context.addIssue({ code: "custom", message: "Reference metadata is required" });
+    if (value.type !== "reference" && value.reference)
+      context.addIssue({ code: "custom", message: "Reference metadata is not allowed" });
+  });
 const paragraph = z.object({ type: z.literal("paragraph"), children: z.array(inline) }).strict();
 const table = z
   .object({
@@ -36,10 +49,17 @@ const table = z
     ),
   })
   .strict();
+const list = z
+  .object({
+    type: z.literal("list"),
+    ordered: z.boolean(),
+    items: z.array(z.object({ type: z.literal("listItem"), children: z.array(inline) }).strict()),
+  })
+  .strict();
 const presentation = z
   .object({
     plainText: z.string(),
-    blocks: z.array(z.union([paragraph, table])),
+    blocks: z.array(z.union([paragraph, table, list])),
     contentUnavailable: z.boolean(),
     diagnostics: z.array(z.string()),
   })
@@ -54,6 +74,33 @@ const provenance = z
     sourceNodeId: brandedId,
     sourceTag: z.string().min(1),
     upstreamId: z.string().nullable(),
+    occurrence: z.number().int().positive(),
+    xmlPath: z.string().min(1),
+    resolutionChain: z.array(brandedId),
+    sourceRevision: z.string().min(1),
+    importRevision: z.number().int().positive(),
+    schemaRevision: z.literal(DOMAIN_SCHEMA_VERSION),
+  })
+  .strict();
+const labels = z
+  .object({
+    contractVersion,
+    canonicalLabel: z.string().min(1),
+    sourceLabel: z.string().nullable(),
+    aliases: z.array(z.string()),
+    locale: z.literal("und"),
+    fallbackLabel: z.string().min(1),
+  })
+  .strict();
+const identity = z
+  .object({
+    contractVersion,
+    canonicalId: brandedId,
+    sourceNodeId: brandedId,
+    upstreamId: z.string().nullable(),
+    occurrence: z.number().int().positive(),
+    quality: z.enum(["upstream", "scoped", "synthetic"]),
+    migrationAliasIds: z.array(brandedId),
   })
   .strict();
 const costAmount = z.discriminatedUnion("state", [
@@ -142,8 +189,10 @@ const entityBase = z
     id: brandedId,
     kind: z.enum(entityKinds),
     sourceTag: z.string().min(1),
-    identityQuality: z.enum(["stable", "duplicate", "synthetic"]),
+    identityQuality: z.enum(["upstream", "scoped", "synthetic"]),
+    identity,
     label: presentation,
+    labels,
     description: presentation.optional(),
     attributes: z.record(z.string(), z.string()),
     fields: z.array(field),
@@ -194,7 +243,21 @@ export const domainEntitySchema = z.discriminatedUnion("kind", [
   plainEntity("Doctrine"),
   plainEntity("Rule"),
   plainEntity("CostType"),
-  entityBase.extend({ kind: z.literal("Cost"), amount: costAmount }),
+  entityBase.extend({
+    kind: z.literal("Cost"),
+    amount: costAmount,
+    semantics: z
+      .object({
+        contractVersion,
+        amount: costAmount,
+        costTypeId: brandedId.nullable(),
+        sourceCostTypeId: z.string().nullable(),
+        resource: z.enum(["points", "victory-points", "other", "unknown"]),
+        role: z.enum(["base", "delta", "limit", "unknown"]),
+        scope: z.string().nullable(),
+      })
+      .strict(),
+  }),
   expressionEntity("Constraint"),
   expressionEntity("ConditionGroup"),
   expressionEntity("Condition"),
@@ -254,6 +317,21 @@ export const domainCatalogSchema = z
           ]),
           label: presentation,
           placementIds: z.array(z.string()),
+          optionPlacementIds: z.array(z.string()),
+          cardinality: z
+            .object({
+              contractVersion,
+              minimum: costAmount,
+              maximum: costAmount,
+              effective: z.literal("deferred-to-kan-32"),
+            })
+            .strict(),
+          costIds: z.array(brandedId),
+          constraintIds: z.array(brandedId),
+          conditionIds: z.array(brandedId),
+          modifierIds: z.array(brandedId),
+          hidden: z.boolean(),
+          helper: z.boolean(),
           semantics: z
             .object({
               contractVersion,
@@ -290,5 +368,85 @@ export const domainCatalogSchema = z
         })
         .strict(),
     ),
+  })
+  .strict();
+
+const chunkKind = z.enum([
+  "entities",
+  "placements",
+  "slots",
+  "aliases",
+  "diagnostics",
+  "metadata",
+  "core",
+  "glossary",
+  "faction-index",
+]);
+const recordEntries = z.array(z.tuple([z.string().min(1), z.unknown()]));
+
+export const catalogChunkPayloadSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("metadata"),
+      schemaVersion: z.literal(DOMAIN_SCHEMA_VERSION),
+      source: sourcePin,
+      roots: z.array(brandedId),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("entities"),
+      bucket: z.string().regex(/^(?:[0-9a-f]{2})+$/u),
+      entries: recordEntries,
+    })
+    .strict(),
+  ...(["placements", "slots", "aliases", "diagnostics"] as const).map((kind) =>
+    z.object({ kind: z.literal(kind), entries: recordEntries }).strict(),
+  ),
+  z
+    .object({ kind: z.literal("core"), roots: z.array(brandedId), entityIds: z.array(brandedId) })
+    .strict(),
+  z.object({ kind: z.literal("glossary"), entityIds: z.array(brandedId) }).strict(),
+  z
+    .object({
+      kind: z.literal("faction-index"),
+      factionId: brandedId,
+      entityIds: z.array(brandedId),
+    })
+    .strict(),
+]);
+
+export const catalogIndexSchema = z
+  .object({
+    format: z.literal("dwb-domain-catalog"),
+    manifestVersion: z.literal(1),
+    schemaVersion: z.literal(DOMAIN_SCHEMA_VERSION),
+    contentVersion: z.string().regex(/^[0-9a-f]{64}$/u),
+    sourceSchemaVersion: z.number().int().positive(),
+    sourceCommit: z.string().regex(/^[0-9a-f]{40}$/u),
+    chunks: z.array(
+      z
+        .object({
+          id: z.string().min(1),
+          kind: chunkKind,
+          bucket: z
+            .string()
+            .regex(/^(?:[0-9a-f]{2})+$/u)
+            .optional(),
+          sha256: z.string().regex(/^[0-9a-f]{64}$/u),
+          bytes: z.number().int().nonnegative(),
+        })
+        .strict(),
+    ),
+    entityChunkById: z.record(z.string(), z.string().regex(/^[0-9a-f]{64}$/u)),
+    placementChunkById: z.record(z.string(), z.string().regex(/^[0-9a-f]{64}$/u)),
+    slotChunkById: z.record(z.string(), z.string().regex(/^[0-9a-f]{64}$/u)),
+    views: z
+      .object({
+        coreChunk: z.string().regex(/^[0-9a-f]{64}$/u),
+        glossaryChunk: z.string().regex(/^[0-9a-f]{64}$/u),
+        factionIndexChunks: z.record(z.string(), z.string().regex(/^[0-9a-f]{64}$/u)),
+      })
+      .strict(),
   })
   .strict();

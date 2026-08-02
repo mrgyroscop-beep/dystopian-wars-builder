@@ -205,20 +205,49 @@ describe("pinned real domain model", () => {
   it("meets normalization, heap, index and lookup budgets", async () => {
     expect(elapsedMs).toBeLessThanOrEqual(15_000);
     expect(peakHeapBytes).toBeLessThanOrEqual(512 * 1024 * 1024);
-    const factionIndex = canonicalJson(
-      Object.values(first.entities)
-        .filter((entity) => entity.kind === "Faction")
-        .map((entity) => ({
-          id: entity.id,
-          label: entity.label.plainText,
-          document: entity.provenance.documentPath,
-        })),
-    );
-    expect(gzipSync(factionIndex).byteLength).toBeLessThanOrEqual(250 * 1024);
+    const indexes = new Map<string, typeof chunks.index>();
+    const storedChunks = new Map<string, string>();
+    const persistedRepository = {
+      contractVersion: 1 as const,
+      writeChunk(sha256: string, value: string) {
+        storedChunks.set(sha256, value);
+        return Promise.resolve();
+      },
+      writeIndex(index: typeof chunks.index) {
+        indexes.set(index.contentVersion, index);
+        return Promise.resolve();
+      },
+      loadIndex(contentVersion: string) {
+        const index = indexes.get(contentVersion);
+        return index
+          ? Promise.resolve(index)
+          : Promise.reject(new Error("missing persisted index"));
+      },
+      loadChunk(sha256: string) {
+        const value = storedChunks.get(sha256);
+        return value
+          ? Promise.resolve(value)
+          : Promise.reject(new Error("missing persisted chunk"));
+      },
+    };
+    await persistChunkedCatalog(chunks, persistedRepository);
+    const persistedIndex = await persistedRepository.loadIndex(chunks.index.contentVersion);
+    const factionIndexHashes = Object.values(persistedIndex.views.factionIndexChunks);
+    expect(factionIndexHashes).toHaveLength(8);
+    for (const sha256 of factionIndexHashes) {
+      const factionIndex = await persistedRepository.loadChunk(sha256);
+      expect(gzipSync(factionIndex).byteLength).toBeLessThanOrEqual(250 * 1024);
+    }
     const target = Object.keys(first.entities)[Math.floor(Object.keys(first.entities).length / 2)]!;
     const started = performance.now();
-    for (let index = 0; index < 10_000; index += 1) expect(first.entities[target]).toBeDefined();
-    expect((performance.now() - started) / 10_000).toBeLessThanOrEqual(50);
+    for (let index = 0; index < 100; index += 1) {
+      const persisted = await persistedRepository.loadIndex(chunks.index.contentVersion);
+      const sha256 = persisted.entityChunkById[target];
+      expect(sha256).toBeDefined();
+      expect(await persistedRepository.loadChunk(sha256!)).toContain(target);
+    }
+    const persistedLookupMs = (performance.now() - started) / 100;
+    expect(persistedLookupMs).toBeLessThanOrEqual(50);
 
     const evidence = {
       schemaVersion: first.schemaVersion,
@@ -238,6 +267,9 @@ describe("pinned real domain model", () => {
       peakHeapMeasurement: "normalizer-checkpoints",
       sourcePayloadPublished: false,
       persistedRoundTrip: true,
+      persistedFactionIndexes: factionIndexHashes.length,
+      persistedFactionIndexGzipBudgetBytes: 250 * 1024,
+      persistedRepositoryLookupMs: persistedLookupMs,
       indexedLookupBudgetMs: 50,
     };
     const evidenceDirectory = path.join(repositoryRoot, "artifacts");

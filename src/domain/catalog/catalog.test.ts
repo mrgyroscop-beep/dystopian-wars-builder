@@ -44,7 +44,7 @@ describe("normalized catalog contract", () => {
     );
     const ids = Object.keys(catalog.entities).filter((id) => id.includes(":selectionEntry:same"));
     expect(ids).toEqual(["dw4:root:selectionEntry:same", "dw4:root:selectionEntry:same~2"]);
-    expect(catalog.entities[ids[1]!]!.identityQuality).toBe("duplicate");
+    expect(catalog.entities[ids[1]!]!.identityQuality).toBe("scoped");
     expect(catalog.diagnostics).toContainEqual(
       expect.objectContaining({ code: "DUPLICATE_UPSTREAM_ID" }),
     );
@@ -288,6 +288,71 @@ describe("normalized catalog contract", () => {
     expect(parseCostAmount(raw)).toEqual(expected);
   });
 
+  it("publishes complete identity, label, provenance, cost and slot contracts", () => {
+    const catalog = normalize(
+      root([
+        node("selectionEntryGroups", {}, [
+          node("selectionEntryGroup", { id: "slot", name: "Loadout", hidden: "true" }, [
+            node("constraints", {}, [
+              node("constraint", { id: "min", type: "min", field: "selections", value: "1" }),
+              node("constraint", { id: "max", type: "max", field: "selections", value: "2" }),
+            ]),
+            node("selectionEntries", {}, [
+              node("selectionEntry", { id: "choice", name: "Choice", type: "upgrade" }, [
+                node("costs", {}, [
+                  node("cost", { id: "cost", name: "Points", typeId: "points", value: "5" }),
+                ]),
+              ]),
+            ]),
+          ]),
+        ]),
+      ]),
+    );
+    const faction = Object.values(catalog.entities).find((entity) => entity.kind === "Faction")!;
+    expect(faction.identity).toMatchObject({
+      canonicalId: faction.id,
+      sourceNodeId: faction.provenance.sourceNodeId,
+      occurrence: 1,
+      quality: "upstream",
+    });
+    expect(faction.labels).toMatchObject({
+      canonicalLabel: "Synthetic",
+      sourceLabel: "Synthetic",
+      aliases: [],
+      locale: "und",
+      fallbackLabel: "Synthetic",
+    });
+    expect(faction.provenance.xmlPath).toContain("root");
+    expect(faction.provenance).toMatchObject({
+      occurrence: 1,
+      resolutionChain: [faction.provenance.sourceNodeId],
+      sourceRevision: source.commit,
+      importRevision: 2,
+      schemaRevision: "1.0.0",
+    });
+    const cost = Object.values(catalog.entities).find((entity) => entity.kind === "Cost")!;
+    expect(cost.semantics).toMatchObject({
+      amount: { state: "value", value: "5" },
+      costTypeId: null,
+      sourceCostTypeId: "points",
+      resource: "points",
+      role: "base",
+      scope: null,
+    });
+    const slot = Object.values(catalog.slots)[0]!;
+    expect(slot).toMatchObject({
+      hidden: true,
+      helper: false,
+      cardinality: {
+        minimum: { state: "value", value: "1" },
+        maximum: { state: "value", value: "2" },
+        effective: "deferred-to-kan-32",
+      },
+    });
+    expect(slot.optionPlacementIds).toEqual(slot.placementIds);
+    expect(slot.constraintIds).toHaveLength(2);
+  });
+
   it("keeps placement order stable for PSA/FPS-like sibling slots", () => {
     const input = root([
       node("selectionEntries", {}, [
@@ -326,6 +391,19 @@ describe("normalized catalog contract", () => {
     const first = await chunkDomainCatalog(catalog, hasher);
     const second = await chunkDomainCatalog(structuredClone(catalog), hasher);
     expect(canonicalJson(first)).toBe(canonicalJson(second));
+    expect(first.index).toMatchObject({
+      format: "dwb-domain-catalog",
+      manifestVersion: 1,
+      sourceSchemaVersion: 2,
+      sourceCommit: source.commit,
+    });
+    expect(first.index.views.coreChunk).toMatch(/^[0-9a-f]{64}$/u);
+    expect(first.index.views.glossaryChunk).toMatch(/^[0-9a-f]{64}$/u);
+    expect(
+      first.index.chunks
+        .filter((chunk) => chunk.kind === "entities")
+        .every((chunk) => chunk.bucket?.match(/^(?:[0-9a-f]{2})+$/u)),
+    ).toBe(true);
     expect(first.index.chunks.every((chunk) => chunk.bytes <= MAX_CHUNK_BYTES)).toBe(true);
     const reconstructed = await reconstructDomainCatalog(first, hasher);
     expect({ ...reconstructed, contentVersion: "unversioned" }).toEqual(catalog);
@@ -434,6 +512,17 @@ describe("normalized catalog contract", () => {
     await expect(
       reconstructDomainCatalog(await chunkDomainCatalog(broken, hasher), hasher),
     ).rejects.toThrow(/closure/iu);
+
+    const schemaInvalid = structuredClone(catalog) as unknown as {
+      entities: Record<string, Record<string, unknown>>;
+    };
+    delete schemaInvalid.entities[Object.keys(schemaInvalid.entities)[0]!]!.label;
+    await expect(
+      reconstructDomainCatalog(
+        await chunkDomainCatalog(schemaInvalid as unknown as typeof catalog, hasher),
+        hasher,
+      ),
+    ).rejects.toThrow(/domain schema/iu);
   });
 
   it("uses structural vocabulary rather than display labels", () => {
@@ -505,7 +594,22 @@ describe("normalized catalog contract", () => {
     (description as { richText: unknown }).richText = {
       type: "document",
       children: [
-        { type: "paragraph", children: [{ type: "strong", value: "Bold" }, { type: "lineBreak" }] },
+        {
+          type: "paragraph",
+          children: [
+            { type: "strong", value: "Bold" },
+            { type: "emphasis", value: " emphasis" },
+            { type: "reference", value: "Known", targetEntityId: "dw4:root:Rule:known" },
+            { type: "reference", value: "Missing", targetId: "missing" },
+            { type: "lineBreak" },
+            { type: "future-inline", value: "kept in plain fallback" },
+          ],
+        },
+        {
+          type: "list",
+          ordered: false,
+          items: [{ type: "listItem", children: [{ type: "text", value: "First" }] }],
+        },
         {
           type: "table",
           rows: [
@@ -529,7 +633,17 @@ describe("normalized catalog contract", () => {
       { referencePolicy: "report" },
     );
     const owner = Object.values(catalog.entities).find((entity) => entity.id.endsWith(":owner"))!;
-    expect(owner.description?.blocks.map((block) => block.type)).toEqual(["paragraph", "table"]);
+    expect(owner.description?.blocks.map((block) => block.type)).toEqual([
+      "paragraph",
+      "list",
+      "table",
+    ]);
+    expect(owner.description?.diagnostics).toEqual(
+      expect.arrayContaining([
+        "PRESENTATION_REFERENCE_UNRESOLVED",
+        "PRESENTATION_UNSUPPORTED_INLINE",
+      ]),
+    );
     expect(owner.extensions).toEqual([
       expect.objectContaining({
         sourceTag: "futureExtension",

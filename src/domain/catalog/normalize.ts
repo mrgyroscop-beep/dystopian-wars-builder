@@ -113,6 +113,7 @@ interface NodeContext {
   readonly id: SourceNodeId;
   readonly entityId: EntityId | null;
   readonly kind: EntityKind | null;
+  readonly ancestorTags: readonly string[];
 }
 
 interface MutableEntity extends Omit<
@@ -177,7 +178,7 @@ export function normalizeCatalog(
 
   for (const document of input.graph.documents) {
     const rootUpstreamId = document.root.attributes.id ?? upstreamIdFromKey(document.root.key);
-    collectContexts(document.root, document, rootUpstreamId, null);
+    collectContexts(document.root, document, rootUpstreamId, null, []);
     options.observeMemoryCheckpoint?.();
   }
 
@@ -185,13 +186,26 @@ export function normalizeCatalog(
   for (const context of contexts.values()) {
     if (!context.kind || !context.entityId) continue;
     const node = context.node;
+    const identityQualityValue = identityQuality(node);
+    const label = toSafePresentation(node.attributes.name ?? node.text ?? context.kind);
+    const occurrence = parseOccurrence(node.key);
     const entity: MutableEntity = {
       contractVersion: 1,
       id: context.entityId,
       kind: context.kind,
       sourceTag: node.tag,
-      identityQuality: identityQuality(node),
-      label: toSafePresentation(node.attributes.name ?? node.text ?? context.kind),
+      identityQuality: identityQualityValue,
+      identity: {
+        contractVersion: 1,
+        canonicalId: context.entityId,
+        sourceNodeId: context.id,
+        upstreamId: node.attributes.id ?? null,
+        occurrence,
+        quality: identityQualityValue,
+        migrationAliasIds: [],
+      },
+      label,
+      labels: labelsOf(node, context.kind, label.plainText),
       ...descriptionOf(node),
       attributes: safeAttributes(node.attributes),
       fields: fieldsOf(context, contexts, input),
@@ -205,7 +219,12 @@ export function normalizeCatalog(
       profileIds: [],
       ruleIds: [],
       slotIds: [],
-      ...(context.kind === "Cost" ? { amount: parseCostAmount(node.attributes.value) } : {}),
+      ...(context.kind === "Cost"
+        ? {
+            amount: parseCostAmount(node.attributes.value),
+            semantics: costSemantics(context, upstreamIndex),
+          }
+        : {}),
       ...(expressionKinds.has(context.kind)
         ? { expression: expressionOf(context, upstreamIndex, diagnostics) }
         : {}),
@@ -213,10 +232,9 @@ export function normalizeCatalog(
     };
     entities.set(entity.id, entity);
     if (context.node === context.document.root) rootEntityIds.push(entity.id);
-    if (entity.identityQuality !== "stable") {
+    if (entity.identityQuality !== "upstream") {
       diagnostics.push({
-        code:
-          entity.identityQuality === "duplicate" ? "DUPLICATE_UPSTREAM_ID" : "SYNTHETIC_IDENTITY",
+        code: entity.identityQuality === "scoped" ? "DUPLICATE_UPSTREAM_ID" : "SYNTHETIC_IDENTITY",
         severity: "warning",
         sourceNodeId: context.id,
         detail: { identityQuality: entity.identityQuality, entityId: entity.id },
@@ -232,6 +250,14 @@ export function normalizeCatalog(
         kind: context.kind,
         label: entity.label,
         placementIds: [],
+        optionPlacementIds: [],
+        cardinality: slotCardinality(node),
+        costIds: [],
+        constraintIds: [],
+        conditionIds: [],
+        modifierIds: [],
+        hidden: node.attributes.hidden === "true",
+        helper: node.attributes.helper === "true",
         semantics: {
           contractVersion: 1,
           selection: "option",
@@ -250,9 +276,35 @@ export function normalizeCatalog(
     options.observeMemoryCheckpoint?.();
   }
 
+  for (const alias of aliases.values()) {
+    for (const target of alias.entityIds) {
+      const entity = entities.get(target);
+      if (!entity) continue;
+      entities.set(target, {
+        ...entity,
+        identity: {
+          ...entity.identity,
+          migrationAliasIds: [...entity.identity.migrationAliasIds, alias.alias].sort(),
+        },
+      });
+    }
+  }
+
   const fatal = diagnostics.filter((diagnostic) => diagnostic.severity === "fatal");
   if (fatal.length > 0) throw new DomainNormalizationError(fatal);
   options.observeMemoryCheckpoint?.();
+
+  for (const [id, slot] of slots) {
+    const owner = entities.get(slot.ownerId);
+    slots.set(id, {
+      ...slot,
+      optionPlacementIds: [...slot.placementIds],
+      costIds: [...(owner?.costIds ?? [])],
+      constraintIds: [...(owner?.constraintIds ?? [])],
+      conditionIds: [...(owner?.conditionIds ?? [])],
+      modifierIds: [...(owner?.modifierIds ?? [])],
+    });
+  }
 
   return {
     schemaVersion: DOMAIN_SCHEMA_VERSION,
@@ -271,6 +323,7 @@ export function normalizeCatalog(
     document: LosslessDocument,
     rootId: string,
     ownerKind: EntityKind | null,
+    ancestorTags: readonly string[],
   ): void {
     const upstreamId = upstreamIdFromKey(node.key, node.attributes.id);
     const id = sourceNodeId(rootId, node.tag, upstreamId, parseOccurrence(node.key));
@@ -293,7 +346,15 @@ export function normalizeCatalog(
         detail: { first: existingContext.document.path, second: document.path },
       });
     const kind = kindOf(node, ownerKind, vocabulary);
-    const context = { document, rootId, node, id, entityId: kind ? entityId(id) : null, kind };
+    const context = {
+      document,
+      rootId,
+      node,
+      id,
+      entityId: kind ? entityId(id) : null,
+      kind,
+      ancestorTags,
+    };
     contexts.set(node.key, context);
     if (node.attributes.id && context.entityId) {
       const matches = upstreamIndex.get(node.attributes.id) ?? [];
@@ -301,7 +362,7 @@ export function normalizeCatalog(
       upstreamIndex.set(node.attributes.id, matches);
     }
     for (const child of node.children ?? [])
-      collectContexts(child, document, rootId, kind ?? ownerKind);
+      collectContexts(child, document, rootId, kind ?? ownerKind, [...ancestorTags, node.tag]);
   }
 
   function connect(
@@ -536,7 +597,86 @@ function containsWeaponProfile(node: LosslessNode, vocabulary: DomainVocabulary)
 
 function identityQuality(node: LosslessNode): DomainEntity["identityQuality"] {
   if (!node.attributes.id) return "synthetic";
-  return parseOccurrence(node.key) > 1 ? "duplicate" : "stable";
+  return parseOccurrence(node.key) > 1 ? "scoped" : "upstream";
+}
+
+function labelsOf(
+  node: LosslessNode,
+  kind: EntityKind,
+  normalizedLabel: string,
+): DomainEntity["labels"] {
+  const sourceLabel = node.attributes.name ?? node.text ?? null;
+  const fallbackLabel = normalizedLabel || `${kind} (${node.attributes.id ?? "unknown"})`;
+  const aliases = (node.attributes.aliases ?? "")
+    .split(/[;,]/u)
+    .map((value) => toSafePresentation(value).plainText)
+    .filter(Boolean)
+    .sort();
+  return {
+    contractVersion: 1,
+    canonicalLabel: normalizedLabel || fallbackLabel,
+    sourceLabel: sourceLabel === null ? null : toSafePresentation(sourceLabel).plainText,
+    aliases,
+    locale: "und",
+    fallbackLabel,
+  };
+}
+
+function costSemantics(
+  context: NodeContext,
+  upstreamIndex: ReadonlyMap<string, readonly NodeContext[]>,
+): Extract<DomainEntity, { kind: "Cost" }>["semantics"] {
+  const amount = parseCostAmount(context.node.attributes.value);
+  const sourceCostTypeId = context.node.attributes.typeId ?? null;
+  const costType = sourceCostTypeId
+    ? upstreamIndex.get(sourceCostTypeId)?.find((candidate) => candidate.kind === "CostType")
+    : undefined;
+  const costTypeId = costType?.entityId ?? null;
+  const resourceLabel = `${costType?.node.attributes.name ?? ""} ${sourceCostTypeId ?? ""}`
+    .normalize("NFC")
+    .toLowerCase();
+  const resource = /victory|\bvp\b/u.test(resourceLabel)
+    ? "victory-points"
+    : /point|\bpts?\b/u.test(resourceLabel)
+      ? "points"
+      : sourceCostTypeId
+        ? "other"
+        : "unknown";
+  const role = context.ancestorTags.some((tag) => linkTags.has(tag))
+    ? "delta"
+    : context.ancestorTags.includes("constraints")
+      ? "limit"
+      : "base";
+  return {
+    contractVersion: 1,
+    amount,
+    costTypeId,
+    sourceCostTypeId,
+    resource,
+    role,
+    scope: context.node.attributes.scope ?? null,
+  };
+}
+
+function slotCardinality(node: LosslessNode): Slot["cardinality"] {
+  let minimum: CostAmount = { contractVersion: 1, state: "missing" };
+  let maximum: CostAmount = { contractVersion: 1, state: "missing" };
+  const visit = (candidate: LosslessNode): void => {
+    if (candidate.tag === "constraint" && candidate.attributes.field === "selections") {
+      if (candidate.attributes.type === "min")
+        minimum = parseCostAmount(candidate.attributes.value);
+      if (candidate.attributes.type === "max")
+        maximum = parseCostAmount(candidate.attributes.value);
+    }
+    for (const child of candidate.children ?? []) visit(child);
+  };
+  visit(node);
+  return {
+    contractVersion: 1,
+    minimum,
+    maximum,
+    effective: "deferred-to-kan-32",
+  };
 }
 
 function descriptionOf(
@@ -856,6 +996,12 @@ function provenanceOf(context: NodeContext, input: CatalogNormalizationInput): P
     sourceNodeId: context.id,
     sourceTag: context.node.tag,
     upstreamId: context.node.attributes.id ?? null,
+    occurrence: parseOccurrence(context.node.key),
+    xmlPath: context.node.key,
+    resolutionChain: [context.id],
+    sourceRevision: input.source.commit,
+    importRevision: input.graph.schemaVersion,
+    schemaRevision: DOMAIN_SCHEMA_VERSION,
   };
 }
 
