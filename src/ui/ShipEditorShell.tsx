@@ -34,8 +34,9 @@ export function ShipEditorShell({
   const [fleetEditorOpen, setFleetEditorOpen] = useState(false);
   const tabsId = useId();
 
-  function focusGroup(groupId: ShipEditorGroupId) {
-    const target = document.getElementById(`ship-editor-group-${groupId}`);
+  function focusGroup(groupId: ShipEditorGroupId | null) {
+    if (!groupId || model.dataState !== "ready") return;
+    const target = document.getElementById(groupDomId(model, groupId));
     if (target && "scrollIntoView" in target) target.scrollIntoView({ block: "center" });
     target?.focus({ preventScroll: true });
   }
@@ -202,7 +203,7 @@ export function ShipEditorShell({
                     <button onClick={() => focusGroup(problem.targetGroupId)} type="button">
                       <strong>{problem.title}</strong>
                       <span>{problem.detail}</span>
-                      <em>Перейти к {problem.targetGroupId.toUpperCase()} →</em>
+                      <em>Перейти к {problem.targetGroupLabel} →</em>
                     </button>
                   </li>
                 ))}
@@ -211,11 +212,11 @@ export function ShipEditorShell({
           ) : null}
 
           <div className="editor-groups">
-            {model.groups.map((group) => (
+            {model.groups.map((group, groupIndex) => (
               <fieldset
                 className="editor-group"
                 disabled={busy || model.mode === "preview"}
-                id={`ship-editor-group-${group.id}`}
+                id={`ship-editor-group-unit-${groupIndex}`}
                 key={group.id}
                 tabIndex={-1}
               >
@@ -237,7 +238,7 @@ export function ShipEditorShell({
                       <input
                         checked={option.selectedQuantity === 1}
                         disabled={unavailable}
-                        name={`ship-${model.instanceId ?? "preview"}-${group.id}`}
+                        name={`ship-unit-${groupIndex}`}
                         onChange={() =>
                           model.instanceId &&
                           onCommand(
@@ -322,12 +323,14 @@ export function ShipEditorShell({
               className="fleet-doctrine-editor editor-groups"
               id="fleet-doctrine-editor"
             >
-              {model.fleetGroups.map((group) => (
+              {model.fleetGroups.map((group, groupIndex) => (
                 <EditorGroup
                   busy={busy}
+                  domId={`ship-editor-group-fleet-${groupIndex}`}
                   group={group}
                   key={group.id}
                   model={model}
+                  nameToken={`fleet-${groupIndex}`}
                   onCommand={onCommand}
                 />
               ))}
@@ -370,22 +373,33 @@ function OptionCopy({ option }: { readonly option: ShipEditorOptionReadModel }) 
   );
 }
 
+function groupDomId(model: ShipEditorReadyReadModel, groupId: ShipEditorGroupId): string {
+  const unitIndex = model.groups.findIndex((group) => group.id === groupId);
+  if (unitIndex >= 0) return `ship-editor-group-unit-${unitIndex}`;
+  const fleetIndex = model.fleetGroups.findIndex((group) => group.id === groupId);
+  return fleetIndex >= 0 ? `ship-editor-group-fleet-${fleetIndex}` : "ship-editor-title";
+}
+
 function EditorGroup({
   busy,
+  domId,
   group,
   model,
+  nameToken,
   onCommand,
 }: {
   readonly busy: boolean;
+  readonly domId: string;
   readonly group: ShipEditorGroupReadModel;
   readonly model: ShipEditorReadyReadModel;
+  readonly nameToken: string;
   readonly onCommand: (command: ShipEditorCommand, announcement: string) => void;
 }) {
   return (
     <fieldset
       className="editor-group"
       disabled={busy || model.mode === "preview"}
-      id={`ship-editor-group-${group.id}`}
+      id={domId}
       tabIndex={-1}
     >
       <legend>
@@ -401,7 +415,7 @@ function EditorGroup({
             <input
               checked={option.selectedQuantity === 1}
               disabled={option.availability !== "available"}
-              name={`ship-${model.instanceId ?? "preview"}-${group.id}`}
+              name={`ship-${nameToken}`}
               onChange={() =>
                 model.instanceId &&
                 onCommand(

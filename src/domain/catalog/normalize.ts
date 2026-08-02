@@ -1054,6 +1054,7 @@ function overlayOf(
     modifierIds: relationIds(new Set(["Modifier"])),
     repeatIds: relationIds(new Set(["Repeat"])),
     attributes: safeAttributes(context.node.attributes),
+    cardinality: slotCardinality(context.node),
   };
 }
 

@@ -533,7 +533,8 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       );
       const selected = selectedChildren.reduce((sum, child) => sum + child.quantity, 0);
       const bounds = effectiveSlotBounds(slot, instance);
-      if (bounds.state === "unknown") {
+      const visibility = effectiveSlotVisibility(slot, instance);
+      if (visibility.state === "unknown") {
         slotResults.push({
           ownerInstanceId: instance.id,
           slotId: slot.id,
@@ -541,6 +542,32 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           minimum: null,
           maximum: null,
           status: "indeterminate",
+          visibility: "indeterminate",
+          helper: slot.helper,
+        });
+        indeterminateExpression(visibility.code, instance, slot.ownerId, slot.id);
+      } else if (visibility.hidden || slot.helper) {
+        slotResults.push({
+          ownerInstanceId: instance.id,
+          slotId: slot.id,
+          selected,
+          minimum: "0",
+          maximum:
+            bounds.state === "known" && bounds.maximum ? decimalToString(bounds.maximum) : null,
+          status: "satisfied",
+          visibility: visibility.hidden ? "hidden" : "visible",
+          helper: slot.helper,
+        });
+      } else if (bounds.state === "unknown") {
+        slotResults.push({
+          ownerInstanceId: instance.id,
+          slotId: slot.id,
+          selected,
+          minimum: null,
+          maximum: null,
+          status: "indeterminate",
+          visibility: "visible",
+          helper: slot.helper,
         });
         indeterminateExpression(bounds.code, instance, slot.ownerId, slot.id);
       } else {
@@ -555,6 +582,8 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           minimum: bounds.minimum ? decimalToString(bounds.minimum) : null,
           maximum: bounds.maximum ? decimalToString(bounds.maximum) : null,
           status: slotStatus,
+          visibility: "visible",
+          helper: false,
         });
         if (below)
           addProblem(
@@ -577,8 +606,38 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
             `max ${decimalToString(bounds.maximum)}`,
           );
       }
-      evaluateSlotAvailability(slot, instance, selectedChildren, bounds);
+      evaluateSlotAvailability(slot, instance, selectedChildren, bounds, visibility);
     }
+  }
+
+  function effectiveSlotVisibility(
+    slot: Slot,
+    instance: RosterSelectionInstance,
+  ):
+    | { readonly state: "known"; readonly hidden: boolean }
+    | { readonly state: "unknown"; readonly code: string } {
+    let hidden = slot.hidden;
+    let activeValue: boolean | null = null;
+    for (const modifierId of [...slot.modifierIds].sort()) {
+      const modifier = catalog.entities[modifierId];
+      if (!modifier || modifier.kind !== "Modifier")
+        return { state: "unknown", code: "INVALID_SLOT_MODIFIER" };
+      if (modifier.expression.field !== "hidden") continue;
+      if (!modifier.expression.evaluable)
+        return { state: "unknown", code: "UNEVALUABLE_HIDDEN_MODIFIER" };
+      const active = evaluateConditions(modifier.conditionIds, instance, new Set());
+      if (active.state === "unknown") return active;
+      if (active.state === "false") continue;
+      const value = modifier.expression.value;
+      if (value !== "true" && value !== "false")
+        return { state: "unknown", code: "INVALID_HIDDEN_MODIFIER_VALUE" };
+      const parsed = value === "true";
+      if (activeValue !== null && activeValue !== parsed)
+        return { state: "unknown", code: "CONFLICTING_HIDDEN_MODIFIERS" };
+      activeValue = parsed;
+    }
+    if (activeValue !== null) hidden = activeValue;
+    return { state: "known", hidden };
   }
 
   function slotsFor(instance: RosterSelectionInstance): Slot[] {
@@ -587,6 +646,10 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     for (const id of entity?.slotIds ?? []) ids.add(id);
     for (const placement of placementsByOwner.get(instance.definitionId) ?? []) {
       if (!placement.definitionId) continue;
+      const materialized = (children.get(instance.id) ?? []).some(
+        (child) => child.placementId === placement.id,
+      );
+      if (materialized) continue;
       for (const id of catalog.entities[placement.definitionId]?.slotIds ?? []) ids.add(id);
     }
     return [...ids]
@@ -646,6 +709,9 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           readonly maximum: DecimalValue | null;
         }
       | { readonly state: "unknown"; readonly code: string },
+    visibility:
+      | { readonly state: "known"; readonly hidden: boolean }
+      | { readonly state: "unknown"; readonly code: string },
   ): void {
     const selectedCount = selectedChildren.reduce((sum, child) => sum + child.quantity, 0);
     for (const placementId of [...slot.optionPlacementIds].sort()) {
@@ -653,6 +719,16 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       if (!placement) continue;
       const reasons = new Set<string>();
       let state: PlacementAvailability["state"] = "available";
+      if (visibility.state === "unknown") {
+        state = "indeterminate";
+        reasons.add(visibility.code);
+      } else if (visibility.hidden) {
+        state = "unavailable";
+        reasons.add("SLOT_HIDDEN");
+      } else if (slot.helper) {
+        state = "unavailable";
+        reasons.add("HELPER_SLOT");
+      }
       const target = placement.definitionId ? catalog.entities[placement.definitionId] : undefined;
       const conditionIds = [
         ...new Set([...placement.overlay.conditionIds, ...(target?.conditionIds ?? [])]),
@@ -661,7 +737,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       if (enabled.state === "false") {
         state = "unavailable";
         reasons.add("CONDITION_NOT_MET");
-      } else if (enabled.state === "unknown") {
+      } else if (enabled.state === "unknown" && state === "available") {
         state = "indeterminate";
         reasons.add(enabled.code);
       }
@@ -670,15 +746,19 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       );
       const alreadySelected = selectedByPlacement.length > 0;
       if (bounds.state === "unknown") {
-        state = "indeterminate";
-        reasons.add(bounds.code);
-      } else if (
-        bounds.maximum &&
-        compareDecimal(parseDecimal(String(selectedCount))!, bounds.maximum) >= 0 &&
-        !alreadySelected
-      ) {
-        state = "unavailable";
-        reasons.add("SLOT_MAX_REACHED");
+        if (state === "available") {
+          state = "indeterminate";
+          reasons.add(bounds.code);
+        }
+      } else {
+        if (
+          bounds.maximum &&
+          compareDecimal(parseDecimal(String(selectedCount))!, bounds.maximum) >= 0 &&
+          !alreadySelected
+        ) {
+          state = "unavailable";
+          reasons.add("SLOT_MAX_REACHED");
+        }
       }
       for (const constraintId of [...placement.overlay.constraintIds].sort()) {
         const result = evaluateConstraint(constraintId, owner, slot.id, true);

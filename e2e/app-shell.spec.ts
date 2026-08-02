@@ -44,6 +44,15 @@ async function captureReviewEvidence(
   directory: string,
   basename: string,
 ) {
+  await page.evaluate(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    for (const element of document.querySelectorAll<HTMLElement>(
+      ".context-pane, .ship-editor, .ship-editor__configuration",
+    ))
+      element.scrollTop = 0;
+  });
   const dom = await collectDomEvidence(page);
   const metadata = {
     reviewSha,
@@ -450,6 +459,9 @@ test("configures Akita 0/4 → 4/4, fixes fleet-level Kagutsuchi and retries a f
   await page.getByRole("button", { name: "Добавить в состав" }).click();
   await expect(page.getByText("Редактирование")).toBeVisible();
   await expect(page.getByRole("heading", { level: 3, name: "Akita Demonstrator" })).toBeFocused();
+  const editorMarkup = await page.locator(".ship-editor").evaluate((element) => element.outerHTML);
+  expect(editorMarkup).not.toMatch(/DEMO-|opaque|demo-akita-slot|:slot/iu);
+  await expect(page.locator(".editor-problems li")).toHaveCount(4);
 
   await page.getByRole("button", { name: "Настроить доктрину" }).click();
   await page.getByLabel("Количество Kagutsuchi Doctrine").fill("1");
@@ -457,7 +469,6 @@ test("configures Akita 0/4 → 4/4, fixes fleet-level Kagutsuchi and retries a f
     name: /Kagutsuchi Doctrine requires Magma Cast Generator/u,
   });
   await expect(requirement).toBeVisible();
-  await requirement.scrollIntoViewIfNeeded();
   await captureReviewEvidence(
     page,
     {
@@ -476,7 +487,10 @@ test("configures Akita 0/4 → 4/4, fixes fleet-level Kagutsuchi and retries a f
   await page.getByRole("radio", { name: /Rocket Battery/u }).check();
   await page.getByRole("radio", { name: /Shield Generator/u }).check();
   await expect(page.getByText("4 / 4")).toBeVisible();
+  await expect(page.locator(".editor-problems li")).toHaveCount(0);
   await page.getByLabel("Количество Repair Crane").fill("1");
+  await expect(page.getByText("375 / 1000")).toBeVisible();
+  await expect(page.locator(".roster-instance-list small")).toHaveText("375 Points · 9 VP");
   await captureReviewEvidence(
     page,
     {
@@ -500,6 +514,7 @@ test("configures Akita 0/4 → 4/4, fixes fleet-level Kagutsuchi and retries a f
   });
   await page.getByLabel("Количество Tanuki Escort").fill("4");
   await expect(page.getByText("405 / 1000")).toBeVisible();
+  await expect(page.locator(".roster-instance-list small")).toHaveText("405 Points · 9 VP");
   await expect(page.getByText("Производные изменения каталога")).toBeVisible();
   await expect(page.getByText("Не удалось сохранить на устройстве")).toBeVisible();
   await captureReviewEvidence(
@@ -568,6 +583,9 @@ test("returns exact focus on mobile and keeps editor chrome below the workspace 
   await page.getByRole("radio", { name: /Fury Generator/u }).check();
   await page.getByRole("radio", { name: /Rocket Battery/u }).check();
   await page.getByRole("radio", { name: /Shield Generator/u }).check();
+  await page.getByLabel("Количество Repair Crane").fill("1");
+  await expect(page.getByText("375 / 1000")).toBeVisible();
+  await expect(page.locator(".roster-instance-list small")).toHaveText("375 Points · 9 VP");
   await captureReviewEvidence(
     page,
     { route: "/rosters/scaffold-demo", state: "akita-configured-4-of-4", viewport },
@@ -585,6 +603,8 @@ test("returns exact focus on mobile and keeps editor chrome below the workspace 
     };
   });
   await page.getByLabel("Количество Tanuki Escort").fill("4");
+  await expect(page.getByText("405 / 1000")).toBeVisible();
+  await expect(page.locator(".roster-instance-list small")).toHaveText("405 Points · 9 VP");
   await expect(page.getByText("Не удалось сохранить на устройстве")).toBeVisible();
   await captureReviewEvidence(
     page,

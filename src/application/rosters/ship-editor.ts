@@ -44,7 +44,8 @@ export interface ShipEditorProblemReadModel {
   readonly id: string;
   readonly title: string;
   readonly detail: string;
-  readonly targetGroupId: ShipEditorGroupId;
+  readonly targetGroupId: ShipEditorGroupId | null;
+  readonly targetGroupLabel: string;
 }
 
 export interface ShipEditorReadyReadModel {
@@ -138,6 +139,7 @@ export function materializeShipStructure(
   )
     return snapshot;
   const id = freshId(snapshot.instances, createId);
+  const quantity = placementCardinality(placement)?.minimum ?? 1;
   return {
     ...snapshot,
     instances: {
@@ -149,7 +151,7 @@ export function materializeShipStructure(
         null,
         unit.id,
         unit.forceInstanceId ?? unit.id,
-        1,
+        quantity,
       ),
     },
   };
@@ -166,7 +168,8 @@ export function applyShipEditorCommand(
   const unit = snapshot.instances[command.instanceId];
   if (!unit || !isShipEditorDefinition(catalog, unit.definitionId))
     throw new ShipEditorCommandError("UNKNOWN_INSTANCE", "Редактируемый корабль не найден.");
-  const context = resolveGroupContext(snapshot, catalog, unit, command.groupId);
+  const evaluation = evaluateRoster(catalog, snapshot);
+  const context = resolveGroupContext(snapshot, catalog, evaluation, unit, command.groupId);
   if (!context)
     throw new ShipEditorCommandError("UNKNOWN_GROUP", "Группа конфигурации не найдена.");
   const placement = catalog.placements[command.optionId];
@@ -176,7 +179,6 @@ export function applyShipEditorCommand(
     !placement.definitionId
   )
     throw new ShipEditorCommandError("UNKNOWN_OPTION", "Опция конфигурации не найдена.");
-  const evaluation = evaluateRoster(catalog, snapshot);
   const availability = evaluation.availability.find(
     (candidate) =>
       candidate.ownerInstanceId === context.owner.id && candidate.placementId === placement.id,
@@ -284,21 +286,24 @@ export function projectShipEditor(
       "Неполная структура",
       "Экземпляр структурной Model отсутствует в составе.",
     );
-  const unitSlots = slotsForDefinition(catalog, modelInstance.definitionId).filter(
-    (slot) => !slot.hidden && slot.kind !== "Doctrine",
+  const declaredUnitSlots = slotsForDefinition(catalog, modelInstance.definitionId).filter(
+    (slot) => slot.kind !== "Doctrine",
   );
-  if (unitSlots.length === 0)
+  if (declaredUnitSlots.length === 0)
     return unavailable(
       "unsupported-data",
       "Настройка недоступна",
       "Для структурной Model не опубликованы поддерживаемые Slots.",
     );
+  const unitSlots = declaredUnitSlots.filter((slot) =>
+    isControllableSlot(evaluation, modelInstance, slot),
+  );
   const fleetOwner = projected.unit.forceInstanceId
     ? projected.snapshot.instances[projected.unit.forceInstanceId]
     : null;
   const fleetSlots = fleetOwner
     ? slotsForDefinition(catalog, fleetOwner.definitionId).filter(
-        (slot) => !slot.hidden && slot.kind === "Doctrine",
+        (slot) => slot.kind === "Doctrine" && isControllableSlot(evaluation, fleetOwner, slot),
       )
     : [];
   const groups = unitSlots.map((slot) =>
@@ -309,28 +314,47 @@ export function projectShipEditor(
         projectGroup(projected.snapshot, catalog, evaluation, fleetOwner, slot, "fleet"),
       )
     : [];
+  const allGroups = [...groups, ...fleetGroups];
   const relevantIds = descendantsIncluding(projected.snapshot, projected.unit.id);
+  if (fleetOwner) relevantIds.add(fleetOwner.id);
   const relevantProblems = evaluation.problems.filter(
     (problem) =>
-      (problem.target.instanceId && relevantIds.has(problem.target.instanceId)) ||
-      (problem.target.slotId && groups.some((group) => group.id === problem.target.slotId)),
+      !["SLOT_MIN_NOT_MET", "CONSTRAINT_MIN_NOT_MET"].includes(problem.code) &&
+      ((problem.target.instanceId && relevantIds.has(problem.target.instanceId)) ||
+        (problem.target.slotId && allGroups.some((group) => group.id === problem.target.slotId))),
   );
-  const problems = relevantProblems.map((problem) => {
+  const projectedEvaluationProblems = relevantProblems.map((problem) => {
     const source = problem.sourceEntityId ? catalog.entities[problem.sourceEntityId] : null;
     const targetGroupId =
       problem.target.slotId ??
       (source && "expression" in source ? source.expression.flags["targetSlotId"] : undefined) ??
-      groups[0]!.id;
+      null;
+    const targetGroup = allGroups.find((group) => group.id === targetGroupId) ?? null;
     return {
       id: problem.id,
       title:
         problem.code === "ACTIVE_ERROR_MODIFIER"
           ? problem.message
-          : `${catalog.slots[targetGroupId]?.label.plainText ?? "Настройка"}: требуется выбор`,
+          : `${targetGroup?.label ?? "Настройка корабля"}: требует внимания`,
       detail: problem.message,
-      targetGroupId,
+      targetGroupId: targetGroup?.id ?? null,
+      targetGroupLabel: targetGroup?.label ?? "настройке корабля",
     };
   });
+  const mandatoryProblems: ShipEditorProblemReadModel[] = groups.flatMap((group) => {
+    const selected = group.options.reduce((sum, option) => sum + option.selectedQuantity, 0);
+    if (selected >= group.minimum) return [];
+    return [
+      {
+        id: `mandatory:${group.id}`,
+        title: `${group.label}: требуется выбор`,
+        detail: `Выбрано ${selected}; требуется минимум ${group.minimum}.`,
+        targetGroupId: group.id,
+        targetGroupLabel: group.label,
+      },
+    ];
+  });
+  const problems = dedupeProblems([...projectedEvaluationProblems, ...mandatoryProblems]);
   const contributionIds = descendantsIncluding(projected.snapshot, projected.unit.id);
   const contributions = evaluation.contributions.filter((entry) =>
     contributionIds.has(entry.instanceId),
@@ -355,12 +379,17 @@ export function projectShipEditor(
   );
   const validity = relevantProblems.some((problem) => problem.severity === "indeterminate")
     ? "indeterminate"
-    : relevantProblems.some((problem) => problem.severity === "error")
+    : relevantProblems.some((problem) => problem.severity === "error") || mandatoryProblems.length
       ? "invalid"
       : "valid";
-  const modelDefinition = catalog.entities[modelPlacement.definitionId];
-  const minimum = integerAttribute(modelDefinition ?? null, "editor.quantity.minimum", 1);
-  const maximum = integerAttribute(modelDefinition ?? null, "editor.quantity.maximum", minimum);
+  const modelBounds = placementCardinality(modelPlacement);
+  if (!modelBounds)
+    return unavailable(
+      "unsupported-data",
+      "Количество моделей неизвестно",
+      "Каталог не содержит безопасно интерпретируемую cardinality для структурной Model.",
+    );
+  const { minimum, maximum } = modelBounds;
   return {
     dataState: "ready",
     mode: storedUnit ? "instance" : "preview",
@@ -455,11 +484,12 @@ function projectGroup(
 function resolveGroupContext(
   snapshot: RosterSnapshot,
   catalog: DomainCatalog,
+  evaluation: RosterEvaluation,
   unit: RosterSelectionInstance,
   groupId: string,
 ): { readonly owner: RosterSelectionInstance; readonly slot: Slot } | null {
   const slot = catalog.slots[groupId];
-  if (!slot || slot.hidden) return null;
+  if (!slot) return null;
   const placement = editorModelPlacement(catalog, unit.definitionId);
   const model = placement
     ? Object.values(snapshot.instances).find(
@@ -469,13 +499,15 @@ function resolveGroupContext(
     : null;
   if (
     model &&
-    slotsForDefinition(catalog, model.definitionId).some((candidate) => candidate.id === slot.id)
+    slotsForDefinition(catalog, model.definitionId).some((candidate) => candidate.id === slot.id) &&
+    isControllableSlot(evaluation, model, slot)
   )
     return { owner: model, slot };
   const fleet = unit.forceInstanceId ? snapshot.instances[unit.forceInstanceId] : null;
   if (
     fleet &&
-    slotsForDefinition(catalog, fleet.definitionId).some((candidate) => candidate.id === slot.id)
+    slotsForDefinition(catalog, fleet.definitionId).some((candidate) => candidate.id === slot.id) &&
+    isControllableSlot(evaluation, fleet, slot)
   )
     return { owner: fleet, slot };
   return null;
@@ -491,8 +523,14 @@ function setModelQuantity(
   const definition = model ? catalog.entities[model.definitionId] : null;
   if (!model || definition?.kind !== "Model")
     throw new ShipEditorCommandError("UNKNOWN_INSTANCE", "Структурная Model не найдена.");
-  const minimum = integerAttribute(definition, "editor.quantity.minimum", 1);
-  const maximum = integerAttribute(definition, "editor.quantity.maximum", minimum);
+  const placement = model.placementId ? catalog.placements[model.placementId] : null;
+  const bounds = placement ? placementCardinality(placement) : null;
+  if (!bounds)
+    throw new ShipEditorCommandError(
+      "INDETERMINATE",
+      "Каталог не содержит безопасно интерпретируемую cardinality для Model.",
+    );
+  const { minimum, maximum } = bounds;
   if (!Number.isSafeInteger(quantity) || quantity < minimum || quantity > maximum)
     throw new ShipEditorCommandError(
       "OUT_OF_RANGE",
@@ -545,7 +583,7 @@ function previewSnapshot(
     null,
     unitId,
     unitId,
-    1,
+    placementCardinality(modelPlacement)?.minimum ?? 1,
   );
   return {
     unit,
@@ -563,6 +601,29 @@ function cardinality(slot: Slot): { readonly minimum: number; readonly maximum: 
   const minimum = amountNumber(slot.cardinality.minimum);
   const maximum = amountNumber(slot.cardinality.maximum);
   return minimum === null || maximum === null ? null : { minimum, maximum };
+}
+
+function placementCardinality(
+  placement: Placement,
+): { readonly minimum: number; readonly maximum: number } | null {
+  const source = placement.overlay.cardinality;
+  if (!source) return null;
+  const minimum = amountNumber(source.minimum);
+  const maximum = amountNumber(source.maximum);
+  return minimum === null || maximum === null || minimum < 1 || maximum < minimum
+    ? null
+    : { minimum, maximum };
+}
+
+function isControllableSlot(
+  evaluation: RosterEvaluation,
+  owner: RosterSelectionInstance,
+  slot: Slot,
+): boolean {
+  const effective = evaluation.slots.find(
+    (candidate) => candidate.ownerInstanceId === owner.id && candidate.slotId === slot.id,
+  );
+  return effective?.visibility === "visible" && !effective.helper;
 }
 
 function evaluatedCardinality(
@@ -606,6 +667,17 @@ function descendantsIncluding(snapshot: RosterSnapshot, rootId: string): Set<str
     );
   }
   return ids;
+}
+
+function dedupeProblems(
+  problems: readonly ShipEditorProblemReadModel[],
+): ShipEditorProblemReadModel[] {
+  const unique = new Map<string, ShipEditorProblemReadModel>();
+  for (const problem of problems) {
+    const key = `${problem.title}:${problem.detail}:${problem.targetGroupId ?? problem.targetGroupLabel}`;
+    if (!unique.has(key)) unique.set(key, problem);
+  }
+  return [...unique.values()];
 }
 
 function sumContributions(
@@ -654,11 +726,6 @@ function optionCostLabel(
     return sum + Number(candidate.amount.value);
   }, 0);
   return points === 0 ? "Бесплатно" : `${signed(points)} Points`;
-}
-
-function integerAttribute(entity: DomainEntity | null, key: string, fallback: number): number {
-  const value = Number(entity?.attributes[key]);
-  return Number.isSafeInteger(value) && value >= 1 ? value : fallback;
 }
 
 function unavailable(

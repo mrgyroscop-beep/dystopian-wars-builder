@@ -50,6 +50,9 @@ describe("catalog-driven ship editor application boundary", () => {
       modelQuantity: { value: 1, fixed: true },
     });
     expect(model.groups.filter((group) => group.control === "exclusive")).toHaveLength(4);
+    expect(model.problems).toHaveLength(4);
+    expect(new Set(model.problems.map((problem) => problem.targetGroupLabel)).size).toBe(4);
+    expect(model.problems.every((problem) => problem.title.endsWith("требуется выбор"))).toBe(true);
   });
 
   it("uses fleet-level Kagutsuchi and the real error modifier without auto-applying Magma", () => {
@@ -119,15 +122,23 @@ describe("catalog-driven ship editor application boundary", () => {
     const structured = materialize(fixture);
     const initial = project(structured, fixture);
     const modelId = initial.modelQuantity.instanceId!;
-    const definitionId = structured.instances[modelId]!.definitionId;
-    const definition = fixture.catalog.entities[definitionId]!;
+    const placementId = structured.instances[modelId]!.placementId!;
+    const placement = fixture.catalog.placements[placementId]!;
     const catalog: DomainCatalog = {
       ...fixture.catalog,
-      entities: {
-        ...fixture.catalog.entities,
-        [definitionId]: {
-          ...definition,
-          attributes: { ...definition.attributes, "editor.quantity.maximum": "3" },
+      placements: {
+        ...fixture.catalog.placements,
+        [placementId]: {
+          ...placement,
+          overlay: {
+            ...placement.overlay,
+            cardinality: {
+              contractVersion: 1,
+              minimum: { contractVersion: 1, state: "value", value: "1" },
+              maximum: { contractVersion: 1, state: "value", value: "3" },
+              effective: "deferred-to-kan-32",
+            },
+          },
         },
       },
     };
@@ -148,6 +159,100 @@ describe("catalog-driven ship editor application boundary", () => {
         ),
       ).modelQuantity,
     ).toMatchObject({ value: 2, minimum: 1, maximum: 3, fixed: false });
+  });
+
+  it("removes effective hidden and helper slots from controls while failing closed honestly", () => {
+    const fixture = setup();
+    let snapshot = materialize(fixture);
+    const initial = project(snapshot, fixture);
+    const hiddenGroup = group(initial, "FPS 2");
+    snapshot = choose(snapshot, fixture, "FPS 2", "Rocket Battery");
+    const modifierTemplate = Object.values(fixture.catalog.entities).find(
+      (entity): entity is Extract<DomainEntity, { kind: "Modifier" }> => entity.kind === "Modifier",
+    )!;
+    const modifierId = "test-effective-hidden" as DomainEntity["id"];
+    const hiddenCatalog: DomainCatalog = {
+      ...fixture.catalog,
+      entities: {
+        ...fixture.catalog.entities,
+        [modifierId]: {
+          ...modifierTemplate,
+          id: modifierId,
+          conditionIds: [],
+          expression: {
+            ...modifierTemplate.expression,
+            field: "hidden",
+            value: "true",
+            evaluable: true,
+            unevaluableReasons: [],
+          },
+        },
+      },
+      slots: {
+        ...fixture.catalog.slots,
+        [hiddenGroup.id]: {
+          ...fixture.catalog.slots[hiddenGroup.id]!,
+          modifierIds: [modifierId],
+        },
+      },
+    };
+    const hidden = project(snapshot, { ...fixture, catalog: hiddenCatalog });
+    expect(hidden.groups.map((candidate) => candidate.label)).not.toContain("FPS 2");
+    expect(hidden.mandatory).toEqual({ selected: 0, required: 3 });
+    expect(hidden.problems.some((problem) => problem.detail.includes("selected option"))).toBe(
+      true,
+    );
+
+    const helperGroup = group(initial, "FPS 3");
+    const helperCatalog: DomainCatalog = {
+      ...fixture.catalog,
+      slots: {
+        ...fixture.catalog.slots,
+        [helperGroup.id]: { ...fixture.catalog.slots[helperGroup.id]!, helper: true },
+      },
+    };
+    const helper = project(materialize(fixture), { ...fixture, catalog: helperCatalog });
+    expect(helper.groups.map((candidate) => candidate.label)).not.toContain("FPS 3");
+    expect(helper.mandatory.required).toBe(3);
+
+    const effectiveModifier = hiddenCatalog.entities[modifierId] as Extract<
+      DomainEntity,
+      { kind: "Modifier" }
+    >;
+    const unknownModifier: Extract<DomainEntity, { kind: "Modifier" }> = {
+      ...effectiveModifier,
+      expression: { ...effectiveModifier.expression, value: "unknown" },
+    };
+    const unknownCatalog: DomainCatalog = {
+      ...hiddenCatalog,
+      entities: {
+        ...hiddenCatalog.entities,
+        [modifierId]: unknownModifier,
+      },
+    };
+    const unknown = project(materialize(fixture), { ...fixture, catalog: unknownCatalog });
+    expect(unknown.groups.map((candidate) => candidate.label)).not.toContain("FPS 2");
+    expect(unknown.validity).toBe("indeterminate");
+  });
+
+  it("projects exactly four mandatory problems in preview and none after 4/4", () => {
+    const fixture = setup();
+    let snapshot = materialize(fixture);
+    expect(
+      project(snapshot, fixture).problems.filter((problem) => problem.id.startsWith("mandatory:")),
+    ).toHaveLength(4);
+    for (const [groupLabel, optionLabel] of [
+      ["PSA", "Magma Cast Generator"],
+      ["FPS 1", "Fury Generator"],
+      ["FPS 2", "Rocket Battery"],
+      ["FPS 3", "Shield Generator"],
+    ] as const)
+      snapshot = choose(snapshot, fixture, groupLabel, optionLabel);
+    const configured = project(snapshot, fixture);
+    expect(configured.mandatory).toEqual({ selected: 4, required: 4 });
+    expect(configured.problems.filter((problem) => problem.id.startsWith("mandatory:"))).toEqual(
+      [],
+    );
   });
 
   it("fails closed for unavailable, forged and out-of-range commands", () => {

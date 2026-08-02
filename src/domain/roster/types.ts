@@ -109,6 +109,8 @@ export interface EffectiveSlotCardinality {
   readonly minimum: string | null;
   readonly maximum: string | null;
   readonly status: "satisfied" | "underfilled" | "overfilled" | "indeterminate";
+  readonly visibility: "visible" | "hidden" | "indeterminate";
+  readonly helper: boolean;
 }
 
 export interface PlacementAvailability {

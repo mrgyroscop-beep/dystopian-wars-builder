@@ -361,6 +361,14 @@ describe("normalized catalog contract", () => {
               node("constraint", { id: "min", type: "min", field: "selections", value: "1" }),
               node("constraint", { id: "max", type: "max", field: "selections", value: "2" }),
             ]),
+            node("modifiers", {}, [
+              node("modifier", {
+                id: "hide-slot",
+                type: "set",
+                field: "hidden",
+                value: "true",
+              }),
+            ]),
             node("selectionEntries", {}, [
               node("selectionEntry", { id: "choice", name: "Choice", type: "upgrade" }, [
                 node("costs", {}, [
@@ -418,6 +426,18 @@ describe("normalized catalog contract", () => {
       catalog.entities[catalog.placements[slot.optionPlacementIds[0]!]!.definitionId!]!.kind,
     ).toBe("Option");
     expect(slot.constraintIds).toHaveLength(2);
+    expect(slot.modifierIds).toHaveLength(1);
+    expect(catalog.entities[slot.modifierIds[0]!]!).toMatchObject({
+      kind: "Modifier",
+      expression: { field: "hidden", value: "true", evaluable: true },
+    });
+    const slotPlacement = Object.values(catalog.placements).find(
+      (placement) => placement.definitionId === slot.ownerId,
+    )!;
+    expect(slotPlacement.overlay.cardinality).toMatchObject({
+      minimum: { state: "value", value: "1" },
+      maximum: { state: "value", value: "2" },
+    });
   });
 
   it("keeps placement order stable for PSA/FPS-like sibling slots", () => {

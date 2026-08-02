@@ -305,6 +305,14 @@ export interface PlacementOverlay {
   readonly modifierIds: readonly EntityId[];
   readonly repeatIds: readonly EntityId[];
   readonly attributes: Readonly<Record<string, string>>;
+  readonly cardinality?: SelectionCardinality;
+}
+
+export interface SelectionCardinality {
+  readonly contractVersion: 1;
+  readonly minimum: CostAmount;
+  readonly maximum: CostAmount;
+  readonly effective: "deferred-to-kan-32";
 }
 
 export interface Placement {
@@ -331,12 +339,7 @@ export interface Slot {
   readonly label: SafePresentation;
   readonly placementIds: readonly PlacementId[];
   readonly optionPlacementIds: readonly PlacementId[];
-  readonly cardinality: {
-    readonly contractVersion: 1;
-    readonly minimum: CostAmount;
-    readonly maximum: CostAmount;
-    readonly effective: "deferred-to-kan-32";
-  };
+  readonly cardinality: SelectionCardinality;
   readonly costIds: readonly EntityId[];
   readonly constraintIds: readonly EntityId[];
   readonly conditionIds: readonly EntityId[];

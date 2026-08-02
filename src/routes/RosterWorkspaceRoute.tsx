@@ -176,7 +176,8 @@ export function RosterWorkspaceRoute({
   }
 
   function followIssue(problemId: string, targetId: string) {
-    setIssueReturnId(`issue-${safeId(problemId)}`);
+    const problemIndex = model.problems.findIndex((problem) => problem.id === problemId);
+    setIssueReturnId(problemIndex >= 0 ? `workspace-issue-${problemIndex}` : null);
     const target = document.getElementById(targetId);
     target?.scrollIntoView({ block: "center" });
     target?.focus({ preventScroll: true });
@@ -715,10 +716,10 @@ function ContextPane({
         </header>
         {model.problems.length ? (
           <ul>
-            {model.problems.map((problem) => (
+            {model.problems.map((problem, problemIndex) => (
               <li key={problem.id}>
                 <button
-                  id={`issue-${safeId(problem.id)}`}
+                  id={`workspace-issue-${problemIndex}`}
                   onClick={() => onFollowIssue(problem.id, problem.targetId)}
                   type="button"
                 >

@@ -287,6 +287,15 @@ export const placementSchema = z
         modifierIds: z.array(brandedId),
         repeatIds: z.array(brandedId),
         attributes: z.record(z.string(), z.string()),
+        cardinality: z
+          .object({
+            contractVersion,
+            minimum: costAmount,
+            maximum: costAmount,
+            effective: z.literal("deferred-to-kan-32"),
+          })
+          .strict()
+          .optional(),
       })
       .strict(),
     provenance,

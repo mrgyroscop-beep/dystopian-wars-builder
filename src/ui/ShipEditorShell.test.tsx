@@ -72,7 +72,9 @@ describe("ShipEditorShell", () => {
       expect.any(String),
     );
     await user.click(screen.getByRole("button", { name: /PSA: требуется выбор/u }));
-    expect(document.getElementById("ship-editor-group-opaque-slot-psa")).toHaveFocus();
+    expect(document.getElementById("ship-editor-group-unit-0")).toHaveFocus();
+    expect(document.body.innerHTML).not.toMatch(/opaque-slot|DEMO-/u);
+    expect(document.body.textContent).not.toMatch(/opaque-slot|DEMO-/u);
   });
 
   it("renders fixed and variable Model quantity and opens fleet-level Doctrine controls", async () => {
@@ -165,6 +167,7 @@ function editorModel(instanceId: string | null): ShipEditorReadyReadModel {
         title: "PSA: требуется выбор",
         detail: "Выберите ровно одну систему.",
         targetGroupId: "opaque-slot-psa",
+        targetGroupLabel: "PSA",
       },
     ],
     breakdown: [

@@ -185,8 +185,6 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
       attributes: {
         "demo.editor": "ship",
         "demo.catalog": "hidden",
-        "editor.quantity.minimum": "1",
-        "editor.quantity.maximum": "1",
       },
       slotIds: [psaSlotId, fps1SlotId, fps2SlotId, fps3SlotId, attachmentSlotId, escortSlotId],
     }),
@@ -279,7 +277,11 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
     [escortSlotId, "Escort", "Escorts", 0, 4, ["demo-akita-tanuki-escort"]],
   ] as const;
   const slots: Slot[] = [];
-  placements.push(placement("demo-akita-model-placement", entityId("demo-ship-001"), modelId, 0));
+  placements.push(
+    placement("demo-akita-model-placement", entityId("demo-ship-001"), modelId, 0, null, {
+      cardinality: selectionCardinality(1, 1),
+    }),
+  );
   for (const [id, kind, label, minimum, maximum, optionIds] of slotDefinitions) {
     const optionPlacements = optionIds.map((rawId, index) => {
       const overlay =
@@ -535,18 +537,7 @@ function editorSlot(
     label: presentation(label),
     placementIds,
     optionPlacementIds: placementIds,
-    cardinality: {
-      contractVersion: 1,
-      minimum:
-        minimum === 0
-          ? { contractVersion: 1, state: "zero", value: "0" }
-          : { contractVersion: 1, state: "value", value: String(minimum) },
-      maximum:
-        maximum === 0
-          ? { contractVersion: 1, state: "zero", value: "0" }
-          : { contractVersion: 1, state: "value", value: String(maximum) },
-      effective: "deferred-to-kan-32",
-    },
+    cardinality: selectionCardinality(minimum, maximum),
     costIds: [],
     constraintIds,
     conditionIds: [],
@@ -555,6 +546,21 @@ function editorSlot(
     helper: false,
     semantics: { contractVersion: 1, selection: "option", evaluation: "deferred-to-kan-32" },
     provenance: provenance(ownerId),
+  };
+}
+
+function selectionCardinality(minimum: number, maximum: number): Slot["cardinality"] {
+  return {
+    contractVersion: 1,
+    minimum:
+      minimum === 0
+        ? { contractVersion: 1, state: "zero", value: "0" }
+        : { contractVersion: 1, state: "value", value: String(minimum) },
+    maximum:
+      maximum === 0
+        ? { contractVersion: 1, state: "zero", value: "0" }
+        : { contractVersion: 1, state: "value", value: String(maximum) },
+    effective: "deferred-to-kan-32",
   };
 }
 

@@ -587,8 +587,8 @@ function projectElements(
           id: instance.id,
           definitionId: instance.definitionId,
           name: catalog.entities[instance.definitionId]?.label.plainText || "Неизвестный корабль",
-          points: contributionFor(evaluation, instance.id, "points"),
-          victoryPoints: contributionFor(evaluation, instance.id, "victory-points"),
+          points: contributionFor(stored.roster, evaluation, instance.id, "points"),
+          victoryPoints: contributionFor(stored.roster, evaluation, instance.id, "victory-points"),
         }))
         .sort(
           (left, right) =>
@@ -753,18 +753,33 @@ function totalFor(evaluation: RosterEvaluation, resource: "points" | "victory-po
 }
 
 function contributionFor(
+  snapshot: RosterSnapshot,
   evaluation: RosterEvaluation,
   instanceId: string,
   resource: "points" | "victory-points",
 ): string {
+  const descendants = descendantsIncluding(snapshot, instanceId);
   return decimalSum(
     evaluation.contributions
       .filter(
         (contribution) =>
-          contribution.instanceId === instanceId && contribution.resource === resource,
+          descendants.has(contribution.instanceId) && contribution.resource === resource,
       )
       .map((contribution) => contribution.value),
   );
+}
+
+function descendantsIncluding(snapshot: RosterSnapshot, rootId: string): Set<string> {
+  const result = new Set<string>();
+  const pending = [rootId];
+  while (pending.length > 0) {
+    const current = pending.shift()!;
+    if (result.has(current)) continue;
+    result.add(current);
+    for (const instance of Object.values(snapshot.instances))
+      if (instance.parentInstanceId === current) pending.push(instance.id);
+  }
+  return result;
 }
 
 function decimalSum(values: readonly string[]): string {

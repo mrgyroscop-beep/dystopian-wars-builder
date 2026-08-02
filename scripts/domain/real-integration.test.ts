@@ -188,6 +188,10 @@ describe("pinned real domain model", () => {
     const modelPlacement = Object.values(first.placements).find(
       (placement) => placement.ownerId === unit.id && placement.definitionId === model.id,
     )!;
+    expect(modelPlacement.overlay.cardinality).toMatchObject({
+      minimum: { state: "value", value: "1" },
+      maximum: { state: "value", value: "1" },
+    });
     expect(modelPlacement).toBeDefined();
     const forceInstance = rosterInstanceId("real:empire:akita-unit");
     const modelInstance = rosterInstanceId("real:empire:akita-model");
@@ -310,6 +314,12 @@ describe("pinned real domain model", () => {
       ),
     );
     expect(projected.mandatory).toEqual({ selected: 0, required: 4 });
+    expect(
+      projected.problems.filter((problem) => problem.id.startsWith("mandatory:")),
+    ).toHaveLength(4);
+    expect(new Set(projected.problems.map((problem) => problem.id)).size).toBe(
+      projected.problems.length,
+    );
 
     let created = 0;
     for (const group of projected.groups.filter((candidate) => candidate.minimum === 1)) {
@@ -332,6 +342,7 @@ describe("pinned real domain model", () => {
       );
     }
     expect(projected.mandatory).toEqual({ selected: 4, required: 4 });
+    expect(projected.problems.filter((problem) => problem.id.startsWith("mandatory:"))).toEqual([]);
 
     const kagutsuchi = empire.find(
       (entity) =>
