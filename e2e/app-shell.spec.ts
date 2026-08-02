@@ -307,7 +307,9 @@ test("requires an explicit target and keeps unavailable ships previewable", asyn
 
   await page.getByLabel("Поиск").fill("Pattern 029");
   await page.getByRole("button", { name: /Pattern 029/u }).click();
-  await expect(page.getByText(/не входит в выбранный Harbour Patrol/u)).toBeVisible();
+  await expect(
+    page.getByText(/Этот учебный корпус недоступен для выбранного Battlefleet\./u),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Добавление недоступно" })).toBeDisabled();
 });
 

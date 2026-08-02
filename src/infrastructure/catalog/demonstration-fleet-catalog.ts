@@ -80,7 +80,7 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
       attributes["demo.availabilityReason"] =
         availability === "indeterminate"
           ? "Учебная запись содержит неполное правило доступности; добавление заблокировано."
-          : "Этот учебный корпус не входит в выбранный Harbour Patrol.";
+          : "Этот учебный корпус недоступен для выбранного Battlefleet.";
     }
     const points = 35 + (index % 9) * 10;
     const victoryPoints = index % 4;

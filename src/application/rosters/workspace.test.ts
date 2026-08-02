@@ -99,6 +99,7 @@ describe("roster workspace application boundary", () => {
       session.execute({ type: "add", definitionId: "demo-ship-029" }),
     ).rejects.toMatchObject({
       code: "UNAVAILABLE",
+      message: "Этот учебный корпус недоступен для выбранного Battlefleet.",
     } satisfies Partial<WorkspaceCommandError>);
     await expect(
       session.execute({ type: "add", definitionId: "demo-ship-031" }),
