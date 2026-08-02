@@ -6,8 +6,8 @@ Cloudflare Worker API on the same local origin through the Cloudflare Vite
 plugin.
 
 The application shell is accompanied by a Node-only, deterministic catalogue
-importer. Game-domain adapters, functional rosters, authentication, D1 and
-production deployment belong to later Jira tasks.
+importer. Game-domain adapters, functional rosters, authentication, D1, custom
+domains and production data belong to later Jira tasks.
 
 Reference PDF and STL files may remain beside the checkout for research. They
 are ignored by Git and must never be committed or uploaded to the repository.
@@ -47,7 +47,7 @@ Static asset fallback serves `index.html` for deep SPA links, while
 2. Create a Jira-linked branch named `codex/KAN-XX-short-description`.
 3. Commit changes with the Jira key in every commit subject.
 4. Open a pull request and complete the repository template.
-5. Wait for `Required CI` and an independent approval before merging.
+5. Review the final diff and wait for `Required CI` before merging.
 
 Direct work on `main`, force-pushes and merge commits are not part of the
 supported process. See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete
@@ -85,12 +85,12 @@ change. E2E creates ignored screenshots and JSON metadata under `artifacts/`.
 Each review-evidence sidecar records the route, fixture state, viewport and exact
 review commit SHA; CI publishes the directory as a workflow artifact.
 
-Trusted same-repository pull requests also produce a credential-free inert preview
-bundle. After the preview environment is bootstrapped, the protected deployment
-controller publishes a stable PR URL plus an immutable exact-version URL and verifies
-the full SHA through `/api/health` before reporting success. Forks remain CI-only.
-See [preview operations](docs/preview-operations.md) and
-[ADR-0005](docs/architecture/ADR-0005-trusted-pr-previews.md).
+Cloudflare Workers Builds deploys non-production branches as Worker versions and
+posts the native branch and commit preview URLs to pull requests. GitHub Actions
+does not receive Cloudflare credentials and contains no custom preview controller.
+Verify a deployed URL with `npm run preview:smoke -- <url> <commit-sha>`. See
+[preview operations](docs/preview-operations.md) and
+[ADR-0005](docs/architecture/ADR-0005-cloudflare-workers-build-previews.md).
 
 ## Architecture
 
@@ -114,7 +114,7 @@ See [ADR-0001](docs/architecture/ADR-0001-cloudflare-spa-worker.md),
 [ADR-0002](docs/architecture/ADR-0002-layered-boundaries.md),
 [ADR-0003](docs/architecture/ADR-0003-catalog-import-seam.md) and
 [ADR-0004](docs/architecture/ADR-0004-catalog-ingestion-and-promotion.md), and
-[ADR-0005](docs/architecture/ADR-0005-trusted-pr-previews.md).
+[ADR-0005](docs/architecture/ADR-0005-cloudflare-workers-build-previews.md).
 
 ## Release and rollback
 

@@ -1,16 +1,15 @@
 # Release and rollback
 
-This repository uses immutable `main` commits as release inputs. Until the
-application and Cloudflare environments are introduced by their own Jira
-issues, a release means a reviewed repository change only; it does not authorise
-a production deployment.
+This repository uses immutable `main` commits as release inputs. Cloudflare Workers
+Builds deploys successful `main` builds to the Worker. Custom domains, production
+data and migrations still require their own explicitly authorised Jira issues.
 
 ## Release checklist
 
 1. Confirm the pull request references its Jira issue and all acceptance
    criteria are evidenced.
-2. Confirm the branch is current with `main`, all conversations are resolved,
-   `Required CI` passed and an independent reviewer approved the exact SHA.
+2. Review the final diff after the last push and confirm the branch is current with
+   `main`, all conversations are resolved and `Required CI` passed.
 3. Squash-merge the pull request without bypassing branch protection.
 4. Record the resulting `main` SHA in Jira and in any deployment record.
 5. When an environment exists, deploy that exact SHA and verify its health
@@ -23,8 +22,7 @@ a production deployment.
 2. Open a Jira-linked revert branch from the current `main`.
 3. Revert the faulty commit with `git revert`; never reset or force-push
    `main`.
-4. Run the full required CI, obtain independent review and merge the revert by
-   pull request.
+4. Review the revert diff, run the full required CI and merge it by pull request.
 5. When an environment exists, redeploy the selected reviewed SHA and verify
    health checks and user-critical flows.
 6. Record the incident, reverted SHA, replacement SHA and any follow-up task.

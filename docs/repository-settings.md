@@ -18,10 +18,9 @@ The target protection policy is:
 
 - all changes arrive through a pull request;
 - no GitHub approval is required (`required_approving_review_count = 0`), because
-  this personal repository has no second reviewer account and GitHub does not count
-  a pull-request author's self-approval;
-- last-push approval is disabled; independent technical and design review evidence
-  is still recorded by the project workflow before release;
+  this personal repository has no second reviewer account;
+- last-push approval is disabled; the author reviews the final diff after the last
+  push and `Required CI` is the automated release gate;
 - CODEOWNER review is not additionally required;
 - the branch is current before merge;
 - `Required CI` is successful;
@@ -30,9 +29,9 @@ The target protection policy is:
 - administrators cannot bypass the rule;
 - force-push and branch deletion are forbidden.
 
-This policy intentionally does not require a second GitHub account. Pull requests,
-strict `Required CI`, resolved conversations, linear history and administrator
-enforcement remain mandatory release gates.
+This policy intentionally does not require a second reviewer. Pull requests, strict
+`Required CI`, resolved conversations, linear history and administrator enforcement
+remain mandatory release gates.
 
 ## Public repository safeguards
 

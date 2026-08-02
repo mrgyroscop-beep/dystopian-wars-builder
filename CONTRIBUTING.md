@@ -28,13 +28,14 @@ Every change to `main` must arrive through a pull request. The author must:
 
 1. fill in the Jira key, scope, checks, risks and rollback sections;
 2. keep the branch current with `main`;
-3. obtain at least one independent approval;
+3. review the final diff after the last push;
 4. resolve all review conversations;
 5. pass the stable `Required CI` check.
 
 Use squash merge to keep one traceable change on `main`. The pull request title
-and resulting commit must retain the Jira key. Authors do not approve their own
-work.
+and resulting commit must retain the Jira key. This personal repository does not
+require a second reviewer or a GitHub approval; the author and `Required CI` are
+the release gate.
 
 ## Continuous integration contract
 
