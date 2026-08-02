@@ -20,6 +20,7 @@ import {
   type DomainCatalog,
   type LosslessGraph,
 } from "../../src/domain/catalog";
+import { evaluateRoster, rosterInstanceId, type RosterSnapshot } from "../../src/domain/roster";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
 let temporary = "";
@@ -160,6 +161,117 @@ describe("pinned real domain model", () => {
     ).toBe(true);
     expect(entities.some((entity) => "expression" in entity && "effectiveValue" in entity)).toBe(
       false,
+    );
+  });
+
+  it("evaluates real Empire/Akita costs and a second faction through stable IDs", () => {
+    const empire = Object.values(first.entities).filter(
+      (entity) => entity.provenance.documentPath === "Empire.cat",
+    );
+    const unit = empire.find(
+      (entity) => entity.kind === "Unit" && entity.label.plainText === "Akita Super Battleship",
+    )!;
+    const model = empire.find(
+      (entity) => entity.kind === "Model" && entity.label.plainText === "Akita",
+    )!;
+    const modelPlacement = Object.values(first.placements).find(
+      (placement) => placement.ownerId === unit.id && placement.definitionId === model.id,
+    )!;
+    expect(modelPlacement).toBeDefined();
+    const forceInstance = rosterInstanceId("real:empire:akita-unit");
+    const modelInstance = rosterInstanceId("real:empire:akita-model");
+    const empireRoster: RosterSnapshot = {
+      contractVersion: 1,
+      id: "real-empire-akita",
+      catalogContentVersion: first.contentVersion,
+      rootInstanceIds: [forceInstance],
+      instances: {
+        [forceInstance]: {
+          contractVersion: 1,
+          id: forceInstance,
+          definitionId: unit.id,
+          placementId: null,
+          slotId: null,
+          parentInstanceId: null,
+          forceInstanceId: forceInstance,
+          quantity: 1,
+        },
+        [modelInstance]: {
+          contractVersion: 1,
+          id: modelInstance,
+          definitionId: model.id,
+          placementId: modelPlacement.id,
+          slotId: modelPlacement.slotId,
+          parentInstanceId: forceInstance,
+          forceInstanceId: forceInstance,
+          quantity: 1,
+        },
+      },
+    };
+    const empireResult = evaluateRoster(first, empireRoster);
+    expect(empireResult.totals.find((total) => total.resource === "points")).toMatchObject({
+      value: "350",
+      complete: true,
+    });
+    expect(empireResult.totals.find((total) => total.resource === "victory-points")).toMatchObject({
+      value: "9",
+      complete: true,
+    });
+    expect(
+      empireResult.slots.filter((result) => first.slots[result.slotId]?.kind === "Hardpoint"),
+    ).toHaveLength(4);
+
+    const crownModels = Object.values(first.entities).filter(
+      (entity) => entity.kind === "Model" && entity.provenance.documentPath === "Crown.cat",
+    );
+    const crownModel = crownModels.find((candidate) => {
+      const pointCosts = candidate.costIds
+        .map((id) => first.entities[id])
+        .filter(
+          (entity) =>
+            entity?.kind === "Cost" &&
+            entity.semantics.resource === "points" &&
+            entity.amount.state === "value",
+        );
+      return pointCosts.length === 1;
+    })!;
+    expect(crownModel).toBeDefined();
+    const crownPointCost = crownModel.costIds
+      .map((id) => first.entities[id])
+      .find(
+        (entity) =>
+          entity?.kind === "Cost" &&
+          entity.semantics.resource === "points" &&
+          entity.amount.state === "value",
+      )!;
+    if (crownPointCost.kind !== "Cost" || crownPointCost.amount.state !== "value")
+      throw new Error("Crown point cost fixture is invalid");
+    const crownInstance = rosterInstanceId("real:crown:model");
+    const crownResult = evaluateRoster(first, {
+      contractVersion: 1,
+      id: "real-crown-model",
+      catalogContentVersion: first.contentVersion,
+      rootInstanceIds: [crownInstance],
+      instances: {
+        [crownInstance]: {
+          contractVersion: 1,
+          id: crownInstance,
+          definitionId: crownModel.id,
+          placementId: null,
+          slotId: null,
+          parentInstanceId: null,
+          forceInstanceId: crownInstance,
+          quantity: 1,
+        },
+      },
+    });
+    expect(crownResult.contributions).toContainEqual(
+      expect.objectContaining({
+        instanceId: crownInstance,
+        costId: crownPointCost.id,
+        unitValue: crownPointCost.amount.value,
+        value: crownPointCost.amount.value,
+      }),
     );
   });
 

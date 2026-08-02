@@ -23,6 +23,7 @@
     "test:catalog:policy": "node scripts/catalog/check-policy.mjs",
     "test:catalog:bundle": "node scripts/catalog/check-bundle.mjs",
     "test:domain": "vitest run src/domain/catalog/catalog.test.ts --config vitest.config.ts",
+    "test:roster": "vitest run src/domain/roster/roster.test.ts --config vitest.config.ts",
     "test:domain:real": "vitest run --config vitest.domain-real.config.mjs",
     "test:worker": "vitest run --config vitest.worker.config.ts",
     "preview:smoke": "node scripts/smoke-preview.mjs",
