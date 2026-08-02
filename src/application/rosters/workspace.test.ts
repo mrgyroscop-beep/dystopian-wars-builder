@@ -122,7 +122,57 @@ describe("roster workspace application boundary", () => {
     expect(saved.summary.persistence).toBe("saved-local");
     expect(fixture.saved.get("scaffold-demo")!.roster.instances["unsaved-1"]).toBeDefined();
   });
+
+  it("opens, targets, saves and reloads a Crown Vanguard roster created by KAN-33", async () => {
+    const fixture = harness(["crown-ship-1"]);
+    const crown = crownRoster();
+    const dependencies: RosterWorkspaceDependencies = {
+      ...fixture.dependencies,
+      fallbackRoster: (id) => (id === crown.id ? crown : null),
+    };
+
+    const session = await openRosterWorkspace(crown.id, dependencies);
+    expect(session).not.toBeNull();
+    expect(session!.model.catalog).toHaveLength(112);
+    expect(session!.model.elements.map((element) => element.label)).toEqual([
+      "Command Element",
+      "Patrol Element",
+    ]);
+    const asterion = session!.model.catalog.find((item) => item.id === "demo-ship-001")!;
+    expect(asterion.availability).toEqual({ state: "available", reason: null });
+    expect(asterion.eligibleTargets.map((target) => target.elementLabel)).toEqual([
+      "Command Element",
+    ]);
+
+    const added = await session!.execute({ type: "add", definitionId: asterion.id });
+    expect(added.summary).toMatchObject({
+      points: "45",
+      victoryPoints: "1",
+      persistence: "saved-local",
+    });
+    expect(
+      added.elements.find((element) => element.definitionId === "demo-command")!.instances,
+    ).toContainEqual(expect.objectContaining({ id: "crown-ship-1", definitionId: asterion.id }));
+
+    const reopened = await openRosterWorkspace(crown.id, dependencies);
+    expect(reopened!.model).toEqual(added);
+    expect(Object.keys(fixture.saved.get(crown.id)!.roster.instances)).toHaveLength(4);
+  });
 });
+
+function crownRoster(): StoredRoster {
+  const base = createDemonstrationWorkspaceRoster("crown-vanguard");
+  return {
+    ...base,
+    name: "Crown Vanguard",
+    faction: { id: "demo-crown", label: "Crown" },
+    battlefleet: { id: "demo-crown-vanguard", label: "Vanguard Exercise" },
+    requiredElements: [
+      { id: "demo-command", label: "Command Element", minimum: 1 },
+      { id: "demo-patrol", label: "Patrol Element", minimum: 1 },
+    ],
+  };
+}
 
 function harness(ids: string[] = []) {
   const fallback = createDemonstrationWorkspaceRoster();

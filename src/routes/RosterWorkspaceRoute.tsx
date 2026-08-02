@@ -170,7 +170,30 @@ export function RosterWorkspaceRoute({
         </Link>
       </header>
 
-      <nav className="workspace-view-switcher" aria-label="Области билдера">
+      <nav
+        className="workspace-view-switcher workspace-view-switcher--tablet"
+        aria-label="Боковая область билдера"
+      >
+        {(["catalog", "context"] as const).map((view) => (
+          <button
+            aria-current={
+              (view === "catalog" && activeView !== "context") || activeView === view
+                ? "page"
+                : undefined
+            }
+            key={view}
+            onClick={() => setActiveView(view)}
+            type="button"
+          >
+            {view === "catalog" ? "Каталог" : "Контекст"}
+          </button>
+        ))}
+      </nav>
+
+      <nav
+        className="workspace-view-switcher workspace-view-switcher--mobile"
+        aria-label="Область билдера"
+      >
         {(["composition", "catalog", "context"] as const).map((view) => (
           <button
             aria-current={activeView === view ? "page" : undefined}

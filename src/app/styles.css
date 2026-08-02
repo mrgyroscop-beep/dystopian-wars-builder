@@ -1535,7 +1535,7 @@ button.button {
 }
 
 @media (min-width: 48.001rem) and (max-width: 70rem) {
-  .workspace-view-switcher {
+  .workspace-view-switcher--tablet {
     display: flex;
   }
   .builder-grid {
@@ -1564,7 +1564,7 @@ button.button {
   .fleet-workspace__heading .button {
     align-self: flex-start;
   }
-  .workspace-view-switcher {
+  .workspace-view-switcher--mobile {
     display: flex;
     position: sticky;
     z-index: 11;

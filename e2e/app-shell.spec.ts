@@ -311,6 +311,69 @@ test("requires an explicit target and keeps unavailable ships previewable", asyn
   await expect(page.getByRole("button", { name: "Добавление недоступно" })).toBeDisabled();
 });
 
+test("creates, builds and reloads a Crown Vanguard fleet", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/rosters/new");
+  await page.getByLabel("Название флота").fill("Crown Vanguard Squadron");
+  await page.getByLabel("Фракция").selectOption("demo-crown");
+  await page.locator('select[name="battlefleetId"]').selectOption("demo-crown-vanguard");
+  await expect(page.getByRole("heading", { name: "Vanguard Exercise" })).toBeVisible();
+  await page.getByRole("button", { name: "Создать и открыть состав" }).click();
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Crown Vanguard Squadron" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Command Element" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Patrol Element" })).toBeVisible();
+  await expect(page.getByText("112 учебных записей")).toBeVisible();
+
+  await page.getByLabel("Поиск").fill("Asterion Demonstrator");
+  await page.getByRole("button", { name: /Asterion Demonstrator/u }).click();
+  await expect(page.getByText("Будет добавлен в Command Element.")).toBeVisible();
+  await page.getByRole("button", { name: "Добавить в состав" }).click();
+  await expect(page.getByText("45 / 1000")).toBeVisible();
+  await expect(
+    page.locator(".roster-instance-list").getByText("Asterion Demonstrator", { exact: true }),
+  ).toBeVisible();
+
+  const savedId = page.url().split("/").pop()!;
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Crown Vanguard Squadron" }),
+  ).toBeVisible();
+  await expect(page.getByText("45 / 1000")).toBeVisible();
+  expect(
+    await page.evaluate((key) => window.localStorage.getItem(`dwb.roster.v1.${key}`), savedId),
+  ).not.toBeNull();
+});
+
+test("keeps Composition fixed and switches only the tablet side pane", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/rosters/scaffold-demo");
+  await expect(page.getByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
+
+  const switcher = page.getByRole("navigation", { name: "Боковая область билдера" });
+  await expect(switcher).toBeVisible();
+  await expect(switcher.getByRole("button", { name: "Состав" })).toHaveCount(0);
+  await expect(switcher.getByRole("button", { name: "Каталог" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(page.locator(".composition-pane")).toBeVisible();
+  await expect(page.locator(".catalog-pane")).toBeVisible();
+  await expect(page.locator(".context-pane")).toBeHidden();
+
+  await switcher.getByRole("button", { name: "Контекст" }).click();
+  await expect(switcher.getByRole("button", { name: "Контекст" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(page.locator(".composition-pane")).toBeVisible();
+  await expect(page.locator(".catalog-pane")).toBeHidden();
+  await expect(page.locator(".context-pane")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Область билдера", exact: true })).toBeHidden();
+});
+
 test("has no serious or critical Axe violations in the builder reference state", async ({
   page,
 }) => {
