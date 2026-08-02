@@ -21,6 +21,7 @@ import {
   type LosslessGraph,
 } from "../../src/domain/catalog";
 import { evaluateRoster, rosterInstanceId, type RosterSnapshot } from "../../src/domain/roster";
+import { projectRosterSetup } from "../../src/application/rosters/create-roster";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
 let temporary = "";
@@ -273,6 +274,34 @@ describe("pinned real domain model", () => {
         value: crownPointCost.amount.value,
       }),
     );
+  });
+
+  it("projects every real forceEntry into the creation scenario without publishing payloads", () => {
+    const setup = projectRosterSetup(first);
+    const projectedBattlefleets = setup.factions.flatMap((faction) => faction.battlefleets);
+    const realBattlefleets = Object.values(first.entities).filter(
+      (entity) => entity.kind === "Battlefleet",
+    );
+    expect(setup.mode).toBe("current");
+    expect(setup.factions.map((faction) => faction.label).sort()).toEqual([
+      "Alliance",
+      "Commonwealth",
+      "Crown",
+      "Empire",
+      "Enlightened",
+      "Imperium",
+      "Sultanate",
+      "Union",
+    ]);
+    expect(projectedBattlefleets).toHaveLength(realBattlefleets.length);
+    expect(projectedBattlefleets.length).toBeGreaterThan(20);
+    for (const option of projectedBattlefleets) {
+      expect(first.entities[option.id]?.kind).toBe("Battlefleet");
+      expect(option.label).not.toBe("");
+    }
+    expect(
+      projectedBattlefleets.some((battlefleet) => battlefleet.requiredElements.length > 0),
+    ).toBe(true);
   });
 
   it("has unique identities, reference closure and deterministic reconstruction", async () => {
