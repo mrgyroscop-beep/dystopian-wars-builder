@@ -4,6 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { HealthGateway } from "../application/health/health-contract";
 import type { StoredRoster } from "../application/rosters/create-roster";
+import {
+  createDemonstrationFleetCatalogGateway,
+  createDemonstrationWorkspaceRoster,
+} from "../infrastructure/catalog/demonstration-fleet-catalog";
 import { createAppRoutes } from "./router";
 
 const readHealth = vi.fn<HealthGateway["read"]>().mockResolvedValue({
@@ -29,20 +33,23 @@ const rosterCreation = {
     load: () =>
       Promise.resolve({
         contractVersion: 1 as const,
-        contentVersion: "test-catalog",
+        contentVersion: "demonstration-1",
         mode: "current" as const,
         notice: null,
         factions: [
           {
-            id: "empire",
+            id: "demo-empire",
             label: "Empire",
             battlefleets: [
               {
-                id: "patrol",
-                factionId: "empire",
+                id: "demo-empire-patrol",
+                factionId: "demo-empire",
                 label: "Patrol Fleet",
                 summary: "A test Battlefleet.",
-                requiredElements: [{ id: "flagship", label: "Flagship Element", minimum: 1 }],
+                requiredElements: [
+                  { id: "demo-flagship", label: "Flagship Element", minimum: 1 },
+                  { id: "demo-line", label: "Line Element", minimum: 1 },
+                ],
               },
             ],
           },
@@ -56,7 +63,14 @@ const rosterCreation = {
 const testDependencies = {
   healthGateway: { read: readHealth } satisfies HealthGateway,
   rosterCreation,
-  rosterRepository,
+  rosterWorkspace: {
+    catalogGateway: createDemonstrationFleetCatalogGateway(),
+    rosterRepository,
+    createId: () => crypto.randomUUID(),
+    now: () => "2026-08-02T10:00:00.000Z",
+    fallbackRoster: (id: string) =>
+      id === "scaffold-demo" ? createDemonstrationWorkspaceRoster(id) : null,
+  },
 };
 
 function renderRoute(path: string) {
@@ -85,10 +99,10 @@ describe("application routes", () => {
     expect(screen.getByRole("link", { name: "К моим флотам" })).toHaveAttribute("href", "/");
   });
 
-  it("renders a deep roster route without loading the library first", () => {
+  it("renders a deep roster route without loading the library first", async () => {
     renderRoute("/rosters/scaffold-demo");
 
-    expect(screen.getByRole("heading", { level: 1, name: "Черновик флота" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Состав" })).toBeVisible();
   });
 
@@ -107,12 +121,12 @@ describe("application routes", () => {
     renderRoute("/rosters/new");
 
     await user.type(await screen.findByLabelText("Название флота"), "Northern Fleet");
-    await user.selectOptions(screen.getByLabelText("Фракция"), "empire");
-    await user.selectOptions(screen.getByLabelText("Battlefleet"), "patrol");
+    await user.selectOptions(screen.getByLabelText("Фракция"), "demo-empire");
+    await user.selectOptions(screen.getByLabelText("Battlefleet"), "demo-empire-patrol");
     await user.click(screen.getByRole("button", { name: "Создать и открыть состав" }));
 
     expect(await screen.findByRole("heading", { level: 1, name: "Northern Fleet" })).toBeVisible();
-    expect(screen.getByText("Flagship Element")).toBeVisible();
+    expect(screen.getAllByText("Flagship Element").at(-1)).toBeVisible();
     expect(rosterRepository.save).toHaveBeenCalled();
   });
 });

@@ -1,10 +1,8 @@
 import { createBrowserRouter, type RouteObject } from "react-router-dom";
 
 import type { HealthGateway } from "../application/health/health-contract";
-import type {
-  CreateRosterDependencies,
-  RosterRepository,
-} from "../application/rosters/create-roster";
+import type { CreateRosterDependencies } from "../application/rosters/create-roster";
+import type { RosterWorkspaceDependencies } from "../application/rosters/workspace";
 import { AppShell } from "./shell/AppShell";
 import { RouteErrorBoundary } from "../routes/RouteErrorBoundary";
 import { NewRosterRoute } from "../routes/NewRosterRoute";
@@ -16,13 +14,13 @@ import { SettingsRoute } from "../routes/SettingsRoute";
 export interface AppDependencies {
   healthGateway: HealthGateway;
   rosterCreation: CreateRosterDependencies;
-  rosterRepository: RosterRepository;
+  rosterWorkspace: RosterWorkspaceDependencies;
 }
 
 export function createAppRoutes({
   healthGateway,
   rosterCreation,
-  rosterRepository,
+  rosterWorkspace,
 }: AppDependencies): RouteObject[] {
   return [
     {
@@ -33,7 +31,7 @@ export function createAppRoutes({
         { path: "rosters/new", element: <NewRosterRoute {...rosterCreation} /> },
         {
           path: "rosters/:rosterId",
-          element: <RosterWorkspaceRoute rosterRepository={rosterRepository} />,
+          element: <RosterWorkspaceRoute dependencies={rosterWorkspace} />,
         },
         { path: "settings", element: <SettingsRoute healthGateway={healthGateway} /> },
         { path: "*", element: <NotFoundRoute /> },
