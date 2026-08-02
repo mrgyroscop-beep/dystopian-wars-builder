@@ -75,6 +75,25 @@ async function captureReviewEvidence(
   return metadata;
 }
 
+async function expectEditorTouchTargets(page: Page) {
+  const touchTargets = await page
+    .locator(".ship-editor .editor-option, .ship-editor button, .ship-editor input[type=number]")
+    .evaluateAll((elements) =>
+      elements
+        .filter((element) => (element as HTMLElement).offsetParent !== null)
+        .map((element) => {
+          const bounds = element.getBoundingClientRect();
+          return {
+            label: element.textContent?.trim().slice(0, 40),
+            width: bounds.width,
+            height: bounds.height,
+          };
+        }),
+    );
+
+  expect(touchTargets.filter((target) => target.width < 44 || target.height < 44)).toEqual([]);
+}
+
 test("supports SPA routes, keyboard navigation and browser history", async ({ page }) => {
   await page.goto("/");
 
@@ -182,6 +201,7 @@ const evidenceViewports = [
   { name: "tablet-768x1024", width: 768, height: 1024 },
   { name: "mobile-390x844", width: 390, height: 844 },
   { name: "mobile-360x800", width: 360, height: 800 },
+  { name: "mobile-320x800", width: 320, height: 800 },
 ] as const;
 
 for (const viewport of evidenceViewports) {
@@ -418,7 +438,9 @@ test("keeps Composition fixed and switches only the tablet side pane", async ({ 
   await expect(page.getByRole("navigation", { name: "Область билдера", exact: true })).toBeHidden();
 });
 
-test("configures Akita 0/4 → 4/4, fixes Kagutsuchi and retries a failed save", async ({ page }) => {
+test("configures Akita 0/4 → 4/4, fixes fleet-level Kagutsuchi and retries a failed save", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/rosters/scaffold-demo");
   await page.getByLabel("Поиск").fill("Akita Demonstrator");
@@ -427,17 +449,45 @@ test("configures Akita 0/4 → 4/4, fixes Kagutsuchi and retries a failed save",
   await expect(page.getByText("0 / 4")).toBeVisible();
   await page.getByRole("button", { name: "Добавить в состав" }).click();
   await expect(page.getByText("Редактирование")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3, name: "Akita Demonstrator" })).toBeFocused();
 
-  await page.getByRole("radio", { name: /Kagutsuchi Generator/u }).check();
-  await expect(page.getByRole("button", { name: /Kagutsuchi требует Magma Cast/u })).toBeVisible();
-  await page.getByRole("button", { name: /Kagutsuchi требует Magma Cast/u }).click();
-  await expect(page.locator("#ship-editor-group-psa")).toBeFocused();
-  await page.getByRole("radio", { name: /Magma Cast/u }).check();
-  await expect(page.getByRole("button", { name: /Kagutsuchi требует Magma Cast/u })).toHaveCount(0);
+  await page.getByRole("button", { name: "Настроить доктрину" }).click();
+  await page.getByLabel("Количество Kagutsuchi Doctrine").fill("1");
+  const requirement = page.getByRole("button", {
+    name: /Kagutsuchi Doctrine requires Magma Cast Generator/u,
+  });
+  await expect(requirement).toBeVisible();
+  await requirement.scrollIntoViewIfNeeded();
+  await captureReviewEvidence(
+    page,
+    {
+      route: "/rosters/scaffold-demo",
+      state: "akita-kagutsuchi-requires-magma",
+      viewport: { name: "desktop-1280x900", width: 1280, height: 900 },
+    },
+    path.resolve("artifacts/review-evidence/akita-conditional"),
+    "desktop-1280x900",
+  );
+  await requirement.click();
+  await expect(page.getByRole("group", { name: /PSA/u })).toBeFocused();
+  await page.getByRole("radio", { name: /Magma Cast Generator/u }).check();
+  await expect(requirement).toHaveCount(0);
+  await page.getByRole("radio", { name: /Fury Generator/u }).check();
   await page.getByRole("radio", { name: /Rocket Battery/u }).check();
   await page.getByRole("radio", { name: /Shield Generator/u }).check();
   await expect(page.getByText("4 / 4")).toBeVisible();
   await page.getByLabel("Количество Repair Crane").fill("1");
+  await captureReviewEvidence(
+    page,
+    {
+      route: "/rosters/scaffold-demo",
+      state: "akita-configured-4-of-4",
+      viewport: { name: "desktop-1280x900", width: 1280, height: 900 },
+    },
+    path.resolve("artifacts/review-evidence/akita-configured"),
+    "desktop-1280x900",
+  );
+  await expectEditorTouchTargets(page);
 
   await page.evaluate(() => {
     const runtime = window as unknown as {
@@ -449,9 +499,19 @@ test("configures Akita 0/4 → 4/4, fixes Kagutsuchi and retries a failed save",
     };
   });
   await page.getByLabel("Количество Tanuki Escort").fill("4");
-  await expect(page.getByText("425 / 1000")).toBeVisible();
-  await expect(page.getByText("Скрытая скидка Escort 4/4")).toBeVisible();
+  await expect(page.getByText("405 / 1000")).toBeVisible();
+  await expect(page.getByText("Производные изменения каталога")).toBeVisible();
   await expect(page.getByText("Не удалось сохранить на устройстве")).toBeVisible();
+  await captureReviewEvidence(
+    page,
+    {
+      route: "/rosters/scaffold-demo",
+      state: "akita-save-error",
+      viewport: { name: "desktop-1280x900", width: 1280, height: 900 },
+    },
+    path.resolve("artifacts/review-evidence/akita-save-error"),
+    "desktop-1280x900",
+  );
 
   await page.evaluate(() => {
     const runtime = window as unknown as {
@@ -463,11 +523,109 @@ test("configures Akita 0/4 → 4/4, fixes Kagutsuchi and retries a failed save",
   await page.getByRole("button", { name: "Повторить" }).click();
   await expect(page.getByText("Не удалось сохранить на устройстве")).toHaveCount(0);
   await page.reload();
-  await expect(page.getByText("425 / 1000")).toBeVisible();
+  await expect(page.getByText("405 / 1000")).toBeVisible();
   await page.getByRole("button", { name: "Настроить" }).click();
   await expect(page.getByLabel("Количество Tanuki Escort")).toHaveValue("4");
   await page.getByRole("tab", { name: "Профиль" }).click();
   await expect(page.getByText(/будет подключён в KAN-36/u)).toBeVisible();
+});
+
+test("returns exact focus on mobile and keeps editor chrome below the workspace switcher", async ({
+  page,
+}) => {
+  const viewport = { name: "mobile-390x844", width: 390, height: 844 } as const;
+  await page.setViewportSize(viewport);
+  await page.goto("/rosters/scaffold-demo");
+  const switcher = page.getByRole("navigation", { name: "Область билдера", exact: true });
+  await switcher.getByRole("button", { name: "Каталог" }).click();
+  await page.getByLabel("Поиск").fill("Akita Demonstrator");
+  const origin = page.getByRole("button", { name: /Akita Demonstrator/u });
+  await origin.click();
+  await expect(page.getByRole("heading", { level: 3, name: "Akita Demonstrator" })).toBeFocused();
+
+  const switcherBox = await switcher.boundingBox();
+  const chromeBox = await page.locator(".ship-editor__chrome").boundingBox();
+  expect(switcherBox).not.toBeNull();
+  expect(chromeBox).not.toBeNull();
+  expect(chromeBox!.y).toBeGreaterThanOrEqual(switcherBox!.y + switcherBox!.height - 1);
+
+  await page.getByRole("button", { name: /Назад/u }).click();
+  await expect(origin).toBeFocused();
+  await origin.click();
+  await page.getByRole("button", { name: "Добавить в состав" }).click();
+  await page.getByRole("button", { name: "Настроить доктрину" }).click();
+  await page.getByLabel("Количество Kagutsuchi Doctrine").fill("1");
+  await expect(
+    page.getByRole("button", { name: /Kagutsuchi Doctrine requires Magma Cast Generator/u }),
+  ).toBeVisible();
+  await captureReviewEvidence(
+    page,
+    { route: "/rosters/scaffold-demo", state: "akita-kagutsuchi-requires-magma", viewport },
+    path.resolve("artifacts/review-evidence/akita-conditional"),
+    viewport.name,
+  );
+  await page.getByRole("radio", { name: /Magma Cast Generator/u }).check();
+  await page.getByRole("radio", { name: /Fury Generator/u }).check();
+  await page.getByRole("radio", { name: /Rocket Battery/u }).check();
+  await page.getByRole("radio", { name: /Shield Generator/u }).check();
+  await captureReviewEvidence(
+    page,
+    { route: "/rosters/scaffold-demo", state: "akita-configured-4-of-4", viewport },
+    path.resolve("artifacts/review-evidence/akita-configured"),
+    viewport.name,
+  );
+
+  await page.evaluate(() => {
+    const runtime = window as unknown as {
+      __setItemDescriptor: PropertyDescriptor | undefined;
+    };
+    runtime.__setItemDescriptor = Object.getOwnPropertyDescriptor(Storage.prototype, "setItem");
+    Storage.prototype.setItem = () => {
+      throw new Error("simulated quota failure");
+    };
+  });
+  await page.getByLabel("Количество Tanuki Escort").fill("4");
+  await expect(page.getByText("Не удалось сохранить на устройстве")).toBeVisible();
+  await captureReviewEvidence(
+    page,
+    { route: "/rosters/scaffold-demo", state: "akita-save-error", viewport },
+    path.resolve("artifacts/review-evidence/akita-save-error"),
+    viewport.name,
+  );
+  await page.evaluate(() => {
+    const runtime = window as unknown as {
+      __setItemDescriptor: PropertyDescriptor | undefined;
+    };
+    if (runtime.__setItemDescriptor)
+      Object.defineProperty(Storage.prototype, "setItem", runtime.__setItemDescriptor);
+  });
+  await page.getByRole("button", { name: "Повторить" }).click();
+
+  await expectEditorTouchTargets(page);
+
+  await page.getByRole("button", { name: /Назад/u }).click();
+  await switcher.getByRole("button", { name: "Состав" }).click();
+  const editOrigin = page.getByRole("button", { name: "Настроить" });
+  await editOrigin.click();
+  await expect(page.getByRole("heading", { level: 3, name: "Akita Demonstrator" })).toBeFocused();
+  await page.getByRole("button", { name: /Назад/u }).click();
+  await expect(editOrigin).toBeFocused();
+});
+
+test("supports Arrow keys, Home and End in editor tabs", async ({ page }) => {
+  await page.goto("/rosters/scaffold-demo");
+  await page.getByLabel("Поиск").fill("Akita Demonstrator");
+  await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
+  const configuration = page.getByRole("tab", { name: "Настройка" });
+  await configuration.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "Профиль" })).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(page.getByRole("tab", { name: "Правила" })).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(configuration).toBeFocused();
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByRole("tab", { name: "Правила" })).toBeFocused();
 });
 
 test("has no serious or critical Axe violations in the builder reference state", async ({
@@ -497,3 +655,49 @@ test("has no serious or critical Axe violations in the builder reference state",
   });
   expect(violations).toEqual([]);
 });
+
+for (const scenario of [
+  { name: "preview-mobile", configured: false, width: 390, height: 844 },
+  { name: "configured-desktop", configured: true, width: 1280, height: 900 },
+  { name: "configured-mobile", configured: true, width: 390, height: 844 },
+] as const) {
+  test(`has no serious or critical Axe violations in ${scenario.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: scenario.width, height: scenario.height });
+    await page.goto("/rosters/scaffold-demo");
+    if (scenario.width <= 768)
+      await page
+        .getByRole("navigation", { name: "Область билдера", exact: true })
+        .getByRole("button", { name: "Каталог" })
+        .click();
+    await page.getByLabel("Поиск").fill("Akita Demonstrator");
+    await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
+    if (scenario.configured) {
+      await page.getByRole("button", { name: "Добавить в состав" }).click();
+      await page.getByRole("radio", { name: /Magma Cast Generator/u }).check();
+      await page.getByRole("radio", { name: /Fury Generator/u }).check();
+      await page.getByRole("radio", { name: /Rocket Battery/u }).check();
+      await page.getByRole("radio", { name: /Shield Generator/u }).check();
+      await expect(page.getByText("4 / 4")).toBeVisible();
+    }
+    await page.addScriptTag({ content: axe.source });
+    expect(await seriousAxeViolations(page)).toEqual([]);
+  });
+}
+
+async function seriousAxeViolations(page: Page) {
+  return page.evaluate(async () => {
+    const runtime = (
+      window as unknown as {
+        axe: {
+          run(root: Document): Promise<{
+            violations: Array<{ id: string; impact: string | null; help: string }>;
+          }>;
+        };
+      }
+    ).axe;
+    const result = await runtime.run(document);
+    return result.violations.filter(
+      (violation) => violation.impact === "serious" || violation.impact === "critical",
+    );
+  });
+}

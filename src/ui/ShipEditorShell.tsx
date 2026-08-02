@@ -1,25 +1,37 @@
-import { useId, useState } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 
 import type {
   ShipEditorCommand,
   ShipEditorGroupId,
+  ShipEditorGroupReadModel,
+  ShipEditorOptionReadModel,
+  ShipEditorReadyReadModel,
   ShipEditorReadModel,
 } from "../application/rosters/ship-editor";
 
 type EditorTab = "configuration" | "profile" | "rules";
 
+const editorTabs = [
+  ["configuration", "Настройка"],
+  ["profile", "Профиль"],
+  ["rules", "Правила"],
+] as const;
+
 export function ShipEditorShell({
   busy,
   model,
   onAdd,
+  onBack,
   onCommand,
 }: {
   readonly busy: boolean;
   readonly model: ShipEditorReadModel;
   readonly onAdd: () => void;
+  readonly onBack: () => void;
   readonly onCommand: (command: ShipEditorCommand, announcement: string) => void;
 }) {
   const [tab, setTab] = useState<EditorTab>("configuration");
+  const [fleetEditorOpen, setFleetEditorOpen] = useState(false);
   const tabsId = useId();
 
   function focusGroup(groupId: ShipEditorGroupId) {
@@ -28,71 +40,118 @@ export function ShipEditorShell({
     target?.focus({ preventScroll: true });
   }
 
+  function selectTab(next: EditorTab) {
+    setTab(next);
+    document.getElementById(`${tabsId}-${next}-tab`)?.focus();
+  }
+
+  function handleTabKey(event: KeyboardEvent<HTMLButtonElement>, current: EditorTab) {
+    const currentIndex = editorTabs.findIndex(([value]) => value === current);
+    const lastIndex = editorTabs.length - 1;
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? lastIndex
+          : event.key === "ArrowRight"
+            ? (currentIndex + 1) % editorTabs.length
+            : event.key === "ArrowLeft"
+              ? (currentIndex - 1 + editorTabs.length) % editorTabs.length
+              : null;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    selectTab(editorTabs[nextIndex]![0]);
+  }
+
+  if (model.dataState !== "ready")
+    return (
+      <article className="ship-editor ship-editor--unavailable" aria-labelledby="ship-editor-title">
+        <header className="ship-editor__masthead">
+          <div>
+            <p className="preview-category">Состояние данных</p>
+            <h3 id="ship-editor-title" tabIndex={-1}>
+              {model.title}
+            </h3>
+          </div>
+          <button className="editor-back" onClick={onBack} type="button">
+            ← Назад
+          </button>
+        </header>
+        <p role="status">{model.detail}</p>
+      </article>
+    );
+
   return (
     <article className="ship-editor" data-mode={model.mode} aria-labelledby="ship-editor-title">
-      <header className="ship-editor__masthead">
-        <div>
-          <p className="preview-category">{model.mode === "preview" ? "Preview" : "В составе"}</p>
-          <h3 id="ship-editor-title">{model.name}</h3>
-        </div>
-        <span className="editor-mode-badge">
-          {model.mode === "preview" ? "Только чтение" : "Редактирование"}
-        </span>
-      </header>
+      <div className="ship-editor__chrome">
+        <header className="ship-editor__masthead">
+          <div>
+            <p className="preview-category">{model.mode === "preview" ? "Preview" : "В составе"}</p>
+            <h3 id="ship-editor-title" tabIndex={-1}>
+              {model.name}
+            </h3>
+          </div>
+          <div className="ship-editor__masthead-actions">
+            <span className="editor-mode-badge">
+              {model.mode === "preview" ? "Только чтение" : "Редактирование"}
+            </span>
+            <button className="editor-back" onClick={onBack} type="button">
+              ← Назад
+            </button>
+          </div>
+        </header>
 
-      <dl className="ship-editor__summary" aria-label="Сводка корабля">
-        <div>
-          <dt>Points</dt>
-          <dd>
-            <strong>{model.totalPoints}</strong>
-            <small>350 база · {signed(model.optionPoints)} опции</small>
-          </dd>
-        </div>
-        <div>
-          <dt>VP</dt>
-          <dd>
-            <strong>{model.victoryPoints}</strong>
-            <small>фиксировано</small>
-          </dd>
-        </div>
-        <div data-state={model.validity}>
-          <dt>Обязательные</dt>
-          <dd>
-            <strong>
-              {model.mandatory.selected} / {model.mandatory.required}
-            </strong>
-            <small>{model.validity === "valid" ? "готово" : "нужна настройка"}</small>
-          </dd>
-        </div>
-      </dl>
+        <dl className="ship-editor__summary" aria-label="Сводка корабля">
+          <div>
+            <dt>Points</dt>
+            <dd>
+              <strong>{model.totalPoints}</strong>
+              <small>
+                {model.basePoints} база · {signed(model.optionPoints)} опции
+              </small>
+            </dd>
+          </div>
+          <div>
+            <dt>VP</dt>
+            <dd>
+              <strong>{model.victoryPoints}</strong>
+              <small>фиксировано</small>
+            </dd>
+          </div>
+          <div data-state={model.validity}>
+            <dt>Обязательные</dt>
+            <dd>
+              <strong>
+                {model.mandatory.selected} / {model.mandatory.required}
+              </strong>
+              <small>{model.validity === "valid" ? "готово" : "нужна настройка"}</small>
+            </dd>
+          </div>
+        </dl>
 
-      <div className="ship-editor__axes" aria-label="Состояние редактора">
-        <span data-state={model.validity}>Состав: {axisLabel(model.validity)}</span>
-        <span data-state={model.persistence}>Сохранение: {axisLabel(model.persistence)}</span>
-        <span data-state={model.system}>Система: {axisLabel(model.system)}</span>
-      </div>
+        <div className="ship-editor__axes" aria-label="Состояние редактора">
+          <span data-state={model.validity}>Состав: {axisLabel(model.validity)}</span>
+          <span data-state={model.persistence}>Сохранение: {axisLabel(model.persistence)}</span>
+          <span data-state={model.system}>Система: {axisLabel(model.system)}</span>
+        </div>
 
-      <div className="editor-tabs" role="tablist" aria-label="Раздел корабля">
-        {(
-          [
-            ["configuration", "Настройка"],
-            ["profile", "Профиль"],
-            ["rules", "Правила"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            aria-controls={`${tabsId}-${value}`}
-            aria-selected={tab === value}
-            id={`${tabsId}-${value}-tab`}
-            key={value}
-            onClick={() => setTab(value)}
-            role="tab"
-            tabIndex={tab === value ? 0 : -1}
-            type="button"
-          >
-            {label}
-          </button>
-        ))}
+        <div className="editor-tabs" role="tablist" aria-label="Раздел корабля">
+          {editorTabs.map(([value, label]) => (
+            <button
+              aria-controls={`${tabsId}-${value}`}
+              aria-selected={tab === value}
+              id={`${tabsId}-${value}-tab`}
+              key={value}
+              onClick={() => setTab(value)}
+              onKeyDown={(event) => handleTabKey(event, value)}
+              role="tab"
+              tabIndex={tab === value ? 0 : -1}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === "configuration" ? (
@@ -102,6 +161,38 @@ export function ShipEditorShell({
           id={`${tabsId}-configuration`}
           role="tabpanel"
         >
+          <section className="model-quantity" aria-label="Количество моделей">
+            <div>
+              <strong>Model</strong>
+              <small>Структурная модель корабля</small>
+            </div>
+            {model.modelQuantity.fixed ? (
+              <span>{model.modelQuantity.value} (фиксировано)</span>
+            ) : (
+              <label>
+                <span>Количество</span>
+                <input
+                  disabled={busy || model.mode === "preview"}
+                  max={model.modelQuantity.maximum}
+                  min={model.modelQuantity.minimum}
+                  onChange={(event) =>
+                    model.modelQuantity.instanceId &&
+                    onCommand(
+                      {
+                        type: "set-model-quantity",
+                        instanceId: model.modelQuantity.instanceId,
+                        quantity: event.currentTarget.valueAsNumber,
+                      },
+                      `Model: ${event.currentTarget.valueAsNumber}.`,
+                    )
+                  }
+                  type="number"
+                  value={model.modelQuantity.value}
+                />
+              </label>
+            )}
+          </section>
+
           {model.problems.length ? (
             <section className="editor-problems" aria-labelledby={`${tabsId}-problems-title`}>
               <h4 id={`${tabsId}-problems-title`}>Что исправить</h4>
@@ -214,8 +305,34 @@ export function ShipEditorShell({
               <h4>Доктрина флота</h4>
               <p>Доктрина принадлежит Battlefleet и настраивается на уровне состава.</p>
             </div>
-            <a href="#workspace-summary">К сводке флота ↑</a>
+            <button
+              aria-controls="fleet-doctrine-editor"
+              aria-expanded={fleetEditorOpen}
+              disabled={model.fleetGroups.length === 0}
+              onClick={() => setFleetEditorOpen((value) => !value)}
+              type="button"
+            >
+              {fleetEditorOpen ? "Закрыть настройки" : "Настроить доктрину"}
+            </button>
           </section>
+
+          {fleetEditorOpen ? (
+            <section
+              aria-label="Настройка доктрины флота"
+              className="fleet-doctrine-editor editor-groups"
+              id="fleet-doctrine-editor"
+            >
+              {model.fleetGroups.map((group) => (
+                <EditorGroup
+                  busy={busy}
+                  group={group}
+                  key={group.id}
+                  model={model}
+                  onCommand={onCommand}
+                />
+              ))}
+            </section>
+          ) : null}
 
           {model.mode === "preview" ? (
             <button className="button preview-add" disabled={busy} onClick={onAdd} type="button">
@@ -238,11 +355,7 @@ export function ShipEditorShell({
   );
 }
 
-function OptionCopy({
-  option,
-}: {
-  readonly option: ShipEditorReadModel["groups"][number]["options"][number];
-}) {
+function OptionCopy({ option }: { readonly option: ShipEditorOptionReadModel }) {
   return (
     <span className="editor-option__copy">
       <span>
@@ -254,6 +367,89 @@ function OptionCopy({
         {option.reason ? <small>{option.reason}</small> : null}
       </span>
     </span>
+  );
+}
+
+function EditorGroup({
+  busy,
+  group,
+  model,
+  onCommand,
+}: {
+  readonly busy: boolean;
+  readonly group: ShipEditorGroupReadModel;
+  readonly model: ShipEditorReadyReadModel;
+  readonly onCommand: (command: ShipEditorCommand, announcement: string) => void;
+}) {
+  return (
+    <fieldset
+      className="editor-group"
+      disabled={busy || model.mode === "preview"}
+      id={`ship-editor-group-${group.id}`}
+      tabIndex={-1}
+    >
+      <legend>
+        <span>{group.label}</span>
+        <small>
+          {group.minimum}–{group.maximum}
+        </small>
+      </legend>
+      <p>{group.help}</p>
+      {group.options.map((option) =>
+        group.control === "exclusive" ? (
+          <label className="editor-option" data-availability={option.availability} key={option.id}>
+            <input
+              checked={option.selectedQuantity === 1}
+              disabled={option.availability !== "available"}
+              name={`ship-${model.instanceId ?? "preview"}-${group.id}`}
+              onChange={() =>
+                model.instanceId &&
+                onCommand(
+                  {
+                    type: "replace-exclusive",
+                    instanceId: model.instanceId,
+                    groupId: group.id,
+                    optionId: option.id,
+                  },
+                  `${group.label}: выбрано ${option.label}.`,
+                )
+              }
+              type="radio"
+            />
+            <OptionCopy option={option} />
+          </label>
+        ) : (
+          <label
+            className="editor-option editor-option--quantity"
+            data-availability={option.availability}
+            key={option.id}
+          >
+            <OptionCopy option={option} />
+            <input
+              aria-label={`Количество ${option.label}`}
+              disabled={option.availability !== "available"}
+              max={group.maximum}
+              min={group.minimum}
+              onChange={(event) =>
+                model.instanceId &&
+                onCommand(
+                  {
+                    type: "set-choice-quantity",
+                    instanceId: model.instanceId,
+                    groupId: group.id,
+                    optionId: option.id,
+                    quantity: event.currentTarget.valueAsNumber,
+                  },
+                  `${group.label}: ${event.currentTarget.valueAsNumber} из ${group.maximum}.`,
+                )
+              }
+              type="number"
+              value={option.selectedQuantity}
+            />
+          </label>
+        ),
+      )}
+    </fieldset>
   );
 }
 

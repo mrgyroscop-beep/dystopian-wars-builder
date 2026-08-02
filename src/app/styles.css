@@ -1659,6 +1659,7 @@ button.button {
 }
 
 .ship-editor > *,
+.ship-editor__chrome > *,
 .ship-editor__masthead > *,
 .ship-editor__summary > *,
 .ship-editor__configuration > *,
@@ -1670,6 +1671,19 @@ button.button {
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+.context-pane:has(.ship-editor) > .builder-pane__header {
+  position: static;
+}
+
+.ship-editor__chrome {
+  position: sticky;
+  z-index: 5;
+  top: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-strong);
+  box-shadow: 0 8px 18px rgb(20 38 45 / 10%);
 }
 
 .ship-editor__masthead {
@@ -1688,6 +1702,13 @@ button.button {
   font-size: 1.55rem;
 }
 
+.ship-editor__masthead-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 0.45rem;
+}
+
 .editor-mode-badge {
   min-height: 2rem;
   padding: 0.35rem 0.6rem;
@@ -1698,6 +1719,18 @@ button.button {
   font-size: 0.72rem;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.editor-back {
+  display: none;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.7rem;
+  color: var(--brand);
+  background: var(--surface);
+  border: 1px solid var(--brand);
+  border-radius: 0.35rem;
+  cursor: pointer;
+  font-weight: 800;
 }
 
 .ship-editor__summary {
@@ -1800,6 +1833,35 @@ button.button {
   gap: 1rem;
   padding: 0.9rem;
   overflow: hidden;
+}
+
+.model-quantity {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+.model-quantity > div,
+.model-quantity label {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.model-quantity small,
+.model-quantity label span {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.model-quantity input {
+  width: 5rem;
+  min-height: 2.75rem;
 }
 
 .editor-groups {
@@ -2003,12 +2065,26 @@ button.button {
   line-height: 1.4;
 }
 
-.doctrine-navigation a {
+.doctrine-navigation button {
   min-height: 2.75rem;
   padding: 0.65rem;
   color: var(--brand);
+  background: var(--surface);
+  border: 1px solid var(--brand);
+  border-radius: 0.35rem;
   font-weight: 800;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.doctrine-navigation button:disabled {
+  color: var(--text-secondary);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+.fleet-doctrine-editor {
+  padding-top: 0;
 }
 
 @media (min-width: 70.001rem) {
@@ -2017,16 +2093,20 @@ button.button {
   }
 }
 
+@media (max-width: 70rem) {
+  .editor-back {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
 @media (max-width: 48rem) {
   .fleet-workspace[data-active-view="context"] .context-pane {
     width: 100%;
   }
 
-  .ship-editor__masthead {
-    position: sticky;
-    z-index: 4;
-    top: 0;
-    border-bottom: 1px solid var(--border);
+  .ship-editor__chrome {
+    top: 3.25rem;
   }
 }
 
@@ -2040,6 +2120,10 @@ button.button {
 
   .editor-mode-badge {
     align-self: flex-start;
+  }
+
+  .ship-editor__masthead-actions {
+    justify-content: start;
   }
 
   .ship-editor__summary {

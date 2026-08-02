@@ -414,6 +414,40 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       ...new Set([...entity.constraintIds, ...(incoming?.overlay.constraintIds ?? [])]),
     ].sort();
     for (const constraintId of ids) evaluateConstraint(constraintId, instance, null, false);
+    evaluateErrorModifiers(
+      [...new Set([...entity.modifierIds, ...(incoming?.overlay.modifierIds ?? [])])].sort(),
+      instance,
+    );
+  }
+
+  function evaluateErrorModifiers(
+    modifierIds: readonly EntityId[],
+    instance: RosterSelectionInstance,
+  ): void {
+    for (const modifierId of modifierIds) {
+      const modifier = catalog.entities[modifierId];
+      if (!modifier || modifier.kind !== "Modifier" || modifier.expression.field !== "error")
+        continue;
+      if (!modifier.expression.evaluable) {
+        indeterminateExpression("UNEVALUABLE_ERROR_MODIFIER", instance, modifierId);
+        continue;
+      }
+      const active = evaluateConditions(modifier.conditionIds, instance, new Set());
+      if (active.state === "unknown") {
+        indeterminateExpression(active.code, instance, modifierId);
+        continue;
+      }
+      if (active.state === "false") continue;
+      addProblem(
+        "ACTIVE_ERROR_MODIFIER",
+        "error",
+        modifier.expression.value || modifier.label.plainText || "A catalogue requirement failed.",
+        targetFor(instance),
+        modifier.id,
+        "active",
+        "inactive",
+      );
+    }
   }
 
   function evaluateConstraint(
@@ -757,6 +791,12 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     if (!expression.evaluable) return { state: "unknown", code: "UNEVALUABLE_EXPRESSION" };
     const population = scopePopulation(expression.scope, instance);
     if (population.state === "unknown") return population;
+    const populationInstances =
+      expression.flags["includeChildSelections"] === "true"
+        ? uniqueInstances(
+            population.instances.flatMap((candidate) => descendantsIncluding(candidate)),
+          )
+        : population.instances;
     const fieldTarget = resolveEntityToken(expression.field);
     if (fieldTarget.state === "unknown") return fieldTarget;
     const targets =
@@ -767,7 +807,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           : [];
     if (expression.field === "forces") {
       const forceIds = new Set(
-        population.instances.flatMap((candidate) => {
+        populationInstances.flatMap((candidate) => {
           if (targets.length > 0 && !targets.some((target) => instanceMatches(candidate, target)))
             return [];
           const forceId = candidate.forceInstanceId ?? rootAncestor(candidate)?.id;
@@ -777,15 +817,21 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       return { state: "known", value: parseDecimal(String(forceIds.size))! };
     }
     if (expression.field === "cost" || fieldTarget.kind === "CostType")
-      return rawCostMetric(population.instances, targets[0] ?? null);
+      return rawCostMetric(populationInstances, targets[0] ?? null);
     if (expression.field === "name") return { state: "unknown", code: "UNSUPPORTED_NAME_FIELD" };
-    const count = population.instances.reduce((sum, candidate) => {
+    const count = populationInstances.reduce((sum, candidate) => {
       if (targets.length === 0) return sum + candidate.quantity;
       return targets.some((target) => instanceMatches(candidate, target))
         ? sum + candidate.quantity
         : sum;
     }, 0);
     return { state: "known", value: parseDecimal(String(count))! };
+  }
+
+  function uniqueInstances(
+    instances: readonly RosterSelectionInstance[],
+  ): RosterSelectionInstance[] {
+    return [...new Map(instances.map((candidate) => [candidate.id, candidate])).values()];
   }
 
   function scopePopulation(

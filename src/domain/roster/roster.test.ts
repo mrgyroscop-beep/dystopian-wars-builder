@@ -511,16 +511,16 @@ describe("roster evaluator", () => {
     expect(result.totals).toContainEqual(expect.objectContaining({ value: "12" }));
   });
 
-  it("emits an active field=error requirement and remains fail-closed", () => {
+  it("emits an active source Modifier field=error requirement and remains fail-closed", () => {
     const unitId = id("unit");
-    const requirement = expressionEntity("Constraint", id("requires-magma"), {
-      operator: "min",
+    const requirement = expressionEntity("Modifier", id("requires-magma"), {
+      operator: "append",
       field: "error",
       scope: "unit",
-      value: "1",
+      value: "Magma Cast Generator is required.",
     });
     const catalog = makeCatalog([
-      baseEntity("Unit", unitId, { constraintIds: [requirement.id] }),
+      baseEntity("Unit", unitId, { modifierIds: [requirement.id] }),
       requirement,
     ]);
     const root = rosterInstanceId("unit");
@@ -531,7 +531,11 @@ describe("roster evaluator", () => {
 
     expect(result.status).toBe("invalid");
     expect(result.problems).toContainEqual(
-      expect.objectContaining({ code: "ACTIVE_ERROR_REQUIREMENT", severity: "error" }),
+      expect.objectContaining({
+        code: "ACTIVE_ERROR_MODIFIER",
+        severity: "error",
+        message: "Magma Cast Generator is required.",
+      }),
     );
   });
 });

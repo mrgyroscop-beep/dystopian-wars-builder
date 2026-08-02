@@ -50,7 +50,12 @@ describe("roster workspace application boundary", () => {
     const session = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
     const initialSnapshot = structuredClone(fixture.saved.get("scaffold-demo")!.roster);
 
-    const added = await session.execute({ type: "add", definitionId: "demo-ship-001" });
+    const execution = await session.executeDetailed({
+      type: "add",
+      definitionId: "demo-ship-001",
+    });
+    const added = execution.model;
+    expect(execution.createdInstanceId).toBe("instance-1");
     expect(added.summary).toMatchObject({
       points: "350",
       victoryPoints: "9",
@@ -131,17 +136,23 @@ describe("roster workspace application boundary", () => {
     const original = added.elements
       .flatMap((element) => element.instances)
       .find((instance) => instance.definitionId === "demo-ship-001")!;
+    const editor = session.editor(original.id, original.definitionId);
+    if (editor?.dataState !== "ready") throw new Error("Expected the ship editor to be ready");
+    const psa = editor.groups.find((group) => group.label === "PSA")!;
+    const magma = psa.options.find((option) => option.label === "Magma Cast Generator")!;
+    const escorts = editor.groups.find((group) => group.label === "Escorts")!;
+    const tanuki = escorts.options.find((option) => option.label === "Tanuki Escort")!;
     await session.execute({
       type: "replace-exclusive",
       instanceId: original.id,
-      groupId: "psa",
-      optionId: "demo-akita-magma-cast",
+      groupId: psa.id,
+      optionId: magma.id,
     });
     await session.execute({
       type: "set-choice-quantity",
       instanceId: original.id,
-      groupId: "escorts",
-      optionId: "demo-akita-tanuki-escort",
+      groupId: escorts.id,
+      optionId: tanuki.id,
       quantity: 4,
     });
     await session.execute({ type: "duplicate", instanceId: original.id });

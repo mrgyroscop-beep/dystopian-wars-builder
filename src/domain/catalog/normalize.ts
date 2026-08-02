@@ -25,6 +25,7 @@ import {
   type MigrationAlias,
   type NormalizationOptions,
   type Placement,
+  type PlacementId,
   type PlacementOverlay,
   type Provenance,
   type ReferenceResolution,
@@ -86,6 +87,8 @@ const knownConditionOperators = new Set([
   "equalTo",
   "notEqualTo",
   "instanceOf",
+  "lessThan",
+  "notInstanceOf",
 ]);
 const knownModifierOperators = new Set([
   "add",
@@ -103,8 +106,18 @@ const knownFields = new Set([
   "limit::selection",
   "cost",
   "name",
+  "error",
+  "hidden",
 ]);
-const knownScopes = new Set(["force", "parent", "root-entry", "roster", "self"]);
+const knownScopes = new Set([
+  "ancestor",
+  "force",
+  "parent",
+  "root-entry",
+  "roster",
+  "self",
+  "unit",
+]);
 
 interface NodeContext {
   readonly document: LosslessDocument;
@@ -296,14 +309,84 @@ export function normalizeCatalog(
 
   for (const [id, slot] of slots) {
     const owner = entities.get(slot.ownerId);
+    const optionPlacementIds = collectSlotOptions(slot, new Set());
     slots.set(id, {
       ...slot,
-      optionPlacementIds: [...slot.placementIds],
+      placementIds: optionPlacementIds,
+      optionPlacementIds,
       costIds: [...(owner?.costIds ?? [])],
       constraintIds: [...(owner?.constraintIds ?? [])],
       conditionIds: [...(owner?.conditionIds ?? [])],
       modifierIds: [...(owner?.modifierIds ?? [])],
     });
+  }
+
+  function collectSlotOptions(slot: MutableSlot, visited: Set<SlotId>): PlacementId[] {
+    if (visited.has(slot.id)) return [];
+    const nextVisited = new Set(visited).add(slot.id);
+    const options = new Map<EntityId, PlacementId>();
+    for (const currentPlacementId of slot.placementIds) {
+      const placement = placements.get(currentPlacementId);
+      const target = placement?.definitionId ? entities.get(placement.definitionId) : null;
+      if (!placement || !target || !placement.resolved || placement.ambiguous) continue;
+      const nestedSlots = target.slotIds
+        .map((nestedId) => slots.get(nestedId))
+        .filter((candidate): candidate is MutableSlot => Boolean(candidate));
+      if (nestedSlots.some((candidate) => candidate.placementIds.length > 0)) {
+        for (const nested of nestedSlots)
+          for (const nestedPlacementId of collectSlotOptions(nested, nextVisited)) {
+            const nestedPlacement = placements.get(nestedPlacementId);
+            if (!nestedPlacement?.definitionId) continue;
+            const target = entities.get(nestedPlacement.definitionId);
+            if (!target) continue;
+            let order = slot.placementIds.length + options.size;
+            let projectedId = placementId(
+              slot.ownerId,
+              target.provenance.sourceNodeId,
+              order,
+              "reference",
+            );
+            while (placements.has(projectedId))
+              projectedId = placementId(
+                slot.ownerId,
+                target.provenance.sourceNodeId,
+                ++order,
+                "reference",
+              );
+            placements.set(projectedId, {
+              ...nestedPlacement,
+              id: projectedId,
+              ownerId: slot.ownerId,
+              slotId: slot.id,
+              order,
+              linkKind: "reference",
+            });
+            options.set(nestedPlacement.definitionId, projectedId);
+          }
+        continue;
+      }
+      if (
+        placement.linkKind === "ownership" &&
+        (target.provenance.sourceTag === "entryLink" ||
+          target.provenance.sourceTag === "selectionEntryLink")
+      )
+        continue;
+      if (
+        ![
+          "Unit",
+          "Model",
+          "Weapon",
+          "Option",
+          "Generator",
+          "Attachment",
+          "Escort",
+          "Doctrine",
+        ].includes(target.kind)
+      )
+        continue;
+      options.set(target.id, placement.id);
+    }
+    return [...options.values()];
   }
 
   return {

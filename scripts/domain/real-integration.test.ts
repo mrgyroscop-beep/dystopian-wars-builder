@@ -20,8 +20,18 @@ import {
   type DomainCatalog,
   type LosslessGraph,
 } from "../../src/domain/catalog";
-import { evaluateRoster, rosterInstanceId, type RosterSnapshot } from "../../src/domain/roster";
+import {
+  evaluateRoster,
+  rosterInstanceId,
+  type RosterSelectionInstance,
+  type RosterSnapshot,
+} from "../../src/domain/roster";
 import { projectRosterSetup } from "../../src/application/rosters/create-roster";
+import {
+  applyShipEditorCommand,
+  projectShipEditor,
+  type ShipEditorReadyReadModel,
+} from "../../src/application/rosters/ship-editor";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
 let temporary = "";
@@ -276,6 +286,98 @@ describe("pinned real domain model", () => {
     );
   });
 
+  it("pins the real Akita editor from 0/4 to 4/4 and evaluates Kagutsuchi/Magma", () => {
+    const empire = Object.values(first.entities).filter(
+      (entity) => entity.provenance.documentPath === "Empire.cat",
+    );
+    const unit = empire.find(
+      (entity) => entity.kind === "Unit" && entity.label.plainText === "Akita Super Battleship",
+    )!;
+    const model = empire.find(
+      (entity) => entity.kind === "Model" && entity.label.plainText === "Akita",
+    )!;
+    const modelPlacement = Object.values(first.placements).find(
+      (placement) => placement.ownerId === unit.id && placement.definitionId === model.id,
+    )!;
+    let snapshot = realAkitaSnapshot(unit.id, model.id, modelPlacement.id);
+    let projected = readyEditor(
+      projectShipEditor(
+        snapshot,
+        first,
+        rosterInstanceId("real:akita:unit"),
+        unit.id,
+        "saved-local",
+      ),
+    );
+    expect(projected.mandatory).toEqual({ selected: 0, required: 4 });
+
+    let created = 0;
+    for (const group of projected.groups.filter((candidate) => candidate.minimum === 1)) {
+      const preferred =
+        group.options.find((option) => option.label === "Magma Cast Generator") ??
+        group.options.find((option) => option.availability === "available")!;
+      snapshot = applyShipEditorCommand(
+        snapshot,
+        first,
+        {
+          type: "replace-exclusive",
+          instanceId: "real:akita:unit",
+          groupId: group.id,
+          optionId: preferred.id,
+        },
+        () => `real:akita:choice:${++created}`,
+      );
+      projected = readyEditor(
+        projectShipEditor(snapshot, first, "real:akita:unit", unit.id, "saved-local"),
+      );
+    }
+    expect(projected.mandatory).toEqual({ selected: 4, required: 4 });
+
+    const kagutsuchi = empire.find(
+      (entity) =>
+        entity.kind === "Battlefleet" &&
+        entity.label.plainText.includes("Kagutsuchi Volcanic Battlefleet"),
+    )!;
+    expect(kagutsuchi).toBeDefined();
+    let conditional = realAkitaSnapshot(unit.id, model.id, modelPlacement.id, kagutsuchi.id);
+    let conditionalModel = readyEditor(
+      projectShipEditor(conditional, first, "real:akita:unit", unit.id, "saved-local"),
+    );
+    expect(
+      conditionalModel.problems.some((problem) => problem.title.includes("Magma Cast Generator")),
+    ).toBe(true);
+    const psa = conditionalModel.groups.find((group) =>
+      group.options.some((option) => option.label === "Magma Cast Generator"),
+    );
+    if (!psa)
+      throw new Error(
+        JSON.stringify(
+          conditionalModel.groups.map((group) => ({
+            label: group.label,
+            options: group.options.map((option) => option.label).slice(0, 12),
+          })),
+        ),
+      );
+    const magma = psa.options.find((option) => option.label === "Magma Cast Generator")!;
+    conditional = applyShipEditorCommand(
+      conditional,
+      first,
+      {
+        type: "replace-exclusive",
+        instanceId: "real:akita:unit",
+        groupId: psa.id,
+        optionId: magma.id,
+      },
+      () => "real:akita:magma",
+    );
+    conditionalModel = readyEditor(
+      projectShipEditor(conditional, first, "real:akita:unit", unit.id, "saved-local"),
+    );
+    expect(conditionalModel.problems.map((problem) => problem.title).join(" ")).not.toContain(
+      "requires a Magma Cast Generator",
+    );
+  });
+
   it("projects every real forceEntry into the creation scenario without publishing payloads", () => {
     const setup = projectRosterSetup(first);
     const projectedBattlefleets = setup.factions.flatMap((faction) => faction.battlefleets);
@@ -421,6 +523,66 @@ describe("pinned real domain model", () => {
     );
   });
 });
+
+function readyEditor(model: ReturnType<typeof projectShipEditor>): ShipEditorReadyReadModel {
+  if (model.dataState !== "ready") throw new Error(`${model.dataState}: ${model.detail}`);
+  return model;
+}
+
+function realAkitaSnapshot(
+  unitDefinitionId: string,
+  modelDefinitionId: string,
+  modelPlacementId: string,
+  forceDefinitionId?: string,
+): RosterSnapshot {
+  const forceId = rosterInstanceId("real:akita:force");
+  const unitId = rosterInstanceId("real:akita:unit");
+  const modelId = rosterInstanceId("real:akita:model");
+  const unit = realInstance(
+    unitId,
+    unitDefinitionId,
+    forceDefinitionId ? forceId : null,
+    forceDefinitionId ? forceId : unitId,
+  );
+  const model = realInstance(
+    modelId,
+    modelDefinitionId,
+    unitId,
+    unit.forceInstanceId ?? unitId,
+    modelPlacementId,
+  );
+  const force = forceDefinitionId ? realInstance(forceId, forceDefinitionId, null, forceId) : null;
+  return {
+    contractVersion: 1,
+    id: "real-akita-editor",
+    catalogContentVersion: first.contentVersion,
+    rootInstanceIds: [force?.id ?? unit.id],
+    instances: {
+      ...(force ? { [force.id]: force } : {}),
+      [unit.id]: unit,
+      [model.id]: model,
+    },
+  };
+}
+
+function realInstance(
+  id: ReturnType<typeof rosterInstanceId>,
+  definitionId: string,
+  parentInstanceId: ReturnType<typeof rosterInstanceId> | null,
+  forceInstanceId: ReturnType<typeof rosterInstanceId>,
+  placementId: string | null = null,
+): RosterSelectionInstance {
+  return {
+    contractVersion: 1,
+    id,
+    definitionId: definitionId as RosterSelectionInstance["definitionId"],
+    placementId: placementId as RosterSelectionInstance["placementId"],
+    slotId: null,
+    parentInstanceId,
+    forceInstanceId,
+    quantity: 1,
+  };
+}
 
 function descendants(rootId: string): string[] {
   const visited = new Set<string>();

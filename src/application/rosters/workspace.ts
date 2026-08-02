@@ -11,6 +11,7 @@ import {
 import type { RosterRepository, StoredRoster } from "./create-roster";
 import {
   applyShipEditorCommand,
+  isShipEditorDefinition,
   materializeShipStructure,
   projectShipEditor,
   type ShipEditorCommand,
@@ -134,9 +135,15 @@ export interface RosterWorkspaceDependencies {
 
 export interface RosterWorkspaceSession {
   readonly model: RosterWorkspaceReadModel;
-  editor(instanceId: string | null): ShipEditorReadModel | null;
+  editor(instanceId: string | null, definitionId: string | null): ShipEditorReadModel | null;
   execute(command: RosterWorkspaceCommand): Promise<RosterWorkspaceReadModel>;
+  executeDetailed(command: RosterWorkspaceCommand): Promise<RosterWorkspaceExecution>;
   retrySave(): Promise<RosterWorkspaceReadModel>;
+}
+
+export interface RosterWorkspaceExecution {
+  readonly model: RosterWorkspaceReadModel;
+  readonly createdInstanceId: string | null;
 }
 
 export class WorkspaceCommandError extends Error {
@@ -196,8 +203,19 @@ class WorkspaceSession implements RosterWorkspaceSession {
     return this.currentModel;
   }
 
-  editor(instanceId: string | null): ShipEditorReadModel | null {
-    return projectShipEditor(this.current.roster, this.catalog, instanceId, this.persistence);
+  editor(instanceId: string | null, definitionId: string | null): ShipEditorReadModel | null {
+    const targetDefinitionId = instanceId
+      ? this.current.roster.instances[instanceId]?.definitionId
+      : definitionId;
+    if (!targetDefinitionId || !isShipEditorDefinition(this.catalog, targetDefinitionId))
+      return null;
+    return projectShipEditor(
+      this.current.roster,
+      this.catalog,
+      instanceId,
+      definitionId,
+      this.persistence,
+    );
   }
 
   async prepare(): Promise<void> {
@@ -207,18 +225,20 @@ class WorkspaceSession implements RosterWorkspaceSession {
   }
 
   async execute(command: RosterWorkspaceCommand): Promise<RosterWorkspaceReadModel> {
-    const nextSnapshot = applyCommand(
-      this.current,
-      this.catalog,
-      command,
-      this.dependencies.createId,
-    );
+    return (await this.executeDetailed(command)).model;
+  }
+
+  async executeDetailed(command: RosterWorkspaceCommand): Promise<RosterWorkspaceExecution> {
+    const result = applyCommand(this.current, this.catalog, command, this.dependencies.createId);
     const candidate: StoredRoster = {
       ...this.current,
-      roster: nextSnapshot,
+      roster: result.snapshot,
       updatedAt: this.dependencies.now(),
     };
-    return this.persist(candidate);
+    return {
+      model: await this.persist(candidate),
+      createdInstanceId: result.createdInstanceId,
+    };
   }
 
   async retrySave(): Promise<RosterWorkspaceReadModel> {
@@ -302,10 +322,17 @@ function applyCommand(
   catalog: DomainCatalog,
   command: RosterWorkspaceCommand,
   createId: () => string,
-): RosterSnapshot {
+): { readonly snapshot: RosterSnapshot; readonly createdInstanceId: RosterInstanceId | null } {
   const snapshot = stored.roster;
-  if (command.type === "replace-exclusive" || command.type === "set-choice-quantity")
-    return applyShipEditorCommand(snapshot, catalog, command, createId);
+  if (
+    command.type === "replace-exclusive" ||
+    command.type === "set-choice-quantity" ||
+    command.type === "set-model-quantity"
+  )
+    return {
+      snapshot: applyShipEditorCommand(snapshot, catalog, command, createId),
+      createdInstanceId: null,
+    };
   const instances = { ...snapshot.instances };
   let addedId: RosterInstanceId | null = null;
   if (command.type === "add") {
@@ -356,7 +383,12 @@ function applyCommand(
     }
   }
   const next = { ...snapshot, instances };
-  return addedId ? materializeShipStructure(next, instances[addedId]!, createId) : next;
+  return {
+    snapshot: addedId
+      ? materializeShipStructure(next, catalog, instances[addedId]!, createId)
+      : next,
+    createdInstanceId: addedId,
+  };
 }
 
 function duplicateSubtree(

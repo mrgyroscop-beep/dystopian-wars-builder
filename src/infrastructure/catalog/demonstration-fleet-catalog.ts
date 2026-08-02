@@ -7,8 +7,11 @@ import {
   type DomainEntity,
   type EntityId,
   type EntityKind,
+  type EvaluatorExpression,
   type Placement,
   type PlacementId,
+  type Slot,
+  type SlotId,
   type SourceNodeId,
 } from "../../domain/catalog";
 
@@ -39,6 +42,8 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
   const crownBattlefleetId = entityId("demo-crown-vanguard");
   const commandElementId = entityId("demo-command");
   const patrolElementId = entityId("demo-patrol");
+  const akitaDiscountModifierId = entityId("demo-akita-escort-discount-modifier");
+  const akitaRequirementModifierId = entityId("demo-akita-kagutsuchi-requirement");
   const categories = categoryNames.map((name) =>
     entity("Category", entityId(`demo-category-${name.toLocaleLowerCase("en")}`), name),
   );
@@ -97,6 +102,7 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
         attributes,
         categoryIds: [categoryId],
         costIds: [pointsId, victoryPointsId],
+        modifierIds: index === 1 ? [akitaDiscountModifierId, akitaRequirementModifierId] : [],
       }),
       cost(pointsId, "Points", String(points), "points", pointsTypeId),
       cost(victoryPointsId, "VP", String(victoryPoints), "victory-points", victoryPointsTypeId),
@@ -126,20 +132,37 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
       );
   }
 
+  const modelId = entityId("demo-akita-model");
+  const psaSlotId = slotId("demo-akita-slot-psa");
+  const fps1SlotId = slotId("demo-akita-slot-fps-1");
+  const fps2SlotId = slotId("demo-akita-slot-fps-2");
+  const fps3SlotId = slotId("demo-akita-slot-fps-3");
+  const attachmentSlotId = slotId("demo-akita-slot-attachments");
+  const escortSlotId = slotId("demo-akita-slot-escorts");
+  const empireDoctrineSlotId = slotId("demo-empire-slot-doctrine");
+  const crownDoctrineSlotId = slotId("demo-crown-slot-doctrine");
+  const magmaId = entityId("demo-akita-magma-cast");
+  const kagutsuchiId = entityId("demo-doctrine-kagutsuchi");
+  const escortId = entityId("demo-akita-tanuki-escort");
+  const sealedAvailabilityId = entityId("demo-akita-sealed-availability");
+  const hasKagutsuchiId = entityId("demo-akita-has-kagutsuchi");
+  const lacksMagmaId = entityId("demo-akita-lacks-magma");
+  const kagutsuchiGroupId = entityId("demo-akita-kagutsuchi-and-no-magma");
+  const escortDiscountConditionId = entityId("demo-akita-four-escorts");
+
   const editorEntities = [
-    ["Model", "demo-akita-model", "Akita structural Model", 0],
-    ["Weapon", "demo-akita-magma-cast", "Magma Cast", 0],
+    ["Generator", "demo-akita-magma-cast", "Magma Cast Generator", 0],
     ["Weapon", "demo-akita-heavy-battery", "Heavy Battery", 15],
     ["Weapon", "demo-akita-sealed-array", "Sealed Experimental Array", 25],
-    ["Generator", "demo-akita-kagutsuchi", "Kagutsuchi Generator", 20],
     ["Generator", "demo-akita-fury-generator", "Fury Generator", 0],
+    ["Weapon", "demo-akita-torpedo-battery", "Torpedo Battery", 5],
     ["Weapon", "demo-akita-rocket-battery", "Rocket Battery", 10],
     ["Weapon", "demo-akita-flak-battery", "Flak Battery", 0],
     ["Generator", "demo-akita-shield-generator", "Shield Generator", 10],
     ["Weapon", "demo-akita-mine-layer", "Mine Layer", 0],
     ["Attachment", "demo-akita-repair-crane", "Repair Crane", 5],
     ["Escort", "demo-akita-tanuki-escort", "Tanuki Escort", 10],
-    ["Option", "demo-akita-escort-discount", "Escort formation discount", -10],
+    ["Doctrine", "demo-doctrine-kagutsuchi", "Kagutsuchi Doctrine", 0],
   ] as const satisfies readonly (readonly [EntityKind, string, string, number])[];
   for (const [kind, rawId, label, points] of editorEntities) {
     const id = entityId(rawId);
@@ -149,13 +172,167 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
         attributes: {
           "demo.editor": "akita",
           "demo.catalog": "hidden",
-          ...(rawId === "demo-akita-escort-discount" ? { "demo.hidden": "true" } : {}),
         },
         costIds: points === 0 ? [] : [pointCostId],
       }),
     );
     if (points !== 0)
-      entities.push(cost(pointCostId, "Points", String(points), "points", pointsTypeId));
+      entities.push(cost(pointCostId, "Points", String(points), "points", pointsTypeId, "delta"));
+  }
+
+  entities.push(
+    entity("Model", modelId, "Akita", {
+      attributes: {
+        "demo.editor": "ship",
+        "demo.catalog": "hidden",
+        "editor.quantity.minimum": "1",
+        "editor.quantity.maximum": "1",
+      },
+      slotIds: [psaSlotId, fps1SlotId, fps2SlotId, fps3SlotId, attachmentSlotId, escortSlotId],
+    }),
+    expressionEntity("Condition", sealedAvailabilityId, {
+      operator: "instanceOf",
+      field: "selections",
+      scope: "unit",
+      value: "1",
+      references: [entityId("demo-never-selected")],
+    }),
+    entity("Option", entityId("demo-never-selected"), "Unavailable sentinel", {
+      attributes: { "demo.catalog": "hidden" },
+    }),
+    expressionEntity("Condition", hasKagutsuchiId, {
+      operator: "instanceOf",
+      field: "selections",
+      scope: "force",
+      value: "1",
+      references: [kagutsuchiId],
+    }),
+    expressionEntity("Condition", lacksMagmaId, {
+      operator: "notInstanceOf",
+      field: "selections",
+      scope: "unit",
+      value: "1",
+      references: [magmaId],
+    }),
+    expressionEntity("ConditionGroup", kagutsuchiGroupId, {
+      operator: "and",
+      conditionIds: [hasKagutsuchiId, lacksMagmaId],
+    }),
+    expressionEntity("Modifier", akitaRequirementModifierId, {
+      operator: "append",
+      field: "error",
+      scope: "unit",
+      value: "Kagutsuchi Doctrine requires Magma Cast Generator.",
+      conditionIds: [kagutsuchiGroupId],
+      flags: { targetSlotId: psaSlotId },
+    }),
+    expressionEntity("Condition", escortDiscountConditionId, {
+      operator: "atLeast",
+      field: "selections",
+      scope: "unit",
+      value: "4",
+      references: [escortId],
+    }),
+    expressionEntity("Modifier", akitaDiscountModifierId, {
+      operator: "decrement",
+      field: pointsTypeId,
+      scope: "unit",
+      value: "10",
+      conditionIds: [escortDiscountConditionId],
+    }),
+  );
+
+  const slotDefinitions = [
+    [
+      psaSlotId,
+      "Hardpoint",
+      "PSA",
+      1,
+      1,
+      ["demo-akita-magma-cast", "demo-akita-heavy-battery", "demo-akita-sealed-array"],
+    ],
+    [
+      fps1SlotId,
+      "Hardpoint",
+      "FPS 1",
+      1,
+      1,
+      ["demo-akita-fury-generator", "demo-akita-torpedo-battery"],
+    ],
+    [
+      fps2SlotId,
+      "Hardpoint",
+      "FPS 2",
+      1,
+      1,
+      ["demo-akita-rocket-battery", "demo-akita-flak-battery"],
+    ],
+    [
+      fps3SlotId,
+      "Hardpoint",
+      "FPS 3",
+      1,
+      1,
+      ["demo-akita-shield-generator", "demo-akita-mine-layer"],
+    ],
+    [attachmentSlotId, "Attachment", "Attachments", 0, 1, ["demo-akita-repair-crane"]],
+    [escortSlotId, "Escort", "Escorts", 0, 4, ["demo-akita-tanuki-escort"]],
+  ] as const;
+  const slots: Slot[] = [];
+  placements.push(placement("demo-akita-model-placement", entityId("demo-ship-001"), modelId, 0));
+  for (const [id, kind, label, minimum, maximum, optionIds] of slotDefinitions) {
+    const optionPlacements = optionIds.map((rawId, index) => {
+      const overlay =
+        rawId === "demo-akita-sealed-array"
+          ? {
+              conditionIds: [sealedAvailabilityId],
+              attributes: {
+                "editor.unavailableReason": "Недоступно для учебной доктрины Harbour Patrol.",
+              },
+            }
+          : {};
+      const candidate = placement(
+        `demo-placement-${id}-${index}`,
+        modelId,
+        entityId(rawId),
+        index,
+        id,
+        overlay,
+      );
+      placements.push(candidate);
+      return candidate.id;
+    });
+    const constraintIds = addCardinalityConstraints(entities, id, minimum, maximum);
+    slots.push(
+      editorSlot(id, modelId, kind, label, minimum, maximum, optionPlacements, constraintIds),
+    );
+  }
+  for (const [id, ownerId] of [
+    [empireDoctrineSlotId, empireBattlefleetId],
+    [crownDoctrineSlotId, crownBattlefleetId],
+  ] as const) {
+    const option = placement(`demo-placement-${id}-kagutsuchi`, ownerId, kagutsuchiId, 0, id);
+    placements.push(option);
+    slots.push(
+      editorSlot(
+        id,
+        ownerId,
+        "Doctrine",
+        "Доктрина флота",
+        0,
+        1,
+        [option.id],
+        addCardinalityConstraints(entities, id, 0, 1),
+      ),
+    );
+  }
+  const battlefleetSlotIds = new Map<EntityId, SlotId[]>([
+    [empireBattlefleetId, [empireDoctrineSlotId]],
+    [crownBattlefleetId, [crownDoctrineSlotId]],
+  ]);
+  for (const [index, candidate] of entities.entries()) {
+    const ids = battlefleetSlotIds.get(candidate.id);
+    if (ids) entities[index] = { ...candidate, slotIds: ids };
   }
 
   return {
@@ -164,7 +341,7 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
     source,
     entities: Object.fromEntries(entities.map((candidate) => [candidate.id, candidate])),
     placements: Object.fromEntries(placements.map((candidate) => [candidate.id, candidate])),
-    slots: {},
+    slots: Object.fromEntries(slots.map((candidate) => [candidate.id, candidate])),
     aliases: {},
     roots: [empireBattlefleetId, crownBattlefleetId],
     diagnostics: [],
@@ -260,6 +437,7 @@ function cost(
   raw: string,
   resource: "points" | "victory-points",
   costTypeId: EntityId,
+  role: "base" | "delta" = "base",
 ): Extract<DomainEntity, { kind: "Cost" }> {
   const amount: CostAmount =
     raw === "0"
@@ -273,7 +451,7 @@ function cost(
       costTypeId,
       sourceCostTypeId: resource === "points" ? "points" : "vp",
       resource,
-      role: "base",
+      role,
       scope: null,
     },
   }) as Extract<DomainEntity, { kind: "Cost" }>;
@@ -284,13 +462,15 @@ function placement(
   ownerId: EntityId,
   definitionId: EntityId,
   order: number,
+  slotIdValue: SlotId | null = null,
+  overlay: Partial<Placement["overlay"]> = {},
 ): Placement {
   return {
     contractVersion: 1,
     id: value as PlacementId,
     ownerId,
     definitionId,
-    slotId: null,
+    slotId: slotIdValue,
     order,
     linkKind: "ownership",
     resolved: true,
@@ -305,9 +485,102 @@ function placement(
       modifierIds: [],
       repeatIds: [],
       attributes: {},
+      ...overlay,
     },
     provenance: provenance(ownerId),
   };
+}
+
+function expressionEntity(
+  kind: "Condition" | "ConditionGroup" | "Constraint" | "Modifier",
+  id: EntityId,
+  options: Partial<EvaluatorExpression> & {
+    readonly conditionIds?: readonly EntityId[];
+  },
+): Extract<DomainEntity, { expression: EvaluatorExpression }> {
+  const { conditionIds = [], ...expression } = options;
+  return entity(kind, id, id, {
+    conditionIds,
+    expression: {
+      contractVersion: 1,
+      operator: null,
+      field: null,
+      scope: null,
+      value: null,
+      references: [],
+      referenceResolutions: [],
+      flags: {},
+      evaluable: true,
+      unevaluableReasons: [],
+      ...expression,
+    },
+  }) as Extract<DomainEntity, { expression: EvaluatorExpression }>;
+}
+
+function editorSlot(
+  id: SlotId,
+  ownerId: EntityId,
+  kind: Slot["kind"],
+  label: string,
+  minimum: number,
+  maximum: number,
+  placementIds: readonly PlacementId[],
+  constraintIds: readonly EntityId[],
+): Slot {
+  return {
+    contractVersion: 1,
+    id,
+    ownerId,
+    kind,
+    label: presentation(label),
+    placementIds,
+    optionPlacementIds: placementIds,
+    cardinality: {
+      contractVersion: 1,
+      minimum:
+        minimum === 0
+          ? { contractVersion: 1, state: "zero", value: "0" }
+          : { contractVersion: 1, state: "value", value: String(minimum) },
+      maximum:
+        maximum === 0
+          ? { contractVersion: 1, state: "zero", value: "0" }
+          : { contractVersion: 1, state: "value", value: String(maximum) },
+      effective: "deferred-to-kan-32",
+    },
+    costIds: [],
+    constraintIds,
+    conditionIds: [],
+    modifierIds: [],
+    hidden: false,
+    helper: false,
+    semantics: { contractVersion: 1, selection: "option", evaluation: "deferred-to-kan-32" },
+    provenance: provenance(ownerId),
+  };
+}
+
+function addCardinalityConstraints(
+  entities: DomainEntity[],
+  id: SlotId,
+  minimum: number,
+  maximum: number,
+): EntityId[] {
+  const minimumId = entityId(`${id}-minimum`);
+  const maximumId = entityId(`${id}-maximum`);
+  entities.push(
+    expressionEntity("Constraint", minimumId, {
+      operator: "min",
+      field: "selections",
+      scope: "parent",
+      value: String(minimum),
+    }),
+    expressionEntity("Constraint", maximumId, {
+      operator: "max",
+      field: "selections",
+      scope: "parent",
+      value: String(maximum),
+    }),
+  );
+  return [minimumId, maximumId];
 }
 
 function presentation(value: string) {
@@ -346,4 +619,8 @@ function entityId(value: string): EntityId {
 
 function sourceNodeId(value: string): SourceNodeId {
   return `demo-source:${value}` as SourceNodeId;
+}
+
+function slotId(value: string): SlotId {
+  return value as SlotId;
 }
