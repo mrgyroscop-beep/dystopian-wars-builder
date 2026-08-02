@@ -184,10 +184,35 @@ describe("preview workflow policy", () => {
       controller.indexOf("uploadVersion(manifest, artifact, false)"),
     );
     expect(controller).toContain("if (bootstrapOwnershipTag)");
-    expect(controller).toContain("deleteBootstrappedPreviewWorker");
+    expect(controller).toContain("deleteBootstrappedPreviewAfterUpload");
+    expect(provider).toContain("deleteBootstrappedPreviewWorker");
     expect(provider).toContain('request, "/workers/workers"');
     expect(provider).toContain('request, "/workers/scripts"');
     expect(provider).not.toMatch(/wrangler\s+deploy/);
+  });
+
+  it("classifies fresh provider state after every owned first-upload attempt", async () => {
+    const controller = await readFile(path.resolve("scripts/preview/deploy.mjs"), "utf8");
+    const bootstrap = controller.indexOf(
+      "bootstrapOwnershipTag = await ensurePreviewWorkerForUpload",
+    );
+    const upload = controller.indexOf(
+      "const immutable = await uploadVersion(manifest, artifact, false)",
+    );
+    const recovery = controller.indexOf('} else if (recovery === "delete")');
+    const ownedBootstrap = controller.indexOf("if (bootstrapOwnershipTag)", recovery);
+    const postUploadCleanup = controller.indexOf(
+      "await deleteBootstrappedPreviewAfterUpload({",
+      recovery,
+    );
+    expect(bootstrap).toBeGreaterThan(-1);
+    expect(upload).toBeGreaterThan(-1);
+    expect(upload).toBeGreaterThan(bootstrap);
+    expect(recovery).toBeGreaterThan(upload);
+    expect(ownedBootstrap).toBeGreaterThan(recovery);
+    expect(postUploadCleanup).toBeGreaterThan(ownedBootstrap);
+    expect(controller).not.toContain("bootstrapUploadState");
+    expect(controller).not.toContain("deleteBootstrappedPreviewWorker");
   });
 
   it("bounds artifact metadata before privileged reads", async () => {

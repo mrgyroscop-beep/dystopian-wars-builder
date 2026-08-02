@@ -100,25 +100,42 @@ export async function deleteBootstrappedPreviewWorker({
       { method: "DELETE" },
       true,
     );
-    const [exactWorker, workerResources, scripts] = await Promise.all([
-      guardedRequest(
-        name,
-        prNumber,
-        request,
-        `/workers/workers/${encodeURIComponent(name)}`,
-        undefined,
-        true,
-      ),
-      guardedRequest(name, prNumber, request, "/workers/workers"),
-      guardedRequest(name, prNumber, request, "/workers/scripts"),
-    ]);
-    if (
-      exactWorker !== undefined ||
-      normalizeCollection(workerResources).some((worker) => worker?.name === name) ||
-      normalizeCollection(scripts).some((worker) => worker?.id === name)
-    ) {
-      throw new Error("Preview Worker still exists after cleanup");
+    await assertPreviewWorkerAbsent({ name, prNumber, request });
+  } catch {
+    throw new PreviewBootstrapError("cleanup-worker");
+  }
+}
+
+export async function deleteBootstrappedPreviewAfterUpload({
+  name,
+  prNumber,
+  ownershipTag,
+  request = cloudflareRequest,
+}) {
+  assertAllowlistedWorkerName(name, prNumber);
+  assertOwnershipTag(ownershipTag);
+  try {
+    // Recovery re-establishes exclusive ownership from every provider view.
+    // Pre-upload observations are never trusted for deletion.
+    const evidence = await readOwnershipEvidence({ name, prNumber, ownershipTag, request });
+    if (!evidence.owned || !evidence.inventoryValid) {
+      throw new Error("Worker ownership is not proven");
     }
+
+    if (!evidence.scriptExists) {
+      await deleteBootstrappedPreviewWorker({ name, prNumber, ownershipTag, request });
+      return;
+    }
+
+    await guardedRequest(
+      name,
+      prNumber,
+      request,
+      `/workers/scripts/${encodeURIComponent(name)}`,
+      { method: "DELETE" },
+      true,
+    );
+    await assertPreviewWorkerAbsent({ name, prNumber, request });
   } catch {
     throw new PreviewBootstrapError("cleanup-worker");
   }
@@ -180,6 +197,55 @@ export async function latestPreviewVersionTimestamp(name) {
 }
 
 async function readOwnershipEvidence({ name, prNumber, ownershipTag, request }) {
+  const [workerResources, scripts] = await Promise.all([
+    guardedRequest(name, prNumber, request, "/workers/workers"),
+    guardedRequest(name, prNumber, request, "/workers/scripts"),
+  ]);
+  // Read the exact resource last so a mutation during either inventory read is
+  // observed before the destructive request.
+  const exactWorker = await guardedRequest(
+    name,
+    prNumber,
+    request,
+    `/workers/workers/${encodeURIComponent(name)}`,
+    undefined,
+    true,
+  );
+  const resources = strictCollection(workerResources);
+  const scriptEntries = strictCollection(scripts);
+  const resourcesWellFormed = entriesHaveStringProperty(resources, "name");
+  const scriptsWellFormed = entriesHaveStringProperty(scriptEntries, "id");
+  const targetResources = resources?.filter((worker) => worker?.name === name);
+  const targetScripts = scriptEntries?.filter((script) => script?.id === name);
+  const inventoryValid =
+    resourcesWellFormed === true &&
+    scriptsWellFormed === true &&
+    targetResources.length === 1 &&
+    targetScripts.length <= 1;
+  const inventoryAmbiguous =
+    resourcesWellFormed !== true ||
+    scriptsWellFormed !== true ||
+    targetResources?.length > 1 ||
+    targetScripts?.length > 1;
+  const listedWorker = targetResources?.[0];
+  const exactOwned = isExclusivelyOwnedEmptyPreviewWorker(exactWorker, name, ownershipTag);
+  const listedOwned = isExclusivelyOwnedEmptyPreviewWorker(listedWorker, name, ownershipTag);
+  const owned = inventoryValid && exactOwned && listedOwned;
+  const scriptExists = inventoryValid && targetScripts.length === 1;
+  return {
+    owned,
+    configured: owned,
+    inventoryValid,
+    scriptExists,
+    readyForFirstUpload: owned && !scriptExists,
+    conflictingOwner:
+      inventoryAmbiguous ||
+      (exactWorker !== undefined && !exactOwned) ||
+      (listedWorker !== undefined && !listedOwned),
+  };
+}
+
+async function assertPreviewWorkerAbsent({ name, prNumber, request }) {
   const [exactWorker, workerResources, scripts] = await Promise.all([
     guardedRequest(
       name,
@@ -192,18 +258,19 @@ async function readOwnershipEvidence({ name, prNumber, ownershipTag, request }) 
     guardedRequest(name, prNumber, request, "/workers/workers"),
     guardedRequest(name, prNumber, request, "/workers/scripts"),
   ]);
-  const listedWorker = normalizeCollection(workerResources).find((worker) => worker?.name === name);
-  const exactOwned = isExclusivelyOwnedEmptyPreviewWorker(exactWorker, name, ownershipTag);
-  const listedOwned = isExclusivelyOwnedEmptyPreviewWorker(listedWorker, name, ownershipTag);
-  const owned = exactOwned && listedOwned;
-  const scriptExists = normalizeCollection(scripts).some((script) => script?.id === name);
-  return {
-    owned,
-    configured: owned,
-    readyForFirstUpload: owned && !scriptExists,
-    conflictingOwner:
-      (exactWorker !== undefined && !exactOwned) || (listedWorker !== undefined && !listedOwned),
-  };
+  const resources = strictCollection(workerResources);
+  const scriptEntries = strictCollection(scripts);
+  const resourcesWellFormed = entriesHaveStringProperty(resources, "name");
+  const scriptsWellFormed = entriesHaveStringProperty(scriptEntries, "id");
+  if (
+    exactWorker !== undefined ||
+    !resourcesWellFormed ||
+    !scriptsWellFormed ||
+    resources.some((worker) => worker?.name === name) ||
+    scriptEntries.some((script) => script?.id === name)
+  ) {
+    throw new Error("Preview Worker still exists after cleanup");
+  }
 }
 
 function isExclusivelyOwnedEmptyPreviewWorker(worker, name, ownershipTag) {
@@ -239,6 +306,18 @@ function guardedRequest(name, expectedPrNumber, request, pathname, init, acceptN
 function normalizeCollection(value) {
   if (Array.isArray(value)) return value;
   return Array.isArray(value?.items) ? value.items : [];
+}
+
+function strictCollection(value) {
+  if (Array.isArray(value)) return value;
+  if (value !== null && typeof value === "object" && Array.isArray(value.items)) {
+    return value.items;
+  }
+  return undefined;
+}
+
+function entriesHaveStringProperty(entries, property) {
+  return entries?.every((entry) => typeof entry?.[property] === "string") === true;
 }
 
 function defaultWait(milliseconds) {
