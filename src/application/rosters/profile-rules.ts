@@ -96,7 +96,10 @@ export function projectShipProfileRules(
     });
 
   const baseProfiles = profileEntities(baseSources, catalog, diagnostics);
-  const effectiveProfiles = profileEntities(effectiveSources, catalog, diagnostics);
+  const configuredProfiles = configuredSources.flatMap((source) =>
+    profileEntities([source], catalog, diagnostics),
+  );
+  const effectiveProfiles = [...baseProfiles, ...configuredProfiles];
   const weaponSources = effectiveProfiles.filter(({ entity }) => entity.kind === "Weapon");
   const genericBaseProfiles = baseProfiles.filter(({ entity }) => entity.kind === "Profile");
   const properties = [...baseSources, ...genericBaseProfiles].flatMap((source) =>

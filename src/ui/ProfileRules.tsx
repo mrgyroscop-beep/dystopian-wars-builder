@@ -169,10 +169,7 @@ export function RulesPanel({
       {glossaryOpen ? (
         <GlossaryDialog
           onClose={() => setGlossaryOpen(false)}
-          onOpenRule={(ruleId, element) => {
-            setGlossaryOpen(false);
-            onOpenRule(ruleId, element);
-          }}
+          onOpenRule={onOpenRule}
           rules={model.rules}
         />
       ) : null}

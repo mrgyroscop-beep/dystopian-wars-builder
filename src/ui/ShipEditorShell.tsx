@@ -47,9 +47,7 @@ export function ShipEditorShell({
   const [tab, setTab] = useState<EditorTab>(ruleId ? "rules" : "configuration");
   const [fleetEditorOpen, setFleetEditorOpen] = useState(false);
   const [localRuleId, setLocalRuleId] = useState<string | null>(null);
-  const ruleReturn = useRef<{ readonly element: HTMLElement; readonly scrollY: number } | null>(
-    null,
-  );
+  const ruleReturn = useRef<RuleReturn | null>(null);
   const previousRuleId = useRef<string | null>(ruleId ?? null);
   const tabsId = useId();
   const activeRuleId = ruleId === undefined ? localRuleId : ruleId;
@@ -91,7 +89,13 @@ export function ShipEditorShell({
   }
 
   function openRule(nextRuleId: string, returnElement: HTMLElement) {
-    ruleReturn.current = { element: returnElement, scrollY: window.scrollY };
+    const scrollContainer = returnElement.closest<HTMLElement>(".context-pane");
+    ruleReturn.current = {
+      element: returnElement,
+      scrollContainer,
+      scrollTop: scrollContainer?.scrollTop ?? null,
+      scrollY: window.scrollY,
+    };
     setTab("rules");
     if (onOpenRule) onOpenRule(nextRuleId);
     else setLocalRuleId(nextRuleId);
@@ -400,6 +404,9 @@ export function ShipEditorShell({
           id={`${tabsId}-rules`}
           role="tabpanel"
         >
+          <div hidden={Boolean(activeRuleId)}>
+            <RulesPanel model={model.profileRules} onOpenRule={openRule} />
+          </div>
           {activeRuleId ? (
             <RuleSheet
               model={model.profileRules}
@@ -407,9 +414,7 @@ export function ShipEditorShell({
               onOpenRule={openRule}
               ruleId={activeRuleId}
             />
-          ) : (
-            <RulesPanel model={model.profileRules} onOpenRule={openRule} />
-          )}
+          ) : null}
         </section>
       )}
     </article>
@@ -544,15 +549,19 @@ function axisLabel(value: string): string {
   return labels[value] ?? value;
 }
 
-function restoreRuleReturn(
-  ruleReturn: MutableRefObject<{
-    readonly element: HTMLElement;
-    readonly scrollY: number;
-  } | null>,
-) {
+interface RuleReturn {
+  readonly element: HTMLElement;
+  readonly scrollContainer: HTMLElement | null;
+  readonly scrollTop: number | null;
+  readonly scrollY: number;
+}
+
+function restoreRuleReturn(ruleReturn: MutableRefObject<RuleReturn | null>) {
   const target = ruleReturn.current;
   ruleReturn.current = null;
   requestAnimationFrame(() => {
+    if (target?.scrollContainer?.isConnected && target.scrollTop !== null)
+      target.scrollContainer.scrollTop = target.scrollTop;
     if (target?.element.isConnected) target.element.focus({ preventScroll: true });
     else document.querySelector<HTMLElement>(".rule-list button")?.focus({ preventScroll: true });
     if (target) window.scrollTo({ top: target.scrollY });

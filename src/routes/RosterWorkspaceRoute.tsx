@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 
@@ -66,6 +66,12 @@ export function RosterWorkspaceRoute({
   const [commandError, setCommandError] = useState<string | null>(null);
   const [issueReturnId, setIssueReturnId] = useState<string | null>(null);
   const title = state.kind === "ready" ? state.model.roster.name : "Состав флота";
+  const direct = directEditorLink(location.search);
+  const directMode = direct?.mode ?? null;
+  const directRuleId = direct?.ruleId ?? null;
+  const directShipId = direct?.shipId ?? null;
+  const directFocusKey = directMode && directShipId ? `${directMode}:${directShipId}` : null;
+  const handledDirectFocusKey = useRef<string | null>(null);
   useDocumentTitle(title);
 
   useEffect(() => {
@@ -87,12 +93,29 @@ export function RosterWorkspaceRoute({
     };
   }, [dependencies, rosterId]);
 
+  useEffect(() => {
+    if (!directFocusKey) {
+      handledDirectFocusKey.current = null;
+      return;
+    }
+    if (state.kind !== "ready") return;
+    if (directRuleId) {
+      handledDirectFocusKey.current = directFocusKey;
+      return;
+    }
+    if (handledDirectFocusKey.current === directFocusKey) return;
+    handledDirectFocusKey.current = directFocusKey;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById("ship-editor-title")?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [directFocusKey, directRuleId, state.kind]);
+
   if (!parsedRosterId.success || state.kind === "missing") return <InvalidRoster />;
   if (state.kind === "loading") return <LoadingWorkspace />;
   if (state.kind === "error") return <UnavailableWorkspace />;
 
   const { model, session } = state;
-  const direct = directEditorLink(location.search);
   const directInstance =
     direct?.mode === "instance"
       ? (model.elements
@@ -358,7 +381,7 @@ export function RosterWorkspaceRoute({
               { replace: true },
             );
           }}
-          ruleId={directEditorLink(location.search)?.ruleId ?? null}
+          ruleId={direct?.ruleId ?? null}
           selected={selected}
           selectedTarget={selectedTarget}
         />

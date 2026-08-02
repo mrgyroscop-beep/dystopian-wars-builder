@@ -347,6 +347,62 @@ describe("catalog-driven ship editor application boundary", () => {
     );
   });
 
+  it("preserves one configured weapon row per slot when definitions repeat", () => {
+    const fixture = setup();
+    const structured = materialize(fixture);
+    const initial = project(structured, fixture);
+    const psa = group(initial, "PSA");
+    const fps = group(initial, "FPS 1");
+    const heavy = entityByLabel(fixture.catalog, "Heavy Battery");
+    const heavyPlacement = option(initial, "PSA", "Heavy Battery");
+    const repeatedPlacement = option(initial, "FPS 1", "Torpedo Battery");
+    const sourcePlacement = fixture.catalog.placements[repeatedPlacement.id]!;
+    const catalog: DomainCatalog = {
+      ...fixture.catalog,
+      placements: {
+        ...fixture.catalog.placements,
+        [sourcePlacement.id]: { ...sourcePlacement, definitionId: heavy.id },
+      },
+    };
+    let snapshot = applyShipEditorCommand(
+      structured,
+      catalog,
+      {
+        type: "replace-exclusive",
+        instanceId: fixture.unit.id,
+        groupId: psa.id,
+        optionId: heavyPlacement.id,
+      },
+      fixture.createId,
+    );
+    snapshot = applyShipEditorCommand(
+      snapshot,
+      catalog,
+      {
+        type: "replace-exclusive",
+        instanceId: fixture.unit.id,
+        groupId: fps.id,
+        optionId: repeatedPlacement.id,
+      },
+      fixture.createId,
+    );
+
+    const configured = ready(
+      projectShipEditor(
+        snapshot,
+        catalog,
+        fixture.unit.id,
+        fixture.unit.definitionId,
+        "saved-local",
+      ),
+    );
+    expect(
+      configured.profileRules.weapons
+        .filter((weapon) => weapon.weapon === "Heavy Battery")
+        .map((weapon) => weapon.provenance),
+    ).toEqual(["PSA", "FPS 1"]);
+  });
+
   it("diagnoses unknown slot provenance instead of guessing it from the label", () => {
     const fixture = setup();
     let snapshot = materialize(fixture);

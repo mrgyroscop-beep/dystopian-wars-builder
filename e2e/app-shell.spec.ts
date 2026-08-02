@@ -678,18 +678,49 @@ test("shows preview/configured profiles and returns from stable-ID rule navigati
   await expect(page.getByText("Эффективный профиль")).toBeVisible();
   await expect(page.getByRole("row", { name: /Heavy Battery/u })).toContainText("PSA");
 
+  await page.setViewportSize({ width: 1440, height: 450 });
   await page.getByRole("tab", { name: "Правила" }).click();
+  const contextPane = page.locator(".context-pane");
+  const editorScroll = await contextPane.evaluate((element) => {
+    element.scrollTop = Math.min(80, element.scrollHeight - element.clientHeight);
+    return element.scrollTop;
+  });
+  expect(editorScroll).toBeGreaterThan(0);
   const origin = page.getByRole("button", { name: "Открыть правило Torrent" });
-  await origin.click();
+  await origin.evaluate((element) => element.focus({ preventScroll: true }));
+  await origin.press("Enter");
+  await contextPane.evaluate((element) => {
+    element.scrollTop = 0;
+  });
   await expect(page).toHaveURL(/rule=synthetic-rule-torrent/u);
   await expect(page.getByRole("heading", { name: "Torrent" })).toBeFocused();
-  await page.getByRole("button", { name: /К правилам/u }).click();
+  const backToRules = page.getByRole("button", { name: /К правилам/u });
+  await backToRules.evaluate((element) => element.focus({ preventScroll: true }));
+  await backToRules.press("Enter");
   await expect(page.getByRole("button", { name: "Открыть правило Torrent" })).toBeFocused();
   await expect(page.getByRole("tab", { name: "Правила" })).toHaveAttribute("aria-selected", "true");
+  await expect.poll(() => contextPane.evaluate((element) => element.scrollTop)).toBe(editorScroll);
 
   const glossary = page.getByRole("button", { name: "Глоссарий" });
-  await glossary.click();
-  await expect(page.getByRole("dialog", { name: "Глоссарий" })).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 180 });
+  await glossary.evaluate((element) => element.focus({ preventScroll: true }));
+  await glossary.press("Enter");
+  const dialog = page.getByRole("dialog", { name: "Глоссарий" });
+  await expect(dialog).toBeVisible();
+  const glossaryScroll = await dialog.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    return element.scrollTop;
+  });
+  expect(glossaryScroll).toBeGreaterThan(0);
+  const glossaryItem = dialog.getByRole("button", { name: /Torrent/u });
+  await glossaryItem.evaluate((element) => element.focus({ preventScroll: true }));
+  await glossaryItem.press("Enter");
+  await expect(page.getByRole("heading", { name: "Torrent" })).toBeFocused();
+  await backToRules.evaluate((element) => element.focus({ preventScroll: true }));
+  await backToRules.press("Enter");
+  await expect(dialog).toBeVisible();
+  await expect(glossaryItem).toBeFocused();
+  await expect.poll(() => dialog.evaluate((element) => element.scrollTop)).toBe(glossaryScroll);
   await page.keyboard.press("Escape");
   await expect(glossary).toBeFocused();
 });
@@ -704,7 +735,9 @@ for (const viewport of [
   test(`keeps equivalent profile data without overflow at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto("/rosters/scaffold-demo?ship=demo-ship-001&shipMode=preview");
-    await expect(page.getByRole("heading", { level: 3, name: "Akita Demonstrator" })).toBeVisible();
+    const heading = page.getByRole("heading", { level: 3, name: "Akita Demonstrator" });
+    await expect(heading).toBeVisible();
+    await expect(heading).toBeFocused();
     await page.getByRole("tab", { name: "Профиль" }).click();
     if (viewport.width < 600) {
       await expect(page.locator(".weapon-table-wrap")).toBeHidden();
