@@ -16,7 +16,7 @@ import {
   redactOperationalError,
 } from "./core.mjs";
 import {
-  deleteBootstrappedPreviewWorker,
+  deleteBootstrappedPreviewAfterUpload,
   deletePreviewWorker,
   ensurePreviewWorkerForUpload,
   listPreviewWorkersForUpload,
@@ -127,7 +127,7 @@ try {
         }
       } else if (recovery === "delete") {
         if (bootstrapOwnershipTag) {
-          await deleteBootstrappedPreviewWorker({
+          await deleteBootstrappedPreviewAfterUpload({
             name: manifest.workerName,
             prNumber: manifest.prNumber,
             ownershipTag: bootstrapOwnershipTag,
@@ -148,7 +148,7 @@ try {
     console.error(
       JSON.stringify(
         record.code === "PREVIEW_BOOTSTRAP_FAILED"
-          ? record
+          ? { event: "preview_rollback_failed", code: "ROLLBACK_FAILED", stage: record.stage }
           : { event: "preview_rollback_failed", code: "ROLLBACK_FAILED" },
       ),
     );
