@@ -205,6 +205,53 @@ describe("post-upload bootstrap cleanup", () => {
     },
   );
 
+  it.each([
+    [
+      "resource",
+      { workerInventory: (state) => (state.deleteCalls.length ? [{}] : [workerResource()]) },
+    ],
+    [
+      "script",
+      { scriptInventory: (state) => (state.deleteCalls.length ? [{}] : [scriptRecord()]) },
+    ],
+  ])(
+    "fails redacted verification for a malformed post-delete %s inventory after script DELETE",
+    async (_inventory, options) => {
+      const provider = postUploadProvider(options);
+
+      const error = await cleanup(provider).catch((value) => value);
+
+      expect(redactOperationalError(error)).toEqual({
+        event: "preview_failure",
+        code: "PREVIEW_BOOTSTRAP_FAILED",
+        stage: "cleanup-worker",
+      });
+      expect(provider.state.deleteCalls).toEqual([`/workers/scripts/${WORKER}`]);
+    },
+  );
+
+  it.each([
+    [
+      "resource",
+      { workerInventory: (state) => (state.deleteCalls.length ? [{}] : [workerResource()]) },
+    ],
+    ["script", { scriptInventory: (state) => (state.deleteCalls.length ? [{}] : []) }],
+  ])(
+    "fails redacted verification for a malformed post-delete %s inventory after standalone DELETE",
+    async (_inventory, options) => {
+      const provider = postUploadProvider({ script: null, ...options });
+
+      const error = await cleanup(provider).catch((value) => value);
+
+      expect(redactOperationalError(error)).toEqual({
+        event: "preview_failure",
+        code: "PREVIEW_BOOTSTRAP_FAILED",
+        stage: "cleanup-worker",
+      });
+      expect(provider.state.deleteCalls).toEqual([`/workers/workers/${WORKER}`]);
+    },
+  );
+
   it.each(["production-worker", "../dwb-pr-5", "dwb-pr-5.example.com", "dwb-pr-0"])(
     "rejects non-preview cleanup target %s before every provider request",
     async (name) => {

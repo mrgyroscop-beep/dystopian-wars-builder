@@ -213,8 +213,8 @@ async function readOwnershipEvidence({ name, prNumber, ownershipTag, request }) 
   );
   const resources = strictCollection(workerResources);
   const scriptEntries = strictCollection(scripts);
-  const resourcesWellFormed = resources?.every((worker) => typeof worker?.name === "string");
-  const scriptsWellFormed = scriptEntries?.every((script) => typeof script?.id === "string");
+  const resourcesWellFormed = entriesHaveStringProperty(resources, "name");
+  const scriptsWellFormed = entriesHaveStringProperty(scriptEntries, "id");
   const targetResources = resources?.filter((worker) => worker?.name === name);
   const targetScripts = scriptEntries?.filter((script) => script?.id === name);
   const inventoryValid =
@@ -260,10 +260,12 @@ async function assertPreviewWorkerAbsent({ name, prNumber, request }) {
   ]);
   const resources = strictCollection(workerResources);
   const scriptEntries = strictCollection(scripts);
+  const resourcesWellFormed = entriesHaveStringProperty(resources, "name");
+  const scriptsWellFormed = entriesHaveStringProperty(scriptEntries, "id");
   if (
     exactWorker !== undefined ||
-    resources === undefined ||
-    scriptEntries === undefined ||
+    !resourcesWellFormed ||
+    !scriptsWellFormed ||
     resources.some((worker) => worker?.name === name) ||
     scriptEntries.some((script) => script?.id === name)
   ) {
@@ -312,6 +314,10 @@ function strictCollection(value) {
     return value.items;
   }
   return undefined;
+}
+
+function entriesHaveStringProperty(entries, property) {
+  return entries?.every((entry) => typeof entry?.[property] === "string") === true;
 }
 
 function defaultWait(milliseconds) {
