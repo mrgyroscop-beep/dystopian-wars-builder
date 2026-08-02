@@ -75,6 +75,7 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
       nation: "Demonstration Fleet",
       platform: index % 5 === 0 ? "Aerial" : index % 7 === 0 ? "Submersible" : "Surface",
     };
+    if (index === 1) attributes["demo.editor"] = "akita";
     if (availability) {
       attributes["demo.availability"] = availability;
       attributes["demo.availabilityReason"] =
@@ -82,11 +83,11 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
           ? "Учебная запись содержит неполное правило доступности; добавление заблокировано."
           : "Этот учебный корпус недоступен для выбранного Battlefleet.";
     }
-    const points = 35 + (index % 9) * 10;
-    const victoryPoints = index % 4;
+    const points = index === 1 ? 350 : 35 + (index % 9) * 10;
+    const victoryPoints = index === 1 ? 9 : index % 4;
     const name =
       index === 1
-        ? "Asterion Demonstrator"
+        ? "Akita Demonstrator"
         : `${category === "Auxiliary" ? "Harbour" : category} Pattern ${String(index).padStart(3, "0")}`;
     entities.push(
       entity("Unit", unitId, name, {
@@ -123,6 +124,38 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
           index * 4 + targetIndex,
         ),
       );
+  }
+
+  const editorEntities = [
+    ["Model", "demo-akita-model", "Akita structural Model", 0],
+    ["Weapon", "demo-akita-magma-cast", "Magma Cast", 0],
+    ["Weapon", "demo-akita-heavy-battery", "Heavy Battery", 15],
+    ["Weapon", "demo-akita-sealed-array", "Sealed Experimental Array", 25],
+    ["Generator", "demo-akita-kagutsuchi", "Kagutsuchi Generator", 20],
+    ["Generator", "demo-akita-fury-generator", "Fury Generator", 0],
+    ["Weapon", "demo-akita-rocket-battery", "Rocket Battery", 10],
+    ["Weapon", "demo-akita-flak-battery", "Flak Battery", 0],
+    ["Generator", "demo-akita-shield-generator", "Shield Generator", 10],
+    ["Weapon", "demo-akita-mine-layer", "Mine Layer", 0],
+    ["Attachment", "demo-akita-repair-crane", "Repair Crane", 5],
+    ["Escort", "demo-akita-tanuki-escort", "Tanuki Escort", 10],
+    ["Option", "demo-akita-escort-discount", "Escort formation discount", -10],
+  ] as const satisfies readonly (readonly [EntityKind, string, string, number])[];
+  for (const [kind, rawId, label, points] of editorEntities) {
+    const id = entityId(rawId);
+    const pointCostId = entityId(`${rawId}-points`);
+    entities.push(
+      entity(kind, id, label, {
+        attributes: {
+          "demo.editor": "akita",
+          "demo.catalog": "hidden",
+          ...(rawId === "demo-akita-escort-discount" ? { "demo.hidden": "true" } : {}),
+        },
+        costIds: points === 0 ? [] : [pointCostId],
+      }),
+    );
+    if (points !== 0)
+      entities.push(cost(pointCostId, "Points", String(points), "points", pointsTypeId));
   }
 
   return {

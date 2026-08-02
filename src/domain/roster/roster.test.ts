@@ -462,6 +462,78 @@ describe("roster evaluator", () => {
       expect.objectContaining({ code: "UNKNOWN_COST_AMOUNT" }),
     );
   });
+
+  it("supports lessThan/notInstanceOf with unit and ancestor scopes", () => {
+    const pointsType = id("points-type");
+    const unitId = id("unit");
+    const optionId = id("option");
+    const absentId = id("absent");
+    const lessThan = expressionEntity("Condition", id("less-than-two"), {
+      operator: "lessThan",
+      field: "selections",
+      scope: "unit",
+      value: "2",
+      references: [optionId],
+    });
+    const notAncestor = expressionEntity("Condition", id("not-forbidden-ancestor"), {
+      operator: "notInstanceOf",
+      field: "selections",
+      scope: "ancestor",
+      references: [absentId],
+    });
+    const unitCost = cost("unit-conditional", "5", "points", pointsType, "delta", {
+      conditionIds: [lessThan.id],
+    });
+    const optionCost = cost("option-conditional", "7", "points", pointsType, "delta", {
+      conditionIds: [notAncestor.id],
+    });
+    const catalog = makeCatalog([
+      baseEntity("CostType", pointsType),
+      baseEntity("Unit", unitId, { costIds: [unitCost.id] }),
+      baseEntity("Option", optionId, { costIds: [optionCost.id] }),
+      baseEntity("Option", absentId),
+      unitCost,
+      optionCost,
+      lessThan,
+      notAncestor,
+    ]);
+    const root = rosterInstanceId("unit");
+    const option = rosterInstanceId("option");
+    const result = evaluateRoster(
+      catalog,
+      roster(catalog, [
+        instance(root, unitId, { forceInstanceId: root }),
+        instance(option, optionId, { parentInstanceId: root, forceInstanceId: root }),
+      ]),
+    );
+
+    expect(result.status).toBe("valid");
+    expect(result.totals).toContainEqual(expect.objectContaining({ value: "12" }));
+  });
+
+  it("emits an active field=error requirement and remains fail-closed", () => {
+    const unitId = id("unit");
+    const requirement = expressionEntity("Constraint", id("requires-magma"), {
+      operator: "min",
+      field: "error",
+      scope: "unit",
+      value: "1",
+    });
+    const catalog = makeCatalog([
+      baseEntity("Unit", unitId, { constraintIds: [requirement.id] }),
+      requirement,
+    ]);
+    const root = rosterInstanceId("unit");
+    const result = evaluateRoster(
+      catalog,
+      roster(catalog, [instance(root, unitId, { forceInstanceId: root })]),
+    );
+
+    expect(result.status).toBe("invalid");
+    expect(result.problems).toContainEqual(
+      expect.objectContaining({ code: "ACTIVE_ERROR_REQUIREMENT", severity: "error" }),
+    );
+  });
 });
 
 function makeCatalog(

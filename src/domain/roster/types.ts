@@ -1,4 +1,5 @@
 import type { EntityId, PlacementId, SlotId } from "../catalog";
+import { z } from "zod";
 
 import type { Brand } from "../catalog";
 
@@ -22,6 +23,41 @@ export interface RosterSnapshot {
   readonly rootInstanceIds: readonly RosterInstanceId[];
   readonly instances: Readonly<Record<string, RosterSelectionInstance>>;
 }
+
+const nullableStableIdSchema = z.string().min(1).max(240).nullable();
+
+export const rosterSelectionInstanceSchema = z
+  .object({
+    contractVersion: z.literal(1),
+    id: z.string().min(1).max(240),
+    definitionId: z.string().min(1).max(240),
+    placementId: nullableStableIdSchema,
+    slotId: nullableStableIdSchema,
+    parentInstanceId: nullableStableIdSchema,
+    forceInstanceId: nullableStableIdSchema,
+    quantity: z.number().int().min(1).max(10_000),
+  })
+  .strict();
+
+export const rosterSnapshotSchema = z
+  .object({
+    contractVersion: z.literal(1),
+    id: z.string().min(1).max(80),
+    catalogContentVersion: z.string().min(1).max(240),
+    rootInstanceIds: z.array(z.string().min(1).max(240)),
+    instances: z.record(z.string().min(1).max(240), rosterSelectionInstanceSchema),
+  })
+  .strict()
+  .superRefine((snapshot, context) => {
+    for (const [key, instance] of Object.entries(snapshot.instances)) {
+      if (key !== instance.id)
+        context.addIssue({
+          code: "custom",
+          message: "Roster instance record key must equal instance.id",
+          path: ["instances", key, "id"],
+        });
+    }
+  });
 
 export type EvaluationStatus = "valid" | "invalid" | "indeterminate";
 export type ProblemSeverity = "error" | "warning" | "indeterminate";

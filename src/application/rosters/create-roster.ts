@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { DomainCatalog, EntityId } from "../../domain/catalog";
-import type { RosterSnapshot } from "../../domain/roster";
+import { rosterSnapshotSchema, type RosterSnapshot } from "../../domain/roster";
 
 export interface RequiredFleetElement {
   readonly id: string;
@@ -53,13 +53,7 @@ export const storedRosterSchema = z.object({
       minimum: z.number().int().min(1),
     }),
   ),
-  roster: z.object({
-    contractVersion: z.literal(1),
-    id: z.string().min(1),
-    catalogContentVersion: z.string().min(1),
-    rootInstanceIds: z.array(z.string()),
-    instances: z.record(z.string(), z.unknown()),
-  }),
+  roster: rosterSnapshotSchema,
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
 });

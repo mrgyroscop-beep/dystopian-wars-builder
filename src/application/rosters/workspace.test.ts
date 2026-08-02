@@ -46,14 +46,14 @@ describe("roster workspace application boundary", () => {
   });
 
   it("adds, duplicates, deletes, evaluates and restores an exact locally saved snapshot", async () => {
-    const fixture = harness(["instance-1", "instance-2"]);
+    const fixture = harness(["instance-1", "model-1", "instance-2", "model-2"]);
     const session = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
     const initialSnapshot = structuredClone(fixture.saved.get("scaffold-demo")!.roster);
 
     const added = await session.execute({ type: "add", definitionId: "demo-ship-001" });
     expect(added.summary).toMatchObject({
-      points: "45",
-      victoryPoints: "1",
+      points: "350",
+      victoryPoints: "9",
       persistence: "saved-local",
     });
     expect(initialSnapshot).not.toEqual(fixture.saved.get("scaffold-demo")!.roster);
@@ -64,13 +64,13 @@ describe("roster workspace application boundary", () => {
     });
 
     const duplicated = await session.execute({ type: "duplicate", instanceId: "instance-1" });
-    expect(duplicated.summary.points).toBe("90");
+    expect(duplicated.summary.points).toBe("700");
     expect(
       duplicated.elements.flatMap((element) => element.instances).map((item) => item.id),
     ).toContain("instance-2");
 
     const afterDelete = await session.execute({ type: "delete", instanceId: "instance-1" });
-    expect(afterDelete.summary.points).toBe("45");
+    expect(afterDelete.summary.points).toBe("350");
     expect(
       afterDelete.elements.flatMap((element) => element.instances).map((item) => item.id),
     ).toEqual(["instance-2"]);
@@ -109,13 +109,13 @@ describe("roster workspace application boundary", () => {
   });
 
   it("keeps the evaluated candidate in memory after save failure and supports Retry", async () => {
-    const fixture = harness(["unsaved-1"]);
+    const fixture = harness(["unsaved-1", "unsaved-model-1"]);
     fixture.failSave.value = true;
     const session = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
 
     const unsaved = await session.execute({ type: "add", definitionId: "demo-ship-001" });
     expect(unsaved.summary.persistence).toBe("save-error");
-    expect(unsaved.summary.points).toBe("45");
+    expect(unsaved.summary.points).toBe("350");
     expect(unsaved.elements.flatMap((element) => element.instances)).toHaveLength(1);
 
     fixture.failSave.value = false;
@@ -124,8 +124,50 @@ describe("roster workspace application boundary", () => {
     expect(fixture.saved.get("scaffold-demo")!.roster.instances["unsaved-1"]).toBeDefined();
   });
 
+  it("deep-duplicates the configured Akita subtree with fresh IDs", async () => {
+    const fixture = harness();
+    const session = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
+    const added = await session.execute({ type: "add", definitionId: "demo-ship-001" });
+    const original = added.elements
+      .flatMap((element) => element.instances)
+      .find((instance) => instance.definitionId === "demo-ship-001")!;
+    await session.execute({
+      type: "replace-exclusive",
+      instanceId: original.id,
+      groupId: "psa",
+      optionId: "demo-akita-magma-cast",
+    });
+    await session.execute({
+      type: "set-choice-quantity",
+      instanceId: original.id,
+      groupId: "escorts",
+      optionId: "demo-akita-tanuki-escort",
+      quantity: 4,
+    });
+    await session.execute({ type: "duplicate", instanceId: original.id });
+
+    const snapshot = fixture.saved.get("scaffold-demo")!.roster;
+    const units = Object.values(snapshot.instances).filter(
+      (instance) => instance.definitionId === "demo-ship-001",
+    );
+    expect(units).toHaveLength(2);
+    const children = units.map((unit) =>
+      Object.values(snapshot.instances)
+        .filter((instance) => instance.parentInstanceId === unit.id)
+        .map((instance) => `${instance.definitionId}:${instance.quantity}`)
+        .sort(),
+    );
+    expect(children[1]).toEqual(children[0]);
+    const childIds = units.map((unit) =>
+      Object.values(snapshot.instances)
+        .filter((instance) => instance.parentInstanceId === unit.id)
+        .map((instance) => instance.id),
+    );
+    expect(childIds[0]!.some((id) => childIds[1]!.includes(id))).toBe(false);
+  });
+
   it("opens, targets, saves and reloads a Crown Vanguard roster created by KAN-33", async () => {
-    const fixture = harness(["crown-ship-1"]);
+    const fixture = harness(["crown-ship-1", "crown-model-1"]);
     const crown = crownRoster();
     const dependencies: RosterWorkspaceDependencies = {
       ...fixture.dependencies,
@@ -147,8 +189,8 @@ describe("roster workspace application boundary", () => {
 
     const added = await session!.execute({ type: "add", definitionId: asterion.id });
     expect(added.summary).toMatchObject({
-      points: "45",
-      victoryPoints: "1",
+      points: "350",
+      victoryPoints: "9",
       persistence: "saved-local",
     });
     expect(
@@ -157,7 +199,7 @@ describe("roster workspace application boundary", () => {
 
     const reopened = await openRosterWorkspace(crown.id, dependencies);
     expect(reopened!.model).toEqual(added);
-    expect(Object.keys(fixture.saved.get(crown.id)!.roster.instances)).toHaveLength(4);
+    expect(Object.keys(fixture.saved.get(crown.id)!.roster.instances)).toHaveLength(5);
   });
 });
 

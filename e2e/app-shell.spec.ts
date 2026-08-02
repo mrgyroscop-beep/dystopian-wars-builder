@@ -137,13 +137,40 @@ test("keeps the roster workspace usable with 200% text scaling", async ({ page }
   await expect(page.getByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
   await page.getByRole("button", { name: "Каталог", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Каталог" })).toBeVisible();
+  await page.getByLabel("Поиск").fill("Akita Demonstrator");
+  await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
+  await expect(page.getByText("Только чтение")).toBeVisible();
 
   const dimensions = await page.evaluate(() => ({
     viewportWidth: document.documentElement.clientWidth,
     scrollWidth: document.documentElement.scrollWidth,
+    overflowElements: [...document.querySelectorAll<HTMLElement>("body *")]
+      .filter(
+        (element) =>
+          element.getBoundingClientRect().right > document.documentElement.clientWidth + 1,
+      )
+      .slice(0, 8)
+      .map((element) => ({
+        className: element.className,
+        right: Math.round(element.getBoundingClientRect().right),
+        tag: element.tagName,
+        text: element.textContent?.trim().slice(0, 60),
+      })),
   }));
 
-  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+  expect(dimensions.scrollWidth, JSON.stringify(dimensions.overflowElements)).toBeLessThanOrEqual(
+    dimensions.viewportWidth,
+  );
+  await captureReviewEvidence(
+    page,
+    {
+      route: "/rosters/scaffold-demo",
+      state: "akita-preview-200-percent",
+      viewport: { name: "mobile-360x800-200-percent", width: 360, height: 800 },
+    },
+    path.resolve("artifacts/review-evidence/akita-preview"),
+    "mobile-360x800-200-percent",
+  );
 });
 
 const evidenceViewports = [
@@ -153,6 +180,7 @@ const evidenceViewports = [
   { name: "desktop-1200x800", width: 1200, height: 800 },
   { name: "tablet-1024x768", width: 1024, height: 768 },
   { name: "tablet-768x1024", width: 768, height: 1024 },
+  { name: "mobile-390x844", width: 390, height: 844 },
   { name: "mobile-360x800", width: 360, height: 800 },
 ] as const;
 
@@ -174,6 +202,21 @@ for (const viewport of evidenceViewports) {
       path.join(a11yDirectory, `${viewport.name}.json`),
       `${JSON.stringify(metadata, null, 2)}\n`,
       "utf8",
+    );
+
+    if (viewport.width <= 768)
+      await page
+        .getByRole("navigation", { name: "Область билдера", exact: true })
+        .getByRole("button", { name: "Каталог" })
+        .click();
+    await page.getByLabel("Поиск").fill("Akita Demonstrator");
+    await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
+    await expect(page.getByText("Только чтение")).toBeVisible();
+    await captureReviewEvidence(
+      page,
+      { route: "/rosters/scaffold-demo", state: "akita-preview", viewport },
+      path.resolve("artifacts/review-evidence/akita-preview"),
+      viewport.name,
     );
   });
 }
@@ -253,37 +296,37 @@ test("creates, persists and restores a demonstration fleet", async ({ page }) =>
     (key) => window.localStorage.getItem(`dwb.roster.v1.${key}`),
     savedId,
   );
-  await page.getByLabel("Поиск").fill("Asterion Demonstrator");
-  await page.getByRole("button", { name: /Asterion Demonstrator/u }).click();
-  await expect(
-    page.getByRole("heading", { level: 3, name: "Asterion Demonstrator" }),
-  ).toBeVisible();
+  await page.getByLabel("Поиск").fill("Akita Demonstrator");
+  await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
+  await expect(page.getByRole("heading", { level: 3, name: "Akita Demonstrator" })).toBeVisible();
   expect(
     await page.evaluate((key) => window.localStorage.getItem(`dwb.roster.v1.${key}`), savedId),
   ).toBe(beforePreview);
 
   await page.getByRole("button", { name: "Добавить в состав" }).click();
-  await expect(page.getByText("45 / 1000")).toBeVisible();
+  await expect(page.getByText("350 / 1000")).toBeVisible();
   await expect(
-    page.locator(".roster-instance-list").getByText("Asterion Demonstrator", { exact: true }),
+    page.locator(".roster-instance-list").getByText("Akita Demonstrator", { exact: true }),
   ).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { level: 1, name: "Northern Squadron" })).toBeVisible();
-  await expect(page.getByText("45 / 1000")).toBeVisible();
+  await expect(page.getByText("350 / 1000")).toBeVisible();
   await page.getByRole("button", { name: "Копировать" }).click();
-  await expect(page.getByText("90 / 1000")).toBeVisible();
+  await expect(page.getByText("700 / 1000")).toBeVisible();
 
   const persisted = await page.evaluate((key) => {
     const value = window.localStorage.getItem(`dwb.roster.v1.${key}`)!;
-    return JSON.parse(value) as { roster: { instances: Record<string, unknown> } };
+    return JSON.parse(value) as {
+      roster: { instances: Record<string, { definitionId: string }> };
+    };
   }, savedId);
-  const shipIds = Object.keys(persisted.roster.instances).filter(
-    (id) => !id.startsWith("structure-"),
-  );
+  const shipIds = Object.entries(persisted.roster.instances)
+    .filter(([, instance]) => instance.definitionId === "demo-ship-001")
+    .map(([id]) => id);
   expect(new Set(shipIds).size).toBe(2);
 
   await page.getByRole("button", { name: "Удалить" }).first().click();
-  await expect(page.getByText("45 / 1000")).toBeVisible();
+  await expect(page.getByText("350 / 1000")).toBeVisible();
   expect(
     await page.evaluate((key) => window.localStorage.getItem(`dwb.roster.v1.${key}`), savedId),
   ).not.toBeNull();
@@ -329,13 +372,12 @@ test("creates, builds and reloads a Crown Vanguard fleet", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Patrol Element" })).toBeVisible();
   await expect(page.getByText("112 учебных записей")).toBeVisible();
 
-  await page.getByLabel("Поиск").fill("Asterion Demonstrator");
-  await page.getByRole("button", { name: /Asterion Demonstrator/u }).click();
-  await expect(page.getByText("Будет добавлен в Command Element.")).toBeVisible();
+  await page.getByLabel("Поиск").fill("Akita Demonstrator");
+  await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
   await page.getByRole("button", { name: "Добавить в состав" }).click();
-  await expect(page.getByText("45 / 1000")).toBeVisible();
+  await expect(page.getByText("350 / 1000")).toBeVisible();
   await expect(
-    page.locator(".roster-instance-list").getByText("Asterion Demonstrator", { exact: true }),
+    page.locator(".roster-instance-list").getByText("Akita Demonstrator", { exact: true }),
   ).toBeVisible();
 
   const savedId = page.url().split("/").pop()!;
@@ -343,7 +385,7 @@ test("creates, builds and reloads a Crown Vanguard fleet", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: "Crown Vanguard Squadron" }),
   ).toBeVisible();
-  await expect(page.getByText("45 / 1000")).toBeVisible();
+  await expect(page.getByText("350 / 1000")).toBeVisible();
   expect(
     await page.evaluate((key) => window.localStorage.getItem(`dwb.roster.v1.${key}`), savedId),
   ).not.toBeNull();
@@ -376,12 +418,67 @@ test("keeps Composition fixed and switches only the tablet side pane", async ({ 
   await expect(page.getByRole("navigation", { name: "Область билдера", exact: true })).toBeHidden();
 });
 
+test("configures Akita 0/4 → 4/4, fixes Kagutsuchi and retries a failed save", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/rosters/scaffold-demo");
+  await page.getByLabel("Поиск").fill("Akita Demonstrator");
+  await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
+  await expect(page.getByText("Только чтение")).toBeVisible();
+  await expect(page.getByText("0 / 4")).toBeVisible();
+  await page.getByRole("button", { name: "Добавить в состав" }).click();
+  await expect(page.getByText("Редактирование")).toBeVisible();
+
+  await page.getByRole("radio", { name: /Kagutsuchi Generator/u }).check();
+  await expect(page.getByRole("button", { name: /Kagutsuchi требует Magma Cast/u })).toBeVisible();
+  await page.getByRole("button", { name: /Kagutsuchi требует Magma Cast/u }).click();
+  await expect(page.locator("#ship-editor-group-psa")).toBeFocused();
+  await page.getByRole("radio", { name: /Magma Cast/u }).check();
+  await expect(page.getByRole("button", { name: /Kagutsuchi требует Magma Cast/u })).toHaveCount(0);
+  await page.getByRole("radio", { name: /Rocket Battery/u }).check();
+  await page.getByRole("radio", { name: /Shield Generator/u }).check();
+  await expect(page.getByText("4 / 4")).toBeVisible();
+  await page.getByLabel("Количество Repair Crane").fill("1");
+
+  await page.evaluate(() => {
+    const runtime = window as unknown as {
+      __setItemDescriptor: PropertyDescriptor | undefined;
+    };
+    runtime.__setItemDescriptor = Object.getOwnPropertyDescriptor(Storage.prototype, "setItem");
+    Storage.prototype.setItem = () => {
+      throw new Error("simulated quota failure");
+    };
+  });
+  await page.getByLabel("Количество Tanuki Escort").fill("4");
+  await expect(page.getByText("425 / 1000")).toBeVisible();
+  await expect(page.getByText("Скрытая скидка Escort 4/4")).toBeVisible();
+  await expect(page.getByText("Не удалось сохранить на устройстве")).toBeVisible();
+
+  await page.evaluate(() => {
+    const runtime = window as unknown as {
+      __setItemDescriptor: PropertyDescriptor | undefined;
+    };
+    if (runtime.__setItemDescriptor)
+      Object.defineProperty(Storage.prototype, "setItem", runtime.__setItemDescriptor);
+  });
+  await page.getByRole("button", { name: "Повторить" }).click();
+  await expect(page.getByText("Не удалось сохранить на устройстве")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText("425 / 1000")).toBeVisible();
+  await page.getByRole("button", { name: "Настроить" }).click();
+  await expect(page.getByLabel("Количество Tanuki Escort")).toHaveValue("4");
+  await page.getByRole("tab", { name: "Профиль" }).click();
+  await expect(page.getByText(/будет подключён в KAN-36/u)).toBeVisible();
+});
+
 test("has no serious or critical Axe violations in the builder reference state", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/rosters/scaffold-demo");
   await expect(page.getByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
+  await page.getByLabel("Поиск").fill("Akita Demonstrator");
+  await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
+  await expect(page.getByText("Только чтение")).toBeVisible();
   await page.addScriptTag({ content: axe.source });
   const violations = await page.evaluate(async () => {
     const runtime = (

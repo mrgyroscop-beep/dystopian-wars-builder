@@ -9,6 +9,13 @@ import {
 } from "../../domain/roster";
 
 import type { RosterRepository, StoredRoster } from "./create-roster";
+import {
+  applyShipEditorCommand,
+  materializeShipStructure,
+  projectShipEditor,
+  type ShipEditorCommand,
+  type ShipEditorReadModel,
+} from "./ship-editor";
 
 export const fleetCategories = [
   "Flagship",
@@ -109,7 +116,8 @@ export type RosterWorkspaceCommand =
       readonly targetElementInstanceId?: string;
     }
   | { readonly type: "duplicate"; readonly instanceId: string }
-  | { readonly type: "delete"; readonly instanceId: string };
+  | { readonly type: "delete"; readonly instanceId: string }
+  | ShipEditorCommand;
 
 export interface RosterCatalogGateway {
   readonly contractVersion: 1;
@@ -126,6 +134,7 @@ export interface RosterWorkspaceDependencies {
 
 export interface RosterWorkspaceSession {
   readonly model: RosterWorkspaceReadModel;
+  editor(instanceId: string | null): ShipEditorReadModel | null;
   execute(command: RosterWorkspaceCommand): Promise<RosterWorkspaceReadModel>;
   retrySave(): Promise<RosterWorkspaceReadModel>;
 }
@@ -185,6 +194,10 @@ class WorkspaceSession implements RosterWorkspaceSession {
 
   get model(): RosterWorkspaceReadModel {
     return this.currentModel;
+  }
+
+  editor(instanceId: string | null): ShipEditorReadModel | null {
+    return projectShipEditor(this.current.roster, this.catalog, instanceId, this.persistence);
   }
 
   async prepare(): Promise<void> {
@@ -291,7 +304,10 @@ function applyCommand(
   createId: () => string,
 ): RosterSnapshot {
   const snapshot = stored.roster;
+  if (command.type === "replace-exclusive" || command.type === "set-choice-quantity")
+    return applyShipEditorCommand(snapshot, catalog, command, createId);
   const instances = { ...snapshot.instances };
+  let addedId: RosterInstanceId | null = null;
   if (command.type === "add") {
     const projected = projectCatalog(catalog, stored);
     const item = projected.find((candidate) => candidate.id === command.definitionId);
@@ -313,6 +329,7 @@ function applyCommand(
       throw new WorkspaceCommandError("UNKNOWN_TARGET", "Battlefleet Element не найден.");
     const root = rootOf(parent, instances);
     const id = freshInstanceId(instances, createId);
+    addedId = id;
     instances[id] = selection(
       id,
       item.id as EntityId,
@@ -325,8 +342,7 @@ function applyCommand(
     if (!current || !["Unit", "Model"].includes(catalog.entities[current.definitionId]?.kind ?? ""))
       throw new WorkspaceCommandError("UNKNOWN_INSTANCE", "Корабль не найден в составе.");
     if (command.type === "duplicate") {
-      const id = freshInstanceId(instances, createId);
-      instances[id] = { ...current, id };
+      duplicateSubtree(current, instances, createId);
     } else {
       const removed = new Set<string>([current.id]);
       let size = -1;
@@ -339,7 +355,40 @@ function applyCommand(
       for (const id of removed) delete instances[id];
     }
   }
-  return { ...snapshot, instances };
+  const next = { ...snapshot, instances };
+  return addedId ? materializeShipStructure(next, instances[addedId]!, createId) : next;
+}
+
+function duplicateSubtree(
+  root: RosterSelectionInstance,
+  instances: Record<string, RosterSelectionInstance>,
+  createId: () => string,
+): void {
+  const subtree: RosterSelectionInstance[] = [];
+  const pending = [root];
+  while (pending.length > 0) {
+    const current = pending.shift()!;
+    subtree.push(current);
+    pending.push(
+      ...Object.values(instances)
+        .filter((candidate) => candidate.parentInstanceId === current.id)
+        .sort((left, right) => left.id.localeCompare(right.id)),
+    );
+  }
+  const replacementIds = new Map<string, RosterInstanceId>();
+  for (const original of subtree)
+    replacementIds.set(original.id, freshInstanceId(instances, createId));
+  for (const original of subtree) {
+    const id = replacementIds.get(original.id)!;
+    instances[id] = {
+      ...original,
+      id,
+      parentInstanceId:
+        original.id === root.id
+          ? root.parentInstanceId
+          : (replacementIds.get(original.parentInstanceId ?? "") ?? original.parentInstanceId),
+    };
+  }
 }
 
 function projectWorkspace(
@@ -421,7 +470,11 @@ function projectCatalog(
     (instance) => catalog.entities[instance.definitionId]?.kind === "BattlefleetElement",
   );
   const items = Object.values(catalog.entities)
-    .filter((entity) => entity.kind === "Unit" || entity.kind === "Model")
+    .filter(
+      (entity) =>
+        (entity.kind === "Unit" || entity.kind === "Model") &&
+        entity.attributes["demo.catalog"] !== "hidden",
+    )
     .map((entity): CatalogItemReadModel => {
       const targets = Object.values(catalog.placements)
         .filter(

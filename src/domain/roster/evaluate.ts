@@ -438,6 +438,19 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
         indeterminateExpression(active.code, instance, constraint.id, slotIdValue);
       return active;
     }
+    if (expression.field === "error") {
+      if (!availabilityCheck)
+        addProblem(
+          "ACTIVE_ERROR_REQUIREMENT",
+          "error",
+          constraint.label.plainText || "An active catalogue requirement is not satisfied.",
+          { ...targetFor(instance), slotId: slotIdValue },
+          constraint.id,
+          "active",
+          "inactive",
+        );
+      return { state: "false" };
+    }
     if (expression.operator !== "min" && expression.operator !== "max") {
       indeterminateExpression(
         "UNSUPPORTED_CONSTRAINT_OPERATOR",
@@ -714,6 +727,10 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       return compareDecimal(metric.value, zeroDecimal()) > 0
         ? { state: "true" }
         : { state: "false" };
+    if (entity.expression.operator === "notInstanceOf")
+      return compareDecimal(metric.value, zeroDecimal()) === 0
+        ? { state: "true" }
+        : { state: "false" };
     const expected = entity.expression.value ? parseDecimal(entity.expression.value) : null;
     if (!expected) return { state: "unknown", code: "INVALID_CONDITION_VALUE" };
     const compared = compareDecimal(metric.value, expected);
@@ -722,6 +739,8 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
         return compared >= 0 ? { state: "true" } : { state: "false" };
       case "atMost":
         return compared <= 0 ? { state: "true" } : { state: "false" };
+      case "lessThan":
+        return compared < 0 ? { state: "true" } : { state: "false" };
       case "equalTo":
         return compared === 0 ? { state: "true" } : { state: "false" };
       case "notEqualTo":
@@ -784,6 +803,34 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           state: "known",
           instances: parentId ? (children.get(parentId) ?? []) : rootInstances(),
         };
+      }
+      case "ancestor": {
+        const ancestors: RosterSelectionInstance[] = [];
+        const visited = new Set<string>();
+        let parentId = instance.parentInstanceId;
+        while (parentId) {
+          if (visited.has(parentId)) return { state: "unknown", code: "INSTANCE_PARENT_CYCLE" };
+          visited.add(parentId);
+          const parent = roster.instances[parentId];
+          if (!parent) return { state: "unknown", code: "MISSING_ANCESTOR_SCOPE" };
+          ancestors.push(parent);
+          parentId = parent.parentInstanceId;
+        }
+        return { state: "known", instances: ancestors };
+      }
+      case "unit": {
+        let current: RosterSelectionInstance | undefined = instance;
+        const visited = new Set<string>();
+        while (current) {
+          if (visited.has(current.id)) return { state: "unknown", code: "INSTANCE_PARENT_CYCLE" };
+          visited.add(current.id);
+          if (catalog.entities[current.definitionId]?.kind === "Unit")
+            return { state: "known", instances: descendantsIncluding(current) };
+          current = current.parentInstanceId
+            ? roster.instances[current.parentInstanceId]
+            : undefined;
+        }
+        return { state: "unknown", code: "MISSING_UNIT_SCOPE" };
       }
       case "force": {
         const forceId = instance.forceInstanceId ?? rootAncestor(instance)?.id ?? null;

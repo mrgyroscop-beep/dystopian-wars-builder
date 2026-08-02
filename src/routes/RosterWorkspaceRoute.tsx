@@ -10,10 +10,18 @@ import {
   type CatalogItemReadModel,
   type FleetCategory,
   type RosterWorkspaceDependencies,
+  type RosterInstanceReadModel,
   type RosterWorkspaceReadModel,
   type RosterWorkspaceSession,
 } from "../application/rosters/workspace";
+import {
+  AKITA_DEMONSTRATOR_ID,
+  ShipEditorCommandError,
+  type ShipEditorCommand,
+  type ShipEditorReadModel,
+} from "../application/rosters/ship-editor";
 import { useDocumentTitle } from "../app/useDocumentTitle";
+import { ShipEditorShell } from "../ui/ShipEditorShell";
 
 const rosterIdSchema = z
   .string()
@@ -47,6 +55,7 @@ export function RosterWorkspaceRoute({
   const [category, setCategory] = useState<FleetCategory | "all">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedTarget, setSelectedTarget] = useState("");
+  const [editorInstanceId, setEditorInstanceId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<WorkspaceView>("composition");
   const [busy, setBusy] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -86,7 +95,7 @@ export function RosterWorkspaceRoute({
     command: Parameters<RosterWorkspaceSession["execute"]>[0],
     success: string,
     focusId?: string,
-  ) {
+  ): Promise<RosterWorkspaceReadModel | null> {
     setBusy(true);
     setCommandError(null);
     try {
@@ -97,12 +106,14 @@ export function RosterWorkspaceRoute({
         requestAnimationFrame(() =>
           document.getElementById(focusId)?.focus({ preventScroll: true }),
         );
+      return next;
     } catch (error) {
       setCommandError(
-        error instanceof WorkspaceCommandError
+        error instanceof WorkspaceCommandError || error instanceof ShipEditorCommandError
           ? error.message
           : "Команду не удалось выполнить. Локальный состав не изменён.",
       );
+      return null;
     } finally {
       setBusy(false);
     }
@@ -114,12 +125,13 @@ export function RosterWorkspaceRoute({
       item.eligibleTargets.length === 1 ? item.eligibleTargets[0]!.elementInstanceId : "",
     );
     setCommandError(null);
+    setEditorInstanceId(null);
     setActiveView("context");
   }
 
   async function addSelected() {
     if (!selected) return;
-    await execute(
+    const next = await execute(
       {
         type: "add",
         definitionId: selected.id,
@@ -128,6 +140,13 @@ export function RosterWorkspaceRoute({
       `${selected.name} добавлен в состав.`,
       `catalog-item-${safeId(selected.id)}`,
     );
+    if (next && selected.id === AKITA_DEMONSTRATOR_ID) {
+      const instance = next.elements
+        .flatMap((element) => element.instances)
+        .filter((candidate) => candidate.definitionId === selected.id)
+        .at(-1);
+      if (instance) setEditorInstanceId(instance.id);
+    }
   }
 
   async function retrySave() {
@@ -259,6 +278,11 @@ export function RosterWorkspaceRoute({
           onDuplicate={(instanceId, name) =>
             void execute({ type: "duplicate", instanceId }, `${name}: создана новая копия.`)
           }
+          onEdit={(instance) => {
+            setSelectedId(instance.definitionId);
+            setEditorInstanceId(instance.id);
+            setActiveView("context");
+          }}
           onReturnToIssue={returnToIssue}
           returnTarget={issueReturnId}
         />
@@ -269,6 +293,8 @@ export function RosterWorkspaceRoute({
           onAdd={() => void addSelected()}
           onFollowIssue={followIssue}
           onTarget={setSelectedTarget}
+          editor={selected?.id === AKITA_DEMONSTRATOR_ID ? session.editor(editorInstanceId) : null}
+          onEditorCommand={(command, message) => void execute(command, message)}
           selected={selected}
           selectedTarget={selectedTarget}
         />
@@ -435,6 +461,7 @@ function CompositionPane({
   model,
   onDelete,
   onDuplicate,
+  onEdit,
   onReturnToIssue,
   returnTarget,
 }: {
@@ -442,6 +469,7 @@ function CompositionPane({
   readonly model: RosterWorkspaceReadModel;
   readonly onDelete: (instanceId: string, name: string, elementId: string) => void;
   readonly onDuplicate: (instanceId: string, name: string) => void;
+  readonly onEdit: (instance: RosterInstanceReadModel) => void;
   readonly onReturnToIssue: () => void;
   readonly returnTarget: string | null;
 }) {
@@ -496,6 +524,9 @@ function CompositionPane({
                       </small>
                     </span>
                     <span className="instance-actions">
+                      <button disabled={busy} onClick={() => onEdit(instance)} type="button">
+                        Настроить
+                      </button>
                       <button
                         disabled={busy}
                         onClick={() => onDuplicate(instance.id, instance.name)}
@@ -533,6 +564,8 @@ function ContextPane({
   onAdd,
   onFollowIssue,
   onTarget,
+  editor,
+  onEditorCommand,
   selected,
   selectedTarget,
 }: {
@@ -541,6 +574,8 @@ function ContextPane({
   readonly onAdd: () => void;
   readonly onFollowIssue: (problemId: string, targetId: string) => void;
   readonly onTarget: (value: string) => void;
+  readonly editor: ShipEditorReadModel | null;
+  readonly onEditorCommand: (command: ShipEditorCommand, message: string) => void;
   readonly selected: CatalogItemReadModel | null;
   readonly selectedTarget: string;
 }) {
@@ -550,7 +585,9 @@ function ContextPane({
         <p className="eyebrow">Preview и проблемы</p>
         <h2 id="context-title">Контекст</h2>
       </div>
-      {selected ? (
+      {editor ? (
+        <ShipEditorShell busy={busy} model={editor} onAdd={onAdd} onCommand={onEditorCommand} />
+      ) : selected ? (
         <article className="catalog-preview">
           <p className="preview-category">
             {selected.category} · {selected.role}
