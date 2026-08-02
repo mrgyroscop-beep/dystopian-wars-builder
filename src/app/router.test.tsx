@@ -106,6 +106,16 @@ describe("application routes", () => {
     expect(screen.getByRole("heading", { name: "Состав" })).toBeVisible();
   });
 
+  it("opens a stable-ID rule deep link and focuses its heading", async () => {
+    renderRoute(
+      "/rosters/scaffold-demo?ship=demo-ship-001&shipMode=preview&rule=synthetic-rule-torrent",
+    );
+
+    const heading = await screen.findByRole("heading", { name: "Torrent" });
+    await waitFor(() => expect(heading).toHaveFocus());
+    expect(screen.getByText("Источник: каталог demonstration-1")).toBeVisible();
+  });
+
   it("uses the HealthGateway injected by the application composition root", async () => {
     readHealth.mockClear();
     renderRoute("/settings");

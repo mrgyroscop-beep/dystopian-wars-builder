@@ -14,6 +14,7 @@ import {
   type RosterSelectionInstance,
   type RosterSnapshot,
 } from "../../domain/roster";
+import { projectShipProfileRules, type ShipProfileRulesReadModel } from "./profile-rules";
 
 export type ShipEditorGroupId = string;
 export type ShipEditorDataState =
@@ -73,6 +74,7 @@ export interface ShipEditorReadyReadModel {
   };
   readonly problems: readonly ShipEditorProblemReadModel[];
   readonly breakdown: readonly { readonly label: string; readonly value: string }[];
+  readonly profileRules: ShipProfileRulesReadModel;
 }
 
 export interface ShipEditorUnavailableReadModel {
@@ -414,6 +416,12 @@ export function projectShipEditor(
       fixed: minimum === maximum,
     },
     problems,
+    profileRules: projectShipProfileRules(
+      projected.snapshot,
+      catalog,
+      projected.unit,
+      modelInstance,
+    ),
     breakdown: [
       { label: "Базовая стоимость", value: String(basePoints) },
       { label: "Выбранные опции", value: signed(optionPoints) },

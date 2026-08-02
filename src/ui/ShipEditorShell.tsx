@@ -1,4 +1,11 @@
-import { useId, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MutableRefObject,
+} from "react";
 
 import type {
   ShipEditorCommand,
@@ -8,6 +15,7 @@ import type {
   ShipEditorReadyReadModel,
   ShipEditorReadModel,
 } from "../application/rosters/ship-editor";
+import { ProfilePanel, RuleSheet, RulesPanel } from "./ProfileRules";
 
 type EditorTab = "configuration" | "profile" | "rules";
 
@@ -23,16 +31,34 @@ export function ShipEditorShell({
   onAdd,
   onBack,
   onCommand,
+  onOpenRule,
+  onRuleBack,
+  ruleId,
 }: {
   readonly busy: boolean;
   readonly model: ShipEditorReadModel;
   readonly onAdd: () => void;
   readonly onBack: () => void;
   readonly onCommand: (command: ShipEditorCommand, announcement: string) => void;
+  readonly onOpenRule?: (ruleId: string) => void;
+  readonly onRuleBack?: () => void;
+  readonly ruleId?: string | null;
 }) {
-  const [tab, setTab] = useState<EditorTab>("configuration");
+  const [tab, setTab] = useState<EditorTab>(ruleId ? "rules" : "configuration");
   const [fleetEditorOpen, setFleetEditorOpen] = useState(false);
+  const [localRuleId, setLocalRuleId] = useState<string | null>(null);
+  const ruleReturn = useRef<{ readonly element: HTMLElement; readonly scrollY: number } | null>(
+    null,
+  );
+  const previousRuleId = useRef<string | null>(ruleId ?? null);
   const tabsId = useId();
+  const activeRuleId = ruleId === undefined ? localRuleId : ruleId;
+  const visibleTab: EditorTab = activeRuleId ? "rules" : tab;
+
+  useEffect(() => {
+    if (previousRuleId.current && !ruleId) restoreRuleReturn(ruleReturn);
+    previousRuleId.current = ruleId ?? null;
+  }, [ruleId]);
 
   function focusGroup(groupId: ShipEditorGroupId | null) {
     if (!groupId || model.dataState !== "ready") return;
@@ -62,6 +88,21 @@ export function ShipEditorShell({
     if (nextIndex === null) return;
     event.preventDefault();
     selectTab(editorTabs[nextIndex]![0]);
+  }
+
+  function openRule(nextRuleId: string, returnElement: HTMLElement) {
+    ruleReturn.current = { element: returnElement, scrollY: window.scrollY };
+    setTab("rules");
+    if (onOpenRule) onOpenRule(nextRuleId);
+    else setLocalRuleId(nextRuleId);
+  }
+
+  function closeRule() {
+    if (onRuleBack) onRuleBack();
+    else {
+      setLocalRuleId(null);
+      restoreRuleReturn(ruleReturn);
+    }
   }
 
   if (model.dataState !== "ready")
@@ -140,13 +181,13 @@ export function ShipEditorShell({
           {editorTabs.map(([value, label]) => (
             <button
               aria-controls={`${tabsId}-${value}`}
-              aria-selected={tab === value}
+              aria-selected={visibleTab === value}
               id={`${tabsId}-${value}-tab`}
               key={value}
               onClick={() => setTab(value)}
               onKeyDown={(event) => handleTabKey(event, value)}
               role="tab"
-              tabIndex={tab === value ? 0 : -1}
+              tabIndex={visibleTab === value ? 0 : -1}
               type="button"
             >
               {label}
@@ -155,7 +196,7 @@ export function ShipEditorShell({
         </div>
       </div>
 
-      {tab === "configuration" ? (
+      {visibleTab === "configuration" ? (
         <section
           aria-labelledby={`${tabsId}-configuration-tab`}
           className="ship-editor__configuration"
@@ -343,15 +384,32 @@ export function ShipEditorShell({
             </button>
           ) : null}
         </section>
-      ) : (
+      ) : visibleTab === "profile" ? (
         <section
-          aria-labelledby={`${tabsId}-${tab}-tab`}
-          className="editor-unsupported"
-          id={`${tabsId}-${tab}`}
+          aria-labelledby={`${tabsId}-profile-tab`}
+          className="ship-editor__profile"
+          id={`${tabsId}-profile`}
           role="tabpanel"
         >
-          <strong>{tab === "profile" ? "Профиль" : "Правила"} пока недоступны</strong>
-          <p>Контент этого раздела будет подключён в KAN-36. Настройки корабля не потеряны.</p>
+          <ProfilePanel model={model.profileRules} />
+        </section>
+      ) : (
+        <section
+          aria-labelledby={`${tabsId}-rules-tab`}
+          className="ship-editor__rules"
+          id={`${tabsId}-rules`}
+          role="tabpanel"
+        >
+          {activeRuleId ? (
+            <RuleSheet
+              model={model.profileRules}
+              onBack={closeRule}
+              onOpenRule={openRule}
+              ruleId={activeRuleId}
+            />
+          ) : (
+            <RulesPanel model={model.profileRules} onOpenRule={openRule} />
+          )}
         </section>
       )}
     </article>
@@ -484,4 +542,19 @@ function axisLabel(value: string): string {
     unavailable: "недоступна",
   };
   return labels[value] ?? value;
+}
+
+function restoreRuleReturn(
+  ruleReturn: MutableRefObject<{
+    readonly element: HTMLElement;
+    readonly scrollY: number;
+  } | null>,
+) {
+  const target = ruleReturn.current;
+  ruleReturn.current = null;
+  requestAnimationFrame(() => {
+    if (target?.element.isConnected) target.element.focus({ preventScroll: true });
+    else document.querySelector<HTMLElement>(".rule-list button")?.focus({ preventScroll: true });
+    if (target) window.scrollTo({ top: target.scrollY });
+  });
 }

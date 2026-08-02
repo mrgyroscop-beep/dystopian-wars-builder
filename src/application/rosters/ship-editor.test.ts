@@ -302,6 +302,101 @@ describe("catalog-driven ship editor application boundary", () => {
       projectShipEditor(fixture.snapshot, fixture.catalog, null, plainUnit.id, "saved-local"),
     ).toMatchObject({ dataState: "unsupported-data" });
   });
+
+  it("projects ordered base and effective profile data with complete weapon rows", () => {
+    const fixture = setup();
+    const preview = ready(
+      projectShipEditor(
+        fixture.snapshot,
+        fixture.catalog,
+        null,
+        fixture.unit.definitionId,
+        "saved-local",
+      ),
+    );
+    expect(preview.profileRules.variant).toBe("base");
+    expect(preview.profileRules.sections.map((section) => section.label)).toEqual([
+      "Model",
+      "Properties",
+      "Systems",
+    ]);
+    expect(preview.profileRules.rules.map((rule) => rule.label)).toEqual(["Torrent", "Submerged"]);
+
+    let snapshot = materialize(fixture);
+    snapshot = choose(snapshot, fixture, "PSA", "Heavy Battery");
+    snapshot = choose(snapshot, fixture, "FPS 1", "Torpedo Battery");
+    const configured = project(snapshot, fixture);
+    expect(configured.profileRules.variant).toBe("effective");
+    const heavy = configured.profileRules.weapons.find(
+      (weapon) => weapon.weapon === "Heavy Battery",
+    );
+    expect(heavy).toBeDefined();
+    expect(heavy?.arc).not.toBe("—");
+    expect(heavy?.close).not.toBe("—");
+    expect(heavy?.standard).not.toBe("—");
+    expect(heavy?.extreme).not.toBe("—");
+    expect(configured.profileRules.weapons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          weapon: "Heavy Battery",
+          qualities: "Torrent",
+          provenance: "PSA",
+        }),
+        expect.objectContaining({ weapon: "Torpedo Battery", provenance: "FPS 1" }),
+      ]),
+    );
+  });
+
+  it("diagnoses unknown slot provenance instead of guessing it from the label", () => {
+    const fixture = setup();
+    let snapshot = materialize(fixture);
+    snapshot = choose(snapshot, fixture, "PSA", "Heavy Battery");
+    const psa = group(project(snapshot, fixture), "PSA");
+    const sourceSlot = fixture.catalog.slots[psa.id]!;
+    const catalog: DomainCatalog = {
+      ...fixture.catalog,
+      slots: {
+        ...fixture.catalog.slots,
+        [sourceSlot.id]: {
+          ...sourceSlot,
+          label: { ...sourceSlot.label, plainText: "PSA" },
+          semantics: { ...sourceSlot.semantics, profileRole: null },
+        },
+      },
+    };
+    const projected = ready(
+      projectShipEditor(
+        snapshot,
+        catalog,
+        fixture.unit.id,
+        fixture.unit.definitionId,
+        "saved-local",
+      ),
+    );
+    expect(
+      projected.profileRules.weapons.find((weapon) => weapon.weapon === "Heavy Battery")
+        ?.provenance,
+    ).toBeNull();
+    expect(projected.profileRules.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "PROFILE_SLOT_SEMANTICS_UNKNOWN" }),
+    );
+  });
+
+  it("fails rule descriptions closed when the source catalog version mismatches", () => {
+    const fixture = setup();
+    const snapshot = { ...materialize(fixture), catalogContentVersion: "older-catalog" };
+    const model = project(snapshot, fixture);
+    expect(model.profileRules.versionState).toBe("mismatch");
+    expect(model.profileRules.rules).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "synthetic-rule-torrent",
+          available: false,
+          description: null,
+        }),
+      ]),
+    );
+  });
 });
 
 function choose(
