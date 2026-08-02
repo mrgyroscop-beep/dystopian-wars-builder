@@ -414,6 +414,128 @@ describe("roster evaluator", () => {
     });
   });
 
+  it("applies effective hidden and helper slots without creating mandatory controls", () => {
+    const shipId = id("visibility-ship");
+    const slotOwnerId = id("visibility-slot-owner");
+    const slotIdValue = sid("visibility-slot");
+    const optionId = id("visibility-option");
+    const modifierId = id("hide-slot");
+    const modifier = expressionEntity("Modifier", modifierId, {
+      operator: "set",
+      field: "hidden",
+      scope: "parent",
+      value: "true",
+    });
+    const slotOwner = baseEntity("Hardpoint", slotOwnerId, { slotIds: [slotIdValue] });
+    const slotPlacement = placement("visibility-slot-placement", shipId, slotOwnerId);
+    const choicePlacement = placement(
+      "visibility-choice-placement",
+      slotOwnerId,
+      optionId,
+      {},
+      slotIdValue,
+    );
+    const slot: Slot = {
+      contractVersion: 1,
+      id: slotIdValue,
+      ownerId: slotOwnerId,
+      kind: "Hardpoint",
+      label: presentation("Visibility slot"),
+      placementIds: [choicePlacement.id],
+      optionPlacementIds: [choicePlacement.id],
+      cardinality: {
+        contractVersion: 1,
+        minimum: amount("1"),
+        maximum: amount("1"),
+        effective: "deferred-to-kan-32",
+      },
+      costIds: [],
+      constraintIds: [],
+      conditionIds: [],
+      modifierIds: [modifierId],
+      hidden: false,
+      helper: false,
+      semantics: { contractVersion: 1, selection: "option", evaluation: "deferred-to-kan-32" },
+      provenance: provenance(slotOwnerId),
+    };
+    const catalog = makeCatalog(
+      [baseEntity("Model", shipId), slotOwner, baseEntity("Option", optionId), modifier],
+      [slotPlacement, choicePlacement],
+      [slot],
+    );
+    const root = rosterInstanceId("visibility-root");
+    const empty = evaluateRoster(
+      catalog,
+      roster(catalog, [instance(root, shipId, { forceInstanceId: root })]),
+    );
+    expect(empty.slots[0]).toMatchObject({
+      status: "satisfied",
+      minimum: "0",
+      visibility: "hidden",
+      helper: false,
+    });
+    expect(empty.problems.filter((problem) => problem.code === "SLOT_MIN_NOT_MET")).toEqual([]);
+    expect(empty.availability[0]).toMatchObject({
+      state: "unavailable",
+      reasonCodes: ["SLOT_HIDDEN"],
+    });
+
+    const selectedId = rosterInstanceId("visibility-selected");
+    const selected = evaluateRoster(
+      catalog,
+      roster(catalog, [
+        instance(root, shipId, { forceInstanceId: root }),
+        instance(selectedId, optionId, {
+          parentInstanceId: root,
+          forceInstanceId: root,
+          placementId: choicePlacement.id,
+          slotId: slotIdValue,
+        }),
+      ]),
+    );
+    expect(
+      selected.problems.some((problem) => problem.code === "SELECTED_UNAVAILABLE_OPTION"),
+    ).toBe(true);
+
+    const helperCatalog: DomainCatalog = {
+      ...catalog,
+      slots: {
+        [slotIdValue]: {
+          ...slot,
+          modifierIds: [],
+          helper: true,
+          cardinality: {
+            ...slot.cardinality,
+            minimum: { contractVersion: 1, state: "missing" },
+            maximum: { contractVersion: 1, state: "missing" },
+          },
+        },
+      },
+    };
+    const helper = evaluateRoster(
+      helperCatalog,
+      roster(helperCatalog, [instance(root, shipId, { forceInstanceId: root })]),
+    );
+    expect(helper.slots[0]).toMatchObject({ status: "satisfied", helper: true });
+    expect(helper.status).toBe("valid");
+    expect(helper.availability[0]).toMatchObject({
+      state: "unavailable",
+      reasonCodes: ["HELPER_SLOT"],
+    });
+
+    const unknownModifier = { ...modifier, expression: { ...modifier.expression, value: "maybe" } };
+    const unknownCatalog: DomainCatalog = {
+      ...catalog,
+      entities: { ...catalog.entities, [modifierId]: unknownModifier },
+    };
+    const unknown = evaluateRoster(
+      unknownCatalog,
+      roster(unknownCatalog, [instance(root, shipId, { forceInstanceId: root })]),
+    );
+    expect(unknown.status).toBe("indeterminate");
+    expect(unknown.slots[0]).toMatchObject({ visibility: "indeterminate" });
+  });
+
   it("fails closed and stays deterministic for an unevaluable expression", () => {
     const unitId = id("unit");
     const constraintId = id("unsupported");
@@ -460,6 +582,82 @@ describe("roster evaluator", () => {
     expect(result.contributions).toEqual([]);
     expect(result.problems).toContainEqual(
       expect.objectContaining({ code: "UNKNOWN_COST_AMOUNT" }),
+    );
+  });
+
+  it("supports lessThan/notInstanceOf with unit and ancestor scopes", () => {
+    const pointsType = id("points-type");
+    const unitId = id("unit");
+    const optionId = id("option");
+    const absentId = id("absent");
+    const lessThan = expressionEntity("Condition", id("less-than-two"), {
+      operator: "lessThan",
+      field: "selections",
+      scope: "unit",
+      value: "2",
+      references: [optionId],
+    });
+    const notAncestor = expressionEntity("Condition", id("not-forbidden-ancestor"), {
+      operator: "notInstanceOf",
+      field: "selections",
+      scope: "ancestor",
+      references: [absentId],
+    });
+    const unitCost = cost("unit-conditional", "5", "points", pointsType, "delta", {
+      conditionIds: [lessThan.id],
+    });
+    const optionCost = cost("option-conditional", "7", "points", pointsType, "delta", {
+      conditionIds: [notAncestor.id],
+    });
+    const catalog = makeCatalog([
+      baseEntity("CostType", pointsType),
+      baseEntity("Unit", unitId, { costIds: [unitCost.id] }),
+      baseEntity("Option", optionId, { costIds: [optionCost.id] }),
+      baseEntity("Option", absentId),
+      unitCost,
+      optionCost,
+      lessThan,
+      notAncestor,
+    ]);
+    const root = rosterInstanceId("unit");
+    const option = rosterInstanceId("option");
+    const result = evaluateRoster(
+      catalog,
+      roster(catalog, [
+        instance(root, unitId, { forceInstanceId: root }),
+        instance(option, optionId, { parentInstanceId: root, forceInstanceId: root }),
+      ]),
+    );
+
+    expect(result.status).toBe("valid");
+    expect(result.totals).toContainEqual(expect.objectContaining({ value: "12" }));
+  });
+
+  it("emits an active source Modifier field=error requirement and remains fail-closed", () => {
+    const unitId = id("unit");
+    const requirement = expressionEntity("Modifier", id("requires-magma"), {
+      operator: "append",
+      field: "error",
+      scope: "unit",
+      value: "Magma Cast Generator is required.",
+    });
+    const catalog = makeCatalog([
+      baseEntity("Unit", unitId, { modifierIds: [requirement.id] }),
+      requirement,
+    ]);
+    const root = rosterInstanceId("unit");
+    const result = evaluateRoster(
+      catalog,
+      roster(catalog, [instance(root, unitId, { forceInstanceId: root })]),
+    );
+
+    expect(result.status).toBe("invalid");
+    expect(result.problems).toContainEqual(
+      expect.objectContaining({
+        code: "ACTIVE_ERROR_MODIFIER",
+        severity: "error",
+        message: "Magma Cast Generator is required.",
+      }),
     );
   });
 });

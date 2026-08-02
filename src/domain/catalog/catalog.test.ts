@@ -135,6 +135,70 @@ describe("normalized catalog contract", () => {
     ]);
   });
 
+  it("recognizes ship-editor operators, fields and ancestor/unit scopes", () => {
+    const catalog = normalize(
+      root([
+        node("selectionEntries", {}, [
+          node("selectionEntry", { id: "target", name: "Target", type: "upgrade" }),
+          node("selectionEntry", { id: "owner", name: "Owner", type: "unit" }, [
+            node("conditions", {}, [
+              node("condition", {
+                type: "lessThan",
+                field: "selections",
+                scope: "unit",
+                value: "2",
+                childId: "target",
+              }),
+              node("condition", {
+                type: "notInstanceOf",
+                field: "hidden",
+                scope: "ancestor",
+                value: "1",
+                childId: "target",
+              }),
+            ]),
+            node("modifiers", {}, [
+              node("modifier", {
+                type: "append",
+                field: "error",
+                scope: "unit",
+                value: "Requirement text",
+              }),
+            ]),
+          ]),
+        ]),
+      ]),
+    );
+    const expressions = Object.values(catalog.entities)
+      .filter((entity) => "expression" in entity)
+      .map((entity) => entity.expression);
+    expect(expressions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          operator: "lessThan",
+          field: "selections",
+          scope: "unit",
+          evaluable: true,
+          unevaluableReasons: [],
+        }),
+        expect.objectContaining({
+          operator: "notInstanceOf",
+          field: "hidden",
+          scope: "ancestor",
+          evaluable: true,
+          unevaluableReasons: [],
+        }),
+        expect.objectContaining({
+          operator: "append",
+          field: "error",
+          scope: "unit",
+          evaluable: true,
+          unevaluableReasons: [],
+        }),
+      ]),
+    );
+  });
+
   it("preserves condition groups, modifiers, repeats and explicit ambiguous aliases", () => {
     const aliasOne = { ...node("alias"), text: "Legacy Name" };
     const aliasTwo = { ...node("alias"), text: "Legacy Name" };
@@ -297,6 +361,14 @@ describe("normalized catalog contract", () => {
               node("constraint", { id: "min", type: "min", field: "selections", value: "1" }),
               node("constraint", { id: "max", type: "max", field: "selections", value: "2" }),
             ]),
+            node("modifiers", {}, [
+              node("modifier", {
+                id: "hide-slot",
+                type: "set",
+                field: "hidden",
+                value: "true",
+              }),
+            ]),
             node("selectionEntries", {}, [
               node("selectionEntry", { id: "choice", name: "Choice", type: "upgrade" }, [
                 node("costs", {}, [
@@ -349,8 +421,23 @@ describe("normalized catalog contract", () => {
         effective: "deferred-to-kan-32",
       },
     });
-    expect(slot.optionPlacementIds).toEqual(slot.placementIds);
+    expect(slot.optionPlacementIds).toHaveLength(1);
+    expect(
+      catalog.entities[catalog.placements[slot.optionPlacementIds[0]!]!.definitionId!]!.kind,
+    ).toBe("Option");
     expect(slot.constraintIds).toHaveLength(2);
+    expect(slot.modifierIds).toHaveLength(1);
+    expect(catalog.entities[slot.modifierIds[0]!]!).toMatchObject({
+      kind: "Modifier",
+      expression: { field: "hidden", value: "true", evaluable: true },
+    });
+    const slotPlacement = Object.values(catalog.placements).find(
+      (placement) => placement.definitionId === slot.ownerId,
+    )!;
+    expect(slotPlacement.overlay.cardinality).toMatchObject({
+      minimum: { state: "value", value: "1" },
+      maximum: { state: "value", value: "2" },
+    });
   });
 
   it("keeps placement order stable for PSA/FPS-like sibling slots", () => {

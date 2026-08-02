@@ -9,6 +9,14 @@ import {
 } from "../../domain/roster";
 
 import type { RosterRepository, StoredRoster } from "./create-roster";
+import {
+  applyShipEditorCommand,
+  isShipEditorDefinition,
+  materializeShipStructure,
+  projectShipEditor,
+  type ShipEditorCommand,
+  type ShipEditorReadModel,
+} from "./ship-editor";
 
 export const fleetCategories = [
   "Flagship",
@@ -109,7 +117,8 @@ export type RosterWorkspaceCommand =
       readonly targetElementInstanceId?: string;
     }
   | { readonly type: "duplicate"; readonly instanceId: string }
-  | { readonly type: "delete"; readonly instanceId: string };
+  | { readonly type: "delete"; readonly instanceId: string }
+  | ShipEditorCommand;
 
 export interface RosterCatalogGateway {
   readonly contractVersion: 1;
@@ -126,8 +135,15 @@ export interface RosterWorkspaceDependencies {
 
 export interface RosterWorkspaceSession {
   readonly model: RosterWorkspaceReadModel;
+  editor(instanceId: string | null, definitionId: string | null): ShipEditorReadModel | null;
   execute(command: RosterWorkspaceCommand): Promise<RosterWorkspaceReadModel>;
+  executeDetailed(command: RosterWorkspaceCommand): Promise<RosterWorkspaceExecution>;
   retrySave(): Promise<RosterWorkspaceReadModel>;
+}
+
+export interface RosterWorkspaceExecution {
+  readonly model: RosterWorkspaceReadModel;
+  readonly createdInstanceId: string | null;
 }
 
 export class WorkspaceCommandError extends Error {
@@ -187,6 +203,21 @@ class WorkspaceSession implements RosterWorkspaceSession {
     return this.currentModel;
   }
 
+  editor(instanceId: string | null, definitionId: string | null): ShipEditorReadModel | null {
+    const targetDefinitionId = instanceId
+      ? this.current.roster.instances[instanceId]?.definitionId
+      : definitionId;
+    if (!targetDefinitionId || !isShipEditorDefinition(this.catalog, targetDefinitionId))
+      return null;
+    return projectShipEditor(
+      this.current.roster,
+      this.catalog,
+      instanceId,
+      definitionId,
+      this.persistence,
+    );
+  }
+
   async prepare(): Promise<void> {
     const prepared = ensureRosterStructure(this.current, this.catalog);
     if (prepared === this.current) return;
@@ -194,18 +225,20 @@ class WorkspaceSession implements RosterWorkspaceSession {
   }
 
   async execute(command: RosterWorkspaceCommand): Promise<RosterWorkspaceReadModel> {
-    const nextSnapshot = applyCommand(
-      this.current,
-      this.catalog,
-      command,
-      this.dependencies.createId,
-    );
+    return (await this.executeDetailed(command)).model;
+  }
+
+  async executeDetailed(command: RosterWorkspaceCommand): Promise<RosterWorkspaceExecution> {
+    const result = applyCommand(this.current, this.catalog, command, this.dependencies.createId);
     const candidate: StoredRoster = {
       ...this.current,
-      roster: nextSnapshot,
+      roster: result.snapshot,
       updatedAt: this.dependencies.now(),
     };
-    return this.persist(candidate);
+    return {
+      model: await this.persist(candidate),
+      createdInstanceId: result.createdInstanceId,
+    };
   }
 
   async retrySave(): Promise<RosterWorkspaceReadModel> {
@@ -289,9 +322,19 @@ function applyCommand(
   catalog: DomainCatalog,
   command: RosterWorkspaceCommand,
   createId: () => string,
-): RosterSnapshot {
+): { readonly snapshot: RosterSnapshot; readonly createdInstanceId: RosterInstanceId | null } {
   const snapshot = stored.roster;
+  if (
+    command.type === "replace-exclusive" ||
+    command.type === "set-choice-quantity" ||
+    command.type === "set-model-quantity"
+  )
+    return {
+      snapshot: applyShipEditorCommand(snapshot, catalog, command, createId),
+      createdInstanceId: null,
+    };
   const instances = { ...snapshot.instances };
+  let addedId: RosterInstanceId | null = null;
   if (command.type === "add") {
     const projected = projectCatalog(catalog, stored);
     const item = projected.find((candidate) => candidate.id === command.definitionId);
@@ -313,6 +356,7 @@ function applyCommand(
       throw new WorkspaceCommandError("UNKNOWN_TARGET", "Battlefleet Element не найден.");
     const root = rootOf(parent, instances);
     const id = freshInstanceId(instances, createId);
+    addedId = id;
     instances[id] = selection(
       id,
       item.id as EntityId,
@@ -325,8 +369,7 @@ function applyCommand(
     if (!current || !["Unit", "Model"].includes(catalog.entities[current.definitionId]?.kind ?? ""))
       throw new WorkspaceCommandError("UNKNOWN_INSTANCE", "Корабль не найден в составе.");
     if (command.type === "duplicate") {
-      const id = freshInstanceId(instances, createId);
-      instances[id] = { ...current, id };
+      duplicateSubtree(current, instances, createId);
     } else {
       const removed = new Set<string>([current.id]);
       let size = -1;
@@ -339,7 +382,45 @@ function applyCommand(
       for (const id of removed) delete instances[id];
     }
   }
-  return { ...snapshot, instances };
+  const next = { ...snapshot, instances };
+  return {
+    snapshot: addedId
+      ? materializeShipStructure(next, catalog, instances[addedId]!, createId)
+      : next,
+    createdInstanceId: addedId,
+  };
+}
+
+function duplicateSubtree(
+  root: RosterSelectionInstance,
+  instances: Record<string, RosterSelectionInstance>,
+  createId: () => string,
+): void {
+  const subtree: RosterSelectionInstance[] = [];
+  const pending = [root];
+  while (pending.length > 0) {
+    const current = pending.shift()!;
+    subtree.push(current);
+    pending.push(
+      ...Object.values(instances)
+        .filter((candidate) => candidate.parentInstanceId === current.id)
+        .sort((left, right) => left.id.localeCompare(right.id)),
+    );
+  }
+  const replacementIds = new Map<string, RosterInstanceId>();
+  for (const original of subtree)
+    replacementIds.set(original.id, freshInstanceId(instances, createId));
+  for (const original of subtree) {
+    const id = replacementIds.get(original.id)!;
+    instances[id] = {
+      ...original,
+      id,
+      parentInstanceId:
+        original.id === root.id
+          ? root.parentInstanceId
+          : (replacementIds.get(original.parentInstanceId ?? "") ?? original.parentInstanceId),
+    };
+  }
 }
 
 function projectWorkspace(
@@ -421,7 +502,11 @@ function projectCatalog(
     (instance) => catalog.entities[instance.definitionId]?.kind === "BattlefleetElement",
   );
   const items = Object.values(catalog.entities)
-    .filter((entity) => entity.kind === "Unit" || entity.kind === "Model")
+    .filter(
+      (entity) =>
+        (entity.kind === "Unit" || entity.kind === "Model") &&
+        entity.attributes["demo.catalog"] !== "hidden",
+    )
     .map((entity): CatalogItemReadModel => {
       const targets = Object.values(catalog.placements)
         .filter(
@@ -502,8 +587,8 @@ function projectElements(
           id: instance.id,
           definitionId: instance.definitionId,
           name: catalog.entities[instance.definitionId]?.label.plainText || "Неизвестный корабль",
-          points: contributionFor(evaluation, instance.id, "points"),
-          victoryPoints: contributionFor(evaluation, instance.id, "victory-points"),
+          points: contributionFor(stored.roster, evaluation, instance.id, "points"),
+          victoryPoints: contributionFor(stored.roster, evaluation, instance.id, "victory-points"),
         }))
         .sort(
           (left, right) =>
@@ -668,18 +753,33 @@ function totalFor(evaluation: RosterEvaluation, resource: "points" | "victory-po
 }
 
 function contributionFor(
+  snapshot: RosterSnapshot,
   evaluation: RosterEvaluation,
   instanceId: string,
   resource: "points" | "victory-points",
 ): string {
+  const descendants = descendantsIncluding(snapshot, instanceId);
   return decimalSum(
     evaluation.contributions
       .filter(
         (contribution) =>
-          contribution.instanceId === instanceId && contribution.resource === resource,
+          descendants.has(contribution.instanceId) && contribution.resource === resource,
       )
       .map((contribution) => contribution.value),
   );
+}
+
+function descendantsIncluding(snapshot: RosterSnapshot, rootId: string): Set<string> {
+  const result = new Set<string>();
+  const pending = [rootId];
+  while (pending.length > 0) {
+    const current = pending.shift()!;
+    if (result.has(current)) continue;
+    result.add(current);
+    for (const instance of Object.values(snapshot.instances))
+      if (instance.parentInstanceId === current) pending.push(instance.id);
+  }
+  return result;
 }
 
 function decimalSum(values: readonly string[]): string {

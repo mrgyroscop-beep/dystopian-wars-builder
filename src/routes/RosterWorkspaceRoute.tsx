@@ -10,10 +10,18 @@ import {
   type CatalogItemReadModel,
   type FleetCategory,
   type RosterWorkspaceDependencies,
+  type RosterWorkspaceExecution,
+  type RosterInstanceReadModel,
   type RosterWorkspaceReadModel,
   type RosterWorkspaceSession,
 } from "../application/rosters/workspace";
+import {
+  ShipEditorCommandError,
+  type ShipEditorCommand,
+  type ShipEditorReadModel,
+} from "../application/rosters/ship-editor";
 import { useDocumentTitle } from "../app/useDocumentTitle";
+import { ShipEditorShell } from "../ui/ShipEditorShell";
 
 const rosterIdSchema = z
   .string()
@@ -33,6 +41,7 @@ type RouteState =
   | { readonly kind: "error" };
 
 type WorkspaceView = "catalog" | "composition" | "context";
+type ContextOrigin = { readonly view: "catalog" | "composition"; readonly elementId: string };
 
 export function RosterWorkspaceRoute({
   dependencies,
@@ -47,6 +56,8 @@ export function RosterWorkspaceRoute({
   const [category, setCategory] = useState<FleetCategory | "all">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedTarget, setSelectedTarget] = useState("");
+  const [editorInstanceId, setEditorInstanceId] = useState<string | null>(null);
+  const [contextOrigin, setContextOrigin] = useState<ContextOrigin | null>(null);
   const [activeView, setActiveView] = useState<WorkspaceView>("composition");
   const [busy, setBusy] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -86,48 +97,70 @@ export function RosterWorkspaceRoute({
     command: Parameters<RosterWorkspaceSession["execute"]>[0],
     success: string,
     focusId?: string,
-  ) {
+  ): Promise<RosterWorkspaceExecution | null> {
     setBusy(true);
     setCommandError(null);
     try {
-      const next = await session.execute(command);
-      setState({ kind: "ready", session, model: next });
-      setAnnouncement(success);
+      const result = await session.executeDetailed(command);
+      setState({ kind: "ready", session, model: result.model });
+      const refreshedEditor =
+        "groupId" in command || command.type === "set-model-quantity"
+          ? session.editor(editorInstanceId, selected?.id ?? null)
+          : null;
+      setAnnouncement(
+        refreshedEditor?.dataState === "ready"
+          ? `${success} Итого ${refreshedEditor.totalPoints} Points. Обязательные ${refreshedEditor.mandatory.selected} из ${refreshedEditor.mandatory.required}.`
+          : success,
+      );
       if (focusId)
         requestAnimationFrame(() =>
           document.getElementById(focusId)?.focus({ preventScroll: true }),
         );
+      return result;
     } catch (error) {
       setCommandError(
-        error instanceof WorkspaceCommandError
+        error instanceof WorkspaceCommandError || error instanceof ShipEditorCommandError
           ? error.message
           : "Команду не удалось выполнить. Локальный состав не изменён.",
       );
+      return null;
     } finally {
       setBusy(false);
     }
   }
 
   function openPreview(item: CatalogItemReadModel) {
+    setContextOrigin({ view: "catalog", elementId: `catalog-item-${safeId(item.id)}` });
     setSelectedId(item.id);
     setSelectedTarget(
       item.eligibleTargets.length === 1 ? item.eligibleTargets[0]!.elementInstanceId : "",
     );
     setCommandError(null);
+    setEditorInstanceId(null);
     setActiveView("context");
+    if (session.editor(null, item.id))
+      requestAnimationFrame(() => document.getElementById("ship-editor-title")?.focus());
   }
 
   async function addSelected() {
     if (!selected) return;
-    await execute(
+    const result = await execute(
       {
         type: "add",
         definitionId: selected.id,
         ...(selectedTarget ? { targetElementInstanceId: selectedTarget } : {}),
       },
       `${selected.name} добавлен в состав.`,
-      `catalog-item-${safeId(selected.id)}`,
     );
+    if (result?.createdInstanceId && session.editor(result.createdInstanceId, selected.id)) {
+      const instance = result.model.elements
+        .flatMap((element) => element.instances)
+        .find((candidate) => candidate.id === result.createdInstanceId);
+      if (instance) {
+        setEditorInstanceId(instance.id);
+        requestAnimationFrame(() => document.getElementById("ship-editor-title")?.focus());
+      }
+    }
   }
 
   async function retrySave() {
@@ -143,7 +176,8 @@ export function RosterWorkspaceRoute({
   }
 
   function followIssue(problemId: string, targetId: string) {
-    setIssueReturnId(`issue-${safeId(problemId)}`);
+    const problemIndex = model.problems.findIndex((problem) => problem.id === problemId);
+    setIssueReturnId(problemIndex >= 0 ? `workspace-issue-${problemIndex}` : null);
     const target = document.getElementById(targetId);
     target?.scrollIntoView({ block: "center" });
     target?.focus({ preventScroll: true });
@@ -154,6 +188,16 @@ export function RosterWorkspaceRoute({
     if (!source) return;
     document.getElementById(source)?.focus();
     setIssueReturnId(null);
+  }
+
+  function closeEditor() {
+    const origin = contextOrigin;
+    setActiveView(origin?.view ?? "composition");
+    setAnnouncement("Возврат из редактора корабля.");
+    if (origin)
+      requestAnimationFrame(() =>
+        document.getElementById(origin.elementId)?.focus({ preventScroll: true }),
+      );
   }
 
   return (
@@ -259,6 +303,16 @@ export function RosterWorkspaceRoute({
           onDuplicate={(instanceId, name) =>
             void execute({ type: "duplicate", instanceId }, `${name}: создана новая копия.`)
           }
+          onEdit={(instance) => {
+            setContextOrigin({
+              view: "composition",
+              elementId: `edit-instance-${safeId(instance.id)}`,
+            });
+            setSelectedId(instance.definitionId);
+            setEditorInstanceId(instance.id);
+            setActiveView("context");
+            requestAnimationFrame(() => document.getElementById("ship-editor-title")?.focus());
+          }}
           onReturnToIssue={returnToIssue}
           returnTarget={issueReturnId}
         />
@@ -269,6 +323,9 @@ export function RosterWorkspaceRoute({
           onAdd={() => void addSelected()}
           onFollowIssue={followIssue}
           onTarget={setSelectedTarget}
+          editor={selected ? session.editor(editorInstanceId, selected.id) : null}
+          onEditorCommand={(command, message) => void execute(command, message)}
+          onEditorBack={closeEditor}
           selected={selected}
           selectedTarget={selectedTarget}
         />
@@ -435,6 +492,7 @@ function CompositionPane({
   model,
   onDelete,
   onDuplicate,
+  onEdit,
   onReturnToIssue,
   returnTarget,
 }: {
@@ -442,6 +500,7 @@ function CompositionPane({
   readonly model: RosterWorkspaceReadModel;
   readonly onDelete: (instanceId: string, name: string, elementId: string) => void;
   readonly onDuplicate: (instanceId: string, name: string) => void;
+  readonly onEdit: (instance: RosterInstanceReadModel) => void;
   readonly onReturnToIssue: () => void;
   readonly returnTarget: string | null;
 }) {
@@ -498,6 +557,14 @@ function CompositionPane({
                     <span className="instance-actions">
                       <button
                         disabled={busy}
+                        id={`edit-instance-${safeId(instance.id)}`}
+                        onClick={() => onEdit(instance)}
+                        type="button"
+                      >
+                        Настроить
+                      </button>
+                      <button
+                        disabled={busy}
                         onClick={() => onDuplicate(instance.id, instance.name)}
                         type="button"
                       >
@@ -533,6 +600,9 @@ function ContextPane({
   onAdd,
   onFollowIssue,
   onTarget,
+  editor,
+  onEditorBack,
+  onEditorCommand,
   selected,
   selectedTarget,
 }: {
@@ -541,6 +611,9 @@ function ContextPane({
   readonly onAdd: () => void;
   readonly onFollowIssue: (problemId: string, targetId: string) => void;
   readonly onTarget: (value: string) => void;
+  readonly editor: ShipEditorReadModel | null;
+  readonly onEditorBack: () => void;
+  readonly onEditorCommand: (command: ShipEditorCommand, message: string) => void;
   readonly selected: CatalogItemReadModel | null;
   readonly selectedTarget: string;
 }) {
@@ -550,7 +623,15 @@ function ContextPane({
         <p className="eyebrow">Preview и проблемы</p>
         <h2 id="context-title">Контекст</h2>
       </div>
-      {selected ? (
+      {editor ? (
+        <ShipEditorShell
+          busy={busy}
+          model={editor}
+          onAdd={onAdd}
+          onBack={onEditorBack}
+          onCommand={onEditorCommand}
+        />
+      ) : selected ? (
         <article className="catalog-preview">
           <p className="preview-category">
             {selected.category} · {selected.role}
@@ -635,10 +716,10 @@ function ContextPane({
         </header>
         {model.problems.length ? (
           <ul>
-            {model.problems.map((problem) => (
+            {model.problems.map((problem, problemIndex) => (
               <li key={problem.id}>
                 <button
-                  id={`issue-${safeId(problem.id)}`}
+                  id={`workspace-issue-${problemIndex}`}
                   onClick={() => onFollowIssue(problem.id, problem.targetId)}
                   type="button"
                 >

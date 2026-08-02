@@ -414,6 +414,40 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       ...new Set([...entity.constraintIds, ...(incoming?.overlay.constraintIds ?? [])]),
     ].sort();
     for (const constraintId of ids) evaluateConstraint(constraintId, instance, null, false);
+    evaluateErrorModifiers(
+      [...new Set([...entity.modifierIds, ...(incoming?.overlay.modifierIds ?? [])])].sort(),
+      instance,
+    );
+  }
+
+  function evaluateErrorModifiers(
+    modifierIds: readonly EntityId[],
+    instance: RosterSelectionInstance,
+  ): void {
+    for (const modifierId of modifierIds) {
+      const modifier = catalog.entities[modifierId];
+      if (!modifier || modifier.kind !== "Modifier" || modifier.expression.field !== "error")
+        continue;
+      if (!modifier.expression.evaluable) {
+        indeterminateExpression("UNEVALUABLE_ERROR_MODIFIER", instance, modifierId);
+        continue;
+      }
+      const active = evaluateConditions(modifier.conditionIds, instance, new Set());
+      if (active.state === "unknown") {
+        indeterminateExpression(active.code, instance, modifierId);
+        continue;
+      }
+      if (active.state === "false") continue;
+      addProblem(
+        "ACTIVE_ERROR_MODIFIER",
+        "error",
+        modifier.expression.value || modifier.label.plainText || "A catalogue requirement failed.",
+        targetFor(instance),
+        modifier.id,
+        "active",
+        "inactive",
+      );
+    }
   }
 
   function evaluateConstraint(
@@ -437,6 +471,19 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       if (active.state === "unknown")
         indeterminateExpression(active.code, instance, constraint.id, slotIdValue);
       return active;
+    }
+    if (expression.field === "error") {
+      if (!availabilityCheck)
+        addProblem(
+          "ACTIVE_ERROR_REQUIREMENT",
+          "error",
+          constraint.label.plainText || "An active catalogue requirement is not satisfied.",
+          { ...targetFor(instance), slotId: slotIdValue },
+          constraint.id,
+          "active",
+          "inactive",
+        );
+      return { state: "false" };
     }
     if (expression.operator !== "min" && expression.operator !== "max") {
       indeterminateExpression(
@@ -486,7 +533,8 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       );
       const selected = selectedChildren.reduce((sum, child) => sum + child.quantity, 0);
       const bounds = effectiveSlotBounds(slot, instance);
-      if (bounds.state === "unknown") {
+      const visibility = effectiveSlotVisibility(slot, instance);
+      if (visibility.state === "unknown") {
         slotResults.push({
           ownerInstanceId: instance.id,
           slotId: slot.id,
@@ -494,6 +542,32 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           minimum: null,
           maximum: null,
           status: "indeterminate",
+          visibility: "indeterminate",
+          helper: slot.helper,
+        });
+        indeterminateExpression(visibility.code, instance, slot.ownerId, slot.id);
+      } else if (visibility.hidden || slot.helper) {
+        slotResults.push({
+          ownerInstanceId: instance.id,
+          slotId: slot.id,
+          selected,
+          minimum: "0",
+          maximum:
+            bounds.state === "known" && bounds.maximum ? decimalToString(bounds.maximum) : null,
+          status: "satisfied",
+          visibility: visibility.hidden ? "hidden" : "visible",
+          helper: slot.helper,
+        });
+      } else if (bounds.state === "unknown") {
+        slotResults.push({
+          ownerInstanceId: instance.id,
+          slotId: slot.id,
+          selected,
+          minimum: null,
+          maximum: null,
+          status: "indeterminate",
+          visibility: "visible",
+          helper: slot.helper,
         });
         indeterminateExpression(bounds.code, instance, slot.ownerId, slot.id);
       } else {
@@ -508,6 +582,8 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           minimum: bounds.minimum ? decimalToString(bounds.minimum) : null,
           maximum: bounds.maximum ? decimalToString(bounds.maximum) : null,
           status: slotStatus,
+          visibility: "visible",
+          helper: false,
         });
         if (below)
           addProblem(
@@ -530,8 +606,38 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
             `max ${decimalToString(bounds.maximum)}`,
           );
       }
-      evaluateSlotAvailability(slot, instance, selectedChildren, bounds);
+      evaluateSlotAvailability(slot, instance, selectedChildren, bounds, visibility);
     }
+  }
+
+  function effectiveSlotVisibility(
+    slot: Slot,
+    instance: RosterSelectionInstance,
+  ):
+    | { readonly state: "known"; readonly hidden: boolean }
+    | { readonly state: "unknown"; readonly code: string } {
+    let hidden = slot.hidden;
+    let activeValue: boolean | null = null;
+    for (const modifierId of [...slot.modifierIds].sort()) {
+      const modifier = catalog.entities[modifierId];
+      if (!modifier || modifier.kind !== "Modifier")
+        return { state: "unknown", code: "INVALID_SLOT_MODIFIER" };
+      if (modifier.expression.field !== "hidden") continue;
+      if (!modifier.expression.evaluable)
+        return { state: "unknown", code: "UNEVALUABLE_HIDDEN_MODIFIER" };
+      const active = evaluateConditions(modifier.conditionIds, instance, new Set());
+      if (active.state === "unknown") return active;
+      if (active.state === "false") continue;
+      const value = modifier.expression.value;
+      if (value !== "true" && value !== "false")
+        return { state: "unknown", code: "INVALID_HIDDEN_MODIFIER_VALUE" };
+      const parsed = value === "true";
+      if (activeValue !== null && activeValue !== parsed)
+        return { state: "unknown", code: "CONFLICTING_HIDDEN_MODIFIERS" };
+      activeValue = parsed;
+    }
+    if (activeValue !== null) hidden = activeValue;
+    return { state: "known", hidden };
   }
 
   function slotsFor(instance: RosterSelectionInstance): Slot[] {
@@ -540,6 +646,10 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     for (const id of entity?.slotIds ?? []) ids.add(id);
     for (const placement of placementsByOwner.get(instance.definitionId) ?? []) {
       if (!placement.definitionId) continue;
+      const materialized = (children.get(instance.id) ?? []).some(
+        (child) => child.placementId === placement.id,
+      );
+      if (materialized) continue;
       for (const id of catalog.entities[placement.definitionId]?.slotIds ?? []) ids.add(id);
     }
     return [...ids]
@@ -599,6 +709,9 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           readonly maximum: DecimalValue | null;
         }
       | { readonly state: "unknown"; readonly code: string },
+    visibility:
+      | { readonly state: "known"; readonly hidden: boolean }
+      | { readonly state: "unknown"; readonly code: string },
   ): void {
     const selectedCount = selectedChildren.reduce((sum, child) => sum + child.quantity, 0);
     for (const placementId of [...slot.optionPlacementIds].sort()) {
@@ -606,6 +719,16 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       if (!placement) continue;
       const reasons = new Set<string>();
       let state: PlacementAvailability["state"] = "available";
+      if (visibility.state === "unknown") {
+        state = "indeterminate";
+        reasons.add(visibility.code);
+      } else if (visibility.hidden) {
+        state = "unavailable";
+        reasons.add("SLOT_HIDDEN");
+      } else if (slot.helper) {
+        state = "unavailable";
+        reasons.add("HELPER_SLOT");
+      }
       const target = placement.definitionId ? catalog.entities[placement.definitionId] : undefined;
       const conditionIds = [
         ...new Set([...placement.overlay.conditionIds, ...(target?.conditionIds ?? [])]),
@@ -614,7 +737,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       if (enabled.state === "false") {
         state = "unavailable";
         reasons.add("CONDITION_NOT_MET");
-      } else if (enabled.state === "unknown") {
+      } else if (enabled.state === "unknown" && state === "available") {
         state = "indeterminate";
         reasons.add(enabled.code);
       }
@@ -623,15 +746,19 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       );
       const alreadySelected = selectedByPlacement.length > 0;
       if (bounds.state === "unknown") {
-        state = "indeterminate";
-        reasons.add(bounds.code);
-      } else if (
-        bounds.maximum &&
-        compareDecimal(parseDecimal(String(selectedCount))!, bounds.maximum) >= 0 &&
-        !alreadySelected
-      ) {
-        state = "unavailable";
-        reasons.add("SLOT_MAX_REACHED");
+        if (state === "available") {
+          state = "indeterminate";
+          reasons.add(bounds.code);
+        }
+      } else {
+        if (
+          bounds.maximum &&
+          compareDecimal(parseDecimal(String(selectedCount))!, bounds.maximum) >= 0 &&
+          !alreadySelected
+        ) {
+          state = "unavailable";
+          reasons.add("SLOT_MAX_REACHED");
+        }
       }
       for (const constraintId of [...placement.overlay.constraintIds].sort()) {
         const result = evaluateConstraint(constraintId, owner, slot.id, true);
@@ -714,6 +841,10 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       return compareDecimal(metric.value, zeroDecimal()) > 0
         ? { state: "true" }
         : { state: "false" };
+    if (entity.expression.operator === "notInstanceOf")
+      return compareDecimal(metric.value, zeroDecimal()) === 0
+        ? { state: "true" }
+        : { state: "false" };
     const expected = entity.expression.value ? parseDecimal(entity.expression.value) : null;
     if (!expected) return { state: "unknown", code: "INVALID_CONDITION_VALUE" };
     const compared = compareDecimal(metric.value, expected);
@@ -722,6 +853,8 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
         return compared >= 0 ? { state: "true" } : { state: "false" };
       case "atMost":
         return compared <= 0 ? { state: "true" } : { state: "false" };
+      case "lessThan":
+        return compared < 0 ? { state: "true" } : { state: "false" };
       case "equalTo":
         return compared === 0 ? { state: "true" } : { state: "false" };
       case "notEqualTo":
@@ -738,6 +871,12 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     if (!expression.evaluable) return { state: "unknown", code: "UNEVALUABLE_EXPRESSION" };
     const population = scopePopulation(expression.scope, instance);
     if (population.state === "unknown") return population;
+    const populationInstances =
+      expression.flags["includeChildSelections"] === "true"
+        ? uniqueInstances(
+            population.instances.flatMap((candidate) => descendantsIncluding(candidate)),
+          )
+        : population.instances;
     const fieldTarget = resolveEntityToken(expression.field);
     if (fieldTarget.state === "unknown") return fieldTarget;
     const targets =
@@ -748,7 +887,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           : [];
     if (expression.field === "forces") {
       const forceIds = new Set(
-        population.instances.flatMap((candidate) => {
+        populationInstances.flatMap((candidate) => {
           if (targets.length > 0 && !targets.some((target) => instanceMatches(candidate, target)))
             return [];
           const forceId = candidate.forceInstanceId ?? rootAncestor(candidate)?.id;
@@ -758,15 +897,21 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       return { state: "known", value: parseDecimal(String(forceIds.size))! };
     }
     if (expression.field === "cost" || fieldTarget.kind === "CostType")
-      return rawCostMetric(population.instances, targets[0] ?? null);
+      return rawCostMetric(populationInstances, targets[0] ?? null);
     if (expression.field === "name") return { state: "unknown", code: "UNSUPPORTED_NAME_FIELD" };
-    const count = population.instances.reduce((sum, candidate) => {
+    const count = populationInstances.reduce((sum, candidate) => {
       if (targets.length === 0) return sum + candidate.quantity;
       return targets.some((target) => instanceMatches(candidate, target))
         ? sum + candidate.quantity
         : sum;
     }, 0);
     return { state: "known", value: parseDecimal(String(count))! };
+  }
+
+  function uniqueInstances(
+    instances: readonly RosterSelectionInstance[],
+  ): RosterSelectionInstance[] {
+    return [...new Map(instances.map((candidate) => [candidate.id, candidate])).values()];
   }
 
   function scopePopulation(
@@ -784,6 +929,34 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           state: "known",
           instances: parentId ? (children.get(parentId) ?? []) : rootInstances(),
         };
+      }
+      case "ancestor": {
+        const ancestors: RosterSelectionInstance[] = [];
+        const visited = new Set<string>();
+        let parentId = instance.parentInstanceId;
+        while (parentId) {
+          if (visited.has(parentId)) return { state: "unknown", code: "INSTANCE_PARENT_CYCLE" };
+          visited.add(parentId);
+          const parent = roster.instances[parentId];
+          if (!parent) return { state: "unknown", code: "MISSING_ANCESTOR_SCOPE" };
+          ancestors.push(parent);
+          parentId = parent.parentInstanceId;
+        }
+        return { state: "known", instances: ancestors };
+      }
+      case "unit": {
+        let current: RosterSelectionInstance | undefined = instance;
+        const visited = new Set<string>();
+        while (current) {
+          if (visited.has(current.id)) return { state: "unknown", code: "INSTANCE_PARENT_CYCLE" };
+          visited.add(current.id);
+          if (catalog.entities[current.definitionId]?.kind === "Unit")
+            return { state: "known", instances: descendantsIncluding(current) };
+          current = current.parentInstanceId
+            ? roster.instances[current.parentInstanceId]
+            : undefined;
+        }
+        return { state: "unknown", code: "MISSING_UNIT_SCOPE" };
       }
       case "force": {
         const forceId = instance.forceInstanceId ?? rootAncestor(instance)?.id ?? null;
