@@ -320,6 +320,10 @@ describe("catalog-driven ship editor application boundary", () => {
       "Properties",
       "Systems",
     ]);
+    expect(preview.profileRules.weapons).toHaveLength(1);
+    expect(preview.profileRules.weapons[0]?.id).toBe(
+      entityByLabel(fixture.catalog, "Fore Battery").id,
+    );
     expect(preview.profileRules.rules.map((rule) => rule.label)).toEqual(["Torrent", "Submerged"]);
 
     let snapshot = materialize(fixture);
@@ -396,11 +400,22 @@ describe("catalog-driven ship editor application boundary", () => {
         "saved-local",
       ),
     );
+    const repeatedRows = configured.profileRules.weapons.filter(
+      (weapon) => weapon.weapon === "Heavy Battery",
+    );
+    expect(repeatedRows.map((weapon) => weapon.provenance)).toEqual(["PSA", "FPS 1"]);
+    expect(new Set(repeatedRows.map((weapon) => weapon.id)).size).toBe(2);
     expect(
-      configured.profileRules.weapons
-        .filter((weapon) => weapon.weapon === "Heavy Battery")
-        .map((weapon) => weapon.provenance),
-    ).toEqual(["PSA", "FPS 1"]);
+      ready(
+        projectShipEditor(
+          snapshot,
+          catalog,
+          fixture.unit.id,
+          fixture.unit.definitionId,
+          "saved-local",
+        ),
+      ).profileRules.weapons.filter((weapon) => weapon.weapon === "Heavy Battery"),
+    ).toEqual(repeatedRows);
   });
 
   it("diagnoses unknown slot provenance instead of guessing it from the label", () => {

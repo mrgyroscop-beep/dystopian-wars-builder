@@ -61,6 +61,7 @@ interface SourceDefinition {
   readonly entity: DomainEntity;
   readonly instance: RosterSelectionInstance | null;
   readonly provenance: ProfileSlotRole | null;
+  readonly configured: boolean;
 }
 
 const emptyPresentation: SafePresentation = {
@@ -84,6 +85,7 @@ export function projectShipProfileRules(
     diagnostics,
   ).map((source) => ({
     ...source,
+    configured: true,
     provenance: profileProvenance(catalog, source.instance, diagnostics),
   }));
   const effectiveSources = [...baseSources, ...configuredSources];
@@ -159,7 +161,7 @@ function definitions(
 ): SourceDefinition[] {
   return instances.flatMap((instance) => {
     const entity = catalog.entities[instance.definitionId];
-    if (entity) return [{ entity, instance, provenance: null }];
+    if (entity) return [{ entity, instance, provenance: null, configured: false }];
     diagnostics.push({
       code: "PROFILE_DEFINITION_MISSING",
       message: `Определение ${instance.definitionId} отсутствует в каталоге.`,
@@ -275,7 +277,10 @@ function projectWeapon(
   );
   const value = (name: string) => fields.get(name.toLocaleLowerCase("en")) ?? "—";
   const row = {
-    id: source.entity.id,
+    id:
+      source.configured && source.instance
+        ? `${source.entity.id}:occurrence:${source.instance.id}`
+        : source.entity.id,
     weapon: value("Weapon") === "—" ? source.entity.label.plainText : value("Weapon"),
     arc: value("Arc"),
     close: value("Close"),

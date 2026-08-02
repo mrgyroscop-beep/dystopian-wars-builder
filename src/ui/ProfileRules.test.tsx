@@ -3,9 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ShipProfileRulesReadModel } from "../application/rosters/profile-rules";
-import { RuleSheet, RulesPanel, SafeStructuredText } from "./ProfileRules";
+import { ProfilePanel, RuleSheet, RulesPanel, SafeStructuredText } from "./ProfileRules";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("profile and rules components", () => {
   it("renders only the safe AST allowlist and fails hostile structures closed", () => {
@@ -60,7 +63,51 @@ describe("profile and rules components", () => {
     expect(screen.queryByRole("dialog", { name: "Глоссарий" })).not.toBeInTheDocument();
     expect(source).toHaveFocus();
   });
+
+  it("renders repeated configured weapons as unique table rows and cards without key warnings", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    render(<ProfilePanel model={modelWithRepeatedWeapons()} />);
+
+    const rows = screen.getAllByRole("row", { name: /Heavy Battery/u });
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("PSA");
+    expect(rows[1]).toHaveTextContent("FPS 1");
+    const cards = document.querySelectorAll(".weapon-card");
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveTextContent("PSA");
+    expect(cards[1]).toHaveTextContent("FPS 1");
+    expect(consoleError).not.toHaveBeenCalled();
+  });
 });
+
+function modelWithRepeatedWeapons(): ShipProfileRulesReadModel {
+  const base = model();
+  return {
+    ...base,
+    weapons: [
+      {
+        id: "weapon-heavy:occurrence:psa-instance",
+        weapon: "Heavy Battery",
+        arc: "F",
+        close: "3",
+        standard: "2",
+        extreme: "1",
+        qualities: "Torrent",
+        provenance: "PSA",
+      },
+      {
+        id: "weapon-heavy:occurrence:fps-instance",
+        weapon: "Heavy Battery",
+        arc: "F",
+        close: "3",
+        standard: "2",
+        extreme: "1",
+        qualities: "Torrent",
+        provenance: "FPS 1",
+      },
+    ],
+  };
+}
 
 function model(): ShipProfileRulesReadModel {
   return {
