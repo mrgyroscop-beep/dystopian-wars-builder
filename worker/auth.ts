@@ -1,77 +1,39 @@
-import {
-  generateAuthenticationOptions,
-  generateRegistrationOptions,
-  verifyAuthenticationResponse,
-  verifyRegistrationResponse,
-  type AuthenticationResponseJSON,
-  type AuthenticatorTransportFuture,
-  type RegistrationResponseJSON,
-} from "@simplewebauthn/server";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
 
 import { HttpError, randomToken, readBoundedJson, sha256 } from "./http";
+import { hashPassword, verifyPassword } from "./password";
 
 const SESSION_COOKIE = "dwb_session";
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
-const CHALLENGE_TTL_SECONDS = 5 * 60;
-const rpName = "Dystopian Wars Fleet Builder";
-const base64Url = z
+const emailSchema = z
   .string()
-  .regex(/^[A-Za-z0-9_-]+$/u)
-  .max(4096);
-const transports = z.array(
-  z.enum(["ble", "cable", "hybrid", "internal", "nfc", "smart-card", "usb"]),
-);
-const registrationResponseSchema = z
+  .trim()
+  .toLowerCase()
+  .max(254)
+  .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/u, "Введите корректный email.");
+const passwordSchema = z.string().min(8).max(128);
+const registrationSchema = z
   .object({
-    id: base64Url,
-    rawId: base64Url,
-    response: z
-      .object({
-        clientDataJSON: base64Url,
-        attestationObject: base64Url,
-        authenticatorData: base64Url.optional(),
-        transports: transports.optional(),
-        publicKeyAlgorithm: z.number().int().optional(),
-        publicKey: base64Url.optional(),
-      })
-      .strict(),
-    authenticatorAttachment: z.enum(["cross-platform", "platform"]).optional(),
-    clientExtensionResults: z.record(z.string(), z.unknown()),
-    type: z.literal("public-key"),
+    email: emailSchema,
+    password: passwordSchema,
+    displayName: z.string().trim().min(1).max(80),
   })
   .strict();
-const authenticationResponseSchema = z
-  .object({
-    id: base64Url,
-    rawId: base64Url,
-    response: z
-      .object({
-        clientDataJSON: base64Url,
-        authenticatorData: base64Url,
-        signature: base64Url,
-        userHandle: base64Url.optional(),
-      })
-      .strict(),
-    authenticatorAttachment: z.enum(["cross-platform", "platform"]).optional(),
-    clientExtensionResults: z.record(z.string(), z.unknown()),
-    type: z.literal("public-key"),
-  })
-  .strict();
+const loginSchema = z.object({ email: emailSchema, password: passwordSchema }).strict();
+const dummyPassword = {
+  salt: "AAAAAAAAAAAAAAAAAAAAAA",
+  hash: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  iterations: 600_000,
+};
 
-interface ChallengeRow {
-  challenge: string;
-  payload: string;
-}
-
-interface PasskeyRow {
-  credential_id: string;
+interface PasswordCredentialRow {
   user_id: string;
-  public_key: ArrayBuffer;
-  counter: number;
-  transports: string;
+  display_name: string;
+  password_salt: string;
+  password_hash: string;
+  password_iterations: number;
 }
 
 export interface SessionUser {
@@ -87,171 +49,76 @@ authRoutes.get("/session", async (context) => {
   return context.json({ user });
 });
 
-authRoutes.post("/passkey/register/options", async (context) => {
+authRoutes.post("/register", async (context) => {
   await enforceRateLimit(context, "register", 5, 10 * 60);
-  const input = z
-    .object({ displayName: z.string().trim().min(1).max(80) })
-    .strict()
-    .parse(await readBoundedJson(context));
-  const userId = crypto.randomUUID();
-  const options = await generateRegistrationOptions({
-    rpName,
-    rpID: new URL(context.req.url).hostname,
-    userName: input.displayName,
-    userDisplayName: input.displayName,
-    userID: Uint8Array.from(new TextEncoder().encode(userId)),
-    attestationType: "none",
-    authenticatorSelection: { residentKey: "required", userVerification: "required" },
-    supportedAlgorithmIDs: [-7, -257],
-  });
-  const transactionId = randomToken();
-  const now = unixTime();
-  await context.env.DB.prepare(
-    "INSERT INTO auth_challenges (transaction_hash, purpose, challenge, payload, expires_at, created_at) VALUES (?, 'register', ?, ?, ?, ?)",
+  const input = registrationSchema.parse(await readBoundedJson(context));
+  const existing = await context.env.DB.prepare(
+    "SELECT user_id FROM password_credentials WHERE email = ?",
   )
-    .bind(
-      await sha256(transactionId),
-      options.challenge,
-      JSON.stringify({ userId, displayName: input.displayName, webauthnUserId: options.user.id }),
-      now + CHALLENGE_TTL_SECONDS,
-      now,
-    )
-    .run();
-  return context.json({ transactionId, options });
-});
+    .bind(input.email)
+    .first();
+  if (existing) throw new HttpError(409, "email_exists", "Аккаунт с таким email уже существует.");
 
-authRoutes.post("/passkey/register/verify", async (context) => {
-  const input = z
-    .object({ transactionId: base64Url, response: registrationResponseSchema })
-    .strict()
-    .parse(await readBoundedJson(context));
-  const transactionHash = await sha256(input.transactionId);
-  const response: unknown = input.response;
-  if (!isRegistrationResponse(response))
-    throw new HttpError(400, "invalid_passkey", "Passkey response is invalid.");
-  const challenge = await readChallenge(context.env.DB, transactionHash, "register");
-  await context.env.DB.prepare("DELETE FROM auth_challenges WHERE transaction_hash = ?")
-    .bind(transactionHash)
-    .run();
-  const payload = z
-    .object({
-      userId: z.string().uuid(),
-      displayName: z.string().min(1).max(80),
-      webauthnUserId: base64Url,
-    })
-    .strict()
-    .parse(JSON.parse(challenge.payload));
-  const verification = await verifyRegistrationResponse({
-    response,
-    expectedChallenge: challenge.challenge,
-    expectedOrigin: new URL(context.req.url).origin,
-    expectedRPID: new URL(context.req.url).hostname,
-    requireUserVerification: true,
-  });
-  if (!verification.verified || !verification.registrationInfo)
-    throw new HttpError(400, "invalid_passkey", "Passkey registration could not be verified.");
-
+  const id = crypto.randomUUID();
   const now = unixTime();
-  const session = await newSession(payload.userId, now);
-  const credential = verification.registrationInfo.credential;
+  const password = await hashPassword(input.password);
+  const session = await newSession(id, now);
   await context.env.DB.batch([
     context.env.DB.prepare(
       "INSERT INTO users (id, display_name, webauthn_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-    ).bind(payload.userId, payload.displayName, payload.webauthnUserId, now, now),
+    ).bind(id, input.displayName, `password:${id}`, now, now),
     context.env.DB.prepare(
-      "INSERT INTO passkeys (credential_id, user_id, public_key, counter, device_type, backed_up, transports, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    ).bind(
-      credential.id,
-      payload.userId,
-      credential.publicKey,
-      credential.counter,
-      verification.registrationInfo.credentialDeviceType,
-      verification.registrationInfo.credentialBackedUp ? 1 : 0,
-      JSON.stringify(credential.transports ?? []),
-      now,
-    ),
+      "INSERT INTO password_credentials (user_id, email, password_salt, password_hash, password_iterations, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    ).bind(id, input.email, password.salt, password.hash, password.iterations, now, now),
     context.env.DB.prepare(
       "INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
-    ).bind(session.hash, payload.userId, session.expiresAt, now),
-    context.env.DB.prepare("DELETE FROM auth_challenges WHERE transaction_hash = ?").bind(
-      transactionHash,
-    ),
+    ).bind(session.hash, id, session.expiresAt, now),
   ]);
   writeSessionCookie(context, session.token);
-  return context.json({ user: { id: payload.userId, displayName: payload.displayName } }, 201);
+  return context.json({ user: { id, displayName: input.displayName } }, 201);
 });
 
-authRoutes.post("/passkey/login/options", async (context) => {
-  await enforceRateLimit(context, "login", 20, 10 * 60);
-  const options = await generateAuthenticationOptions({
-    rpID: new URL(context.req.url).hostname,
-    userVerification: "required",
-  });
-  const transactionId = randomToken();
-  const now = unixTime();
-  await context.env.DB.prepare(
-    "INSERT INTO auth_challenges (transaction_hash, purpose, challenge, payload, expires_at, created_at) VALUES (?, 'login', ?, '{}', ?, ?)",
+authRoutes.post("/login", async (context) => {
+  const input = loginSchema.parse(await readBoundedJson(context));
+  const rateLimitBucket = await enforceRateLimit(
+    context,
+    `login:${await sha256(input.email)}`,
+    8,
+    15 * 60,
+  );
+  const credential = await context.env.DB.prepare(
+    "SELECT pc.user_id, u.display_name, pc.password_salt, pc.password_hash, pc.password_iterations FROM password_credentials pc JOIN users u ON u.id = pc.user_id WHERE pc.email = ?",
   )
-    .bind(await sha256(transactionId), options.challenge, now + CHALLENGE_TTL_SECONDS, now)
-    .run();
-  return context.json({ transactionId, options });
-});
+    .bind(input.email)
+    .first<PasswordCredentialRow>();
+  const candidate = credential ?? {
+    user_id: "missing",
+    display_name: "missing",
+    password_salt: dummyPassword.salt,
+    password_hash: dummyPassword.hash,
+    password_iterations: dummyPassword.iterations,
+  };
+  const valid = await verifyPassword(
+    input.password,
+    candidate.password_salt,
+    candidate.password_hash,
+    candidate.password_iterations,
+  );
+  if (!credential || !valid)
+    throw new HttpError(401, "invalid_credentials", "Неверный email или пароль.");
 
-authRoutes.post("/passkey/login/verify", async (context) => {
-  const input = z
-    .object({ transactionId: base64Url, response: authenticationResponseSchema })
-    .strict()
-    .parse(await readBoundedJson(context));
-  const transactionHash = await sha256(input.transactionId);
-  const response: unknown = input.response;
-  if (!isAuthenticationResponse(response))
-    throw new HttpError(400, "invalid_passkey", "Passkey response is invalid.");
-  const challenge = await readChallenge(context.env.DB, transactionHash, "login");
-  await context.env.DB.prepare("DELETE FROM auth_challenges WHERE transaction_hash = ?")
-    .bind(transactionHash)
-    .run();
-  const passkey = await context.env.DB.prepare(
-    "SELECT credential_id, user_id, public_key, counter, transports FROM passkeys WHERE credential_id = ?",
-  )
-    .bind(input.response.id)
-    .first<PasskeyRow>();
-  if (!passkey) throw new HttpError(401, "invalid_passkey", "Passkey is not registered.");
-  const parsedTransports = transports.parse(JSON.parse(passkey.transports));
-  const verification = await verifyAuthenticationResponse({
-    response,
-    expectedChallenge: challenge.challenge,
-    expectedOrigin: new URL(context.req.url).origin,
-    expectedRPID: new URL(context.req.url).hostname,
-    requireUserVerification: true,
-    credential: {
-      id: passkey.credential_id,
-      publicKey: new Uint8Array(passkey.public_key),
-      counter: passkey.counter,
-      transports: parsedTransports satisfies AuthenticatorTransportFuture[],
-    },
-  });
-  if (!verification.verified)
-    throw new HttpError(401, "invalid_passkey", "Passkey authentication failed.");
   const now = unixTime();
-  const session = await newSession(passkey.user_id, now);
+  const session = await newSession(credential.user_id, now);
   await context.env.DB.batch([
-    context.env.DB.prepare("UPDATE passkeys SET counter = ? WHERE credential_id = ?").bind(
-      verification.authenticationInfo.newCounter,
-      passkey.credential_id,
-    ),
     context.env.DB.prepare(
       "INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
-    ).bind(session.hash, passkey.user_id, session.expiresAt, now),
-    context.env.DB.prepare("DELETE FROM auth_challenges WHERE transaction_hash = ?").bind(
-      transactionHash,
-    ),
+    ).bind(session.hash, credential.user_id, session.expiresAt, now),
+    context.env.DB.prepare("DELETE FROM rate_limits WHERE bucket = ?").bind(rateLimitBucket),
   ]);
-  const user = await context.env.DB.prepare("SELECT id, display_name FROM users WHERE id = ?")
-    .bind(passkey.user_id)
-    .first<{ id: string; display_name: string }>();
-  if (!user) throw new HttpError(401, "invalid_session", "Account no longer exists.");
   writeSessionCookie(context, session.token);
-  return context.json({ user: { id: user.id, displayName: user.display_name } });
+  return context.json({
+    user: { id: credential.user_id, displayName: credential.display_name },
+  });
 });
 
 authRoutes.post("/logout", async (context) => {
@@ -270,7 +137,7 @@ authRoutes.delete("/account", async (context) => {
     context.env.DB.prepare("DELETE FROM roster_revisions WHERE user_id = ?").bind(user.id),
     context.env.DB.prepare("DELETE FROM rosters WHERE user_id = ?").bind(user.id),
     context.env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id),
-    context.env.DB.prepare("DELETE FROM passkeys WHERE user_id = ?").bind(user.id),
+    context.env.DB.prepare("DELETE FROM password_credentials WHERE user_id = ?").bind(user.id),
     context.env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id),
   ]);
   clearSessionCookie(context);
@@ -294,23 +161,8 @@ export async function requireSessionUser(
   context: Context<{ Bindings: Env }>,
 ): Promise<SessionUser> {
   const user = await getSessionUser(context);
-  if (!user) throw new HttpError(401, "authentication_required", "Sign in is required.");
+  if (!user) throw new HttpError(401, "authentication_required", "Сначала войдите в аккаунт.");
   return user;
-}
-
-async function readChallenge(
-  database: D1Database,
-  transactionHash: string,
-  purpose: "register" | "login",
-): Promise<ChallengeRow> {
-  const row = await database
-    .prepare(
-      "SELECT challenge, payload FROM auth_challenges WHERE transaction_hash = ? AND purpose = ? AND expires_at > ?",
-    )
-    .bind(transactionHash, purpose, unixTime())
-    .first<ChallengeRow>();
-  if (!row) throw new HttpError(401, "expired_challenge", "Authentication request expired.");
-  return row;
 }
 
 async function enforceRateLimit(
@@ -318,17 +170,18 @@ async function enforceRateLimit(
   action: string,
   limit: number,
   windowSeconds: number,
-): Promise<void> {
+): Promise<string> {
   const address = context.req.header("cf-connecting-ip") ?? "local";
   const bucket = `${action}:${await sha256(address)}`;
   const now = unixTime();
   const row = await context.env.DB.prepare(
-    "INSERT INTO rate_limits (bucket, window_started_at, request_count) VALUES (?, ?, 1) ON CONFLICT(bucket) DO UPDATE SET window_started_at = CASE WHEN window_started_at <= ? THEN excluded.window_started_at ELSE window_started_at END, request_count = CASE WHEN window_started_at <= ? THEN 1 ELSE request_count + 1 END RETURNING window_started_at, request_count",
+    "INSERT INTO rate_limits (bucket, window_started_at, request_count) VALUES (?, ?, 1) ON CONFLICT(bucket) DO UPDATE SET window_started_at = CASE WHEN window_started_at <= ? THEN excluded.window_started_at ELSE window_started_at END, request_count = CASE WHEN window_started_at <= ? THEN 1 ELSE request_count + 1 END RETURNING request_count",
   )
     .bind(bucket, now, now - windowSeconds, now - windowSeconds)
-    .first<{ window_started_at: number; request_count: number }>();
+    .first<{ request_count: number }>();
   if (!row || row.request_count > limit)
-    throw new HttpError(429, "rate_limited", "Too many authentication attempts.");
+    throw new HttpError(429, "rate_limited", "Слишком много попыток. Повторите позже.");
+  return bucket;
 }
 
 async function newSession(userId: string, now: number) {
@@ -357,12 +210,4 @@ function clearSessionCookie(context: Context): void {
 
 function unixTime(): number {
   return Math.floor(Date.now() / 1000);
-}
-
-function isRegistrationResponse(value: unknown): value is RegistrationResponseJSON {
-  return registrationResponseSchema.safeParse(value).success;
-}
-
-function isAuthenticationResponse(value: unknown): value is AuthenticationResponseJSON {
-  return authenticationResponseSchema.safeParse(value).success;
 }

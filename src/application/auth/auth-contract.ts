@@ -6,8 +6,8 @@ export interface AuthUser {
 export interface AuthGateway {
   readonly contractVersion: 1;
   session(signal?: AbortSignal): Promise<AuthUser | null>;
-  register(displayName: string): Promise<AuthUser>;
-  login(): Promise<AuthUser>;
+  register(email: string, password: string, displayName: string): Promise<AuthUser>;
+  login(email: string, password: string): Promise<AuthUser>;
   logout(): Promise<void>;
   deleteAccount(): Promise<void>;
 }

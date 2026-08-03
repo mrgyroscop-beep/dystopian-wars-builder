@@ -363,6 +363,34 @@ h3 {
   background: var(--error);
 }
 
+.auth-mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.auth-mode-switch [aria-pressed="true"] {
+  color: #ffffff;
+  background: var(--navy);
+  border-color: var(--navy);
+}
+
+.auth-form {
+  display: grid;
+  width: min(30rem, 100%);
+  gap: 0.85rem;
+}
+
+.auth-form label small {
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
+.auth-form > .button {
+  justify-self: start;
+}
+
 .panel label {
   display: grid;
   max-width: 30rem;

@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 
 import { createHttpHealthGateway } from "../infrastructure/health/http-health-gateway";
-import { createHttpPasskeyAuthGateway } from "../infrastructure/auth/http-passkey-auth-gateway";
+import { createHttpPasswordAuthGateway } from "../infrastructure/auth/http-password-auth-gateway";
 import { createDemonstrationRosterSetupGateway } from "../infrastructure/catalog/demonstration-roster-setup";
 import {
   createDemonstrationFleetCatalogGateway,
@@ -21,7 +21,7 @@ const rosterRepository = createSynchronizingRosterRepository(
 const createId = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const router = createAppRouter({
-  authGateway: createHttpPasskeyAuthGateway(),
+  authGateway: createHttpPasswordAuthGateway(),
   healthGateway: createHttpHealthGateway(),
   rosterCreation: {
     setupGateway: createDemonstrationRosterSetupGateway(),

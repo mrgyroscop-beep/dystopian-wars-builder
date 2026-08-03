@@ -24,9 +24,8 @@ beforeEach(async () => {
     env.DB.prepare("DELETE FROM roster_revisions"),
     env.DB.prepare("DELETE FROM rosters"),
     env.DB.prepare("DELETE FROM sessions"),
-    env.DB.prepare("DELETE FROM passkeys"),
+    env.DB.prepare("DELETE FROM password_credentials"),
     env.DB.prepare("DELETE FROM users"),
-    env.DB.prepare("DELETE FROM auth_challenges"),
     env.DB.prepare("DELETE FROM rate_limits"),
   ]);
 });
@@ -68,26 +67,52 @@ describe("Worker API", () => {
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
   });
 
-  it("generates a rate-limited passkey registration challenge", async () => {
-    const response = await exports.default.fetch(
-      "http://example.com/api/auth/passkey/register/options",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Origin: "http://example.com" },
-        body: JSON.stringify({ displayName: "Admiral" }),
-      },
-    );
-    const payload = await response.json<{
-      transactionId: string;
-      options: { challenge: string };
-    }>();
+  it("registers and signs in with email and password", async () => {
+    const headers = { "Content-Type": "application/json", Origin: "http://example.com" };
+    const registration = await exports.default.fetch("http://example.com/api/auth/register", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        displayName: "Admiral",
+        email: "Admiral@Example.com",
+        password: "correct-horse-battery-staple",
+      }),
+    });
+    const login = await exports.default.fetch("http://example.com/api/auth/login", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        email: "admiral@example.com",
+        password: "correct-horse-battery-staple",
+      }),
+    });
+    const sessionCookie = login.headers.get("set-cookie")?.split(";", 1)[0] ?? "";
+    const session = await exports.default.fetch("http://example.com/api/auth/session", {
+      headers: { Cookie: sessionCookie },
+    });
 
-    expect(response.status).toBe(200);
-    expect(payload.transactionId).toMatch(/^[A-Za-z0-9_-]+$/u);
-    expect(payload.options.challenge).toMatch(/^[A-Za-z0-9_-]+$/u);
-    expect(
-      await env.DB.prepare("SELECT COUNT(*) AS count FROM auth_challenges").first<number>("count"),
-    ).toBe(1);
+    expect(registration.status).toBe(201);
+    expect(login.status).toBe(200);
+    expect(sessionCookie).toMatch(/^dwb_session=/u);
+    await expect(session.json()).resolves.toMatchObject({
+      user: { displayName: "Admiral" },
+    });
+    await expect(
+      env.DB.prepare("SELECT email FROM password_credentials").first<string>("email"),
+    ).resolves.toBe("admiral@example.com");
+  });
+
+  it("uses one generic error for invalid credentials", async () => {
+    const response = await exports.default.fetch("http://example.com/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://example.com" },
+      body: JSON.stringify({ email: "missing@example.com", password: "wrong-password" }),
+    });
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      error: { code: "invalid_credentials", message: "Неверный email или пароль." },
+    });
   });
 
   it("isolates rosters by user and reports optimistic concurrency conflicts", async () => {

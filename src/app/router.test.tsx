@@ -154,6 +154,9 @@ describe("application routes", () => {
 
     expect(await screen.findByText("test-version")).toBeVisible();
     expect(screen.getByText("test-catalog")).toBeVisible();
+    expect(screen.getByLabelText("Email")).toHaveAttribute("type", "email");
+    expect(screen.getByLabelText(/^Пароль/u)).toHaveAttribute("type", "password");
+    expect(screen.getByRole("button", { name: "Создать аккаунт" })).toBeVisible();
     expect(readHealth).toHaveBeenCalledOnce();
   });
 
