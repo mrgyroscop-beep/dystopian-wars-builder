@@ -29,9 +29,9 @@ would require account recovery and could silently overwrite concurrent edits.
 - Server writes require the last known roster version. A version mismatch
   returns a conflict instead of overwriting data; the client keeps the local
   edit as a separate copy and adopts the current server version.
-- D1 migrations run immediately before the Worker deploy. The production D1
-  resource and binding are created only through the controlled infrastructure
-  change.
+- D1 migrations are applied as a controlled step before the corresponding
+  release. The normal direct-main workflow stays limited to build, deploy and
+  one production smoke.
 
 ## Consequences
 
