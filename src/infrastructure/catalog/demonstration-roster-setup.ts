@@ -22,6 +22,13 @@ const demonstrationCatalog = {
             { id: "demo-line", label: "Line Element", minimum: 1 },
           ],
         },
+        {
+          id: "demo-empire-line-squadron",
+          factionId: "demo-empire",
+          label: "Line Squadron",
+          summary: "Линейная учебная эскадра без обязательного флагманского элемента.",
+          requiredElements: [{ id: "demo-line", label: "Line Element", minimum: 1 }],
+        },
       ],
     },
     {

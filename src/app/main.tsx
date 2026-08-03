@@ -9,6 +9,7 @@ import {
   createDemonstrationFleetCatalogGateway,
   createDemonstrationWorkspaceRoster,
 } from "../infrastructure/catalog/demonstration-fleet-catalog";
+import { createDemonstrationRosterSetupGateway } from "../infrastructure/catalog/demonstration-roster-setup";
 import { createPublishedCatalogClient } from "../infrastructure/catalog/published-catalog";
 import { createBrowserRosterRepository } from "../infrastructure/rosters/browser-roster-repository";
 import { createSynchronizingRosterRepository } from "../infrastructure/rosters/synchronizing-roster-repository";
@@ -23,6 +24,7 @@ const createId = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const publishedCatalog = createPublishedCatalogClient();
 const demonstrationCatalog = createDemonstrationFleetCatalogGateway();
+const demonstrationSetup = createDemonstrationRosterSetupGateway();
 const router = createAppRouter({
   authGateway: createHttpPasswordAuthGateway(),
   feedbackGateway: createHttpFeedbackGateway(),
@@ -39,6 +41,13 @@ const router = createAppRouter({
     now,
   },
   rosterWorkspace: {
+    setupGateway: {
+      contractVersion: 1,
+      load: (contentVersion) =>
+        contentVersion === "demonstration-1"
+          ? demonstrationSetup.load(contentVersion)
+          : publishedCatalog.setupGateway.load(contentVersion),
+    },
     catalogGateway: {
       contractVersion: 1,
       load: (contentVersion, factionId) =>

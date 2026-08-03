@@ -8,7 +8,13 @@ import {
   type RosterSnapshot,
 } from "../../domain/roster";
 
-import type { RosterRepository, StoredRoster } from "./create-roster";
+import type {
+  BattlefleetSetupOption,
+  RosterRepository,
+  RosterSetupCatalog,
+  RosterSetupGateway,
+  StoredRoster,
+} from "./create-roster";
 import {
   applyShipEditorCommand,
   isShipEditorDefinition,
@@ -89,7 +95,15 @@ export interface RosterWorkspaceReadModel {
     readonly id: string;
     readonly name: string;
     readonly faction: string;
+    readonly battlefleetId: string;
     readonly battlefleet: string;
+    readonly battlefleets: readonly {
+      readonly id: string;
+      readonly label: string;
+      readonly summary: string;
+      readonly compatibleShipCount: number;
+      readonly removedShipCount: number;
+    }[];
   };
   readonly summary: {
     readonly points: string;
@@ -118,6 +132,7 @@ export type RosterWorkspaceCommand =
     }
   | { readonly type: "duplicate"; readonly instanceId: string }
   | { readonly type: "delete"; readonly instanceId: string }
+  | { readonly type: "change-battlefleet"; readonly battlefleetId: string }
   | ShipEditorCommand;
 
 export interface RosterCatalogGateway {
@@ -127,6 +142,7 @@ export interface RosterCatalogGateway {
 
 export interface RosterWorkspaceDependencies {
   readonly catalogGateway: RosterCatalogGateway;
+  readonly setupGateway: RosterSetupGateway;
   readonly rosterRepository: RosterRepository;
   readonly createId: () => string;
   readonly now: () => string;
@@ -144,11 +160,20 @@ export interface RosterWorkspaceSession {
 export interface RosterWorkspaceExecution {
   readonly model: RosterWorkspaceReadModel;
   readonly createdInstanceId: string | null;
+  readonly battlefleetChange: {
+    readonly preservedShipCount: number;
+    readonly removedShipCount: number;
+  } | null;
 }
 
 export class WorkspaceCommandError extends Error {
   constructor(
-    readonly code: "UNAVAILABLE" | "TARGET_REQUIRED" | "UNKNOWN_TARGET" | "UNKNOWN_INSTANCE",
+    readonly code:
+      | "UNAVAILABLE"
+      | "TARGET_REQUIRED"
+      | "UNKNOWN_TARGET"
+      | "UNKNOWN_INSTANCE"
+      | "UNKNOWN_BATTLEFLEET",
     message: string,
   ) {
     super(message);
@@ -163,11 +188,11 @@ export async function openRosterWorkspace(
   const stored =
     (await dependencies.rosterRepository.read(id)) ?? dependencies.fallbackRoster?.(id);
   if (!stored) return null;
-  const catalog = await dependencies.catalogGateway.load(
-    stored.roster.catalogContentVersion,
-    stored.faction.id,
-  );
-  const session = new WorkspaceSession(stored, catalog, dependencies);
+  const [catalog, setup] = await Promise.all([
+    dependencies.catalogGateway.load(stored.roster.catalogContentVersion, stored.faction.id),
+    dependencies.setupGateway.load(stored.roster.catalogContentVersion),
+  ]);
+  const session = new WorkspaceSession(stored, catalog, setup, dependencies);
   await session.prepare();
   return session;
 }
@@ -196,10 +221,11 @@ class WorkspaceSession implements RosterWorkspaceSession {
   constructor(
     stored: StoredRoster,
     private readonly catalog: DomainCatalog,
+    private readonly setup: RosterSetupCatalog,
     private readonly dependencies: RosterWorkspaceDependencies,
   ) {
     this.current = stored;
-    this.currentModel = projectWorkspace(stored, catalog, this.persistence);
+    this.currentModel = projectWorkspace(stored, catalog, setup, this.persistence);
   }
 
   get model(): RosterWorkspaceReadModel {
@@ -232,6 +258,31 @@ class WorkspaceSession implements RosterWorkspaceSession {
   }
 
   async executeDetailed(command: RosterWorkspaceCommand): Promise<RosterWorkspaceExecution> {
+    if (command.type === "change-battlefleet") {
+      const battlefleet = battlefleetsFor(this.current, this.setup).find(
+        (candidate) => candidate.id === command.battlefleetId,
+      );
+      if (!battlefleet)
+        throw new WorkspaceCommandError(
+          "UNKNOWN_BATTLEFLEET",
+          "Battlefleet недоступен для выбранной фракции.",
+        );
+      const changed = changeBattlefleet(
+        this.current,
+        this.catalog,
+        battlefleet,
+        this.dependencies.createId,
+      );
+      const candidate = { ...changed.roster, updatedAt: this.dependencies.now() };
+      return {
+        model: await this.persist(candidate),
+        createdInstanceId: null,
+        battlefleetChange: {
+          preservedShipCount: changed.preservedShipCount,
+          removedShipCount: changed.removedShipCount,
+        },
+      };
+    }
     const result = applyCommand(this.current, this.catalog, command, this.dependencies.createId);
     const candidate: StoredRoster = {
       ...this.current,
@@ -241,35 +292,36 @@ class WorkspaceSession implements RosterWorkspaceSession {
     return {
       model: await this.persist(candidate),
       createdInstanceId: result.createdInstanceId,
+      battlefleetChange: null,
     };
   }
 
   async retrySave(): Promise<RosterWorkspaceReadModel> {
     this.persistence = "saving";
-    this.currentModel = projectWorkspace(this.current, this.catalog, this.persistence);
+    this.currentModel = projectWorkspace(this.current, this.catalog, this.setup, this.persistence);
     try {
       await this.dependencies.rosterRepository.save(this.current);
       this.persistence = "saved-local";
     } catch {
       this.persistence = "save-error";
     }
-    this.currentModel = projectWorkspace(this.current, this.catalog, this.persistence);
+    this.currentModel = projectWorkspace(this.current, this.catalog, this.setup, this.persistence);
     return this.currentModel;
   }
 
   private async persist(candidate: StoredRoster): Promise<RosterWorkspaceReadModel> {
     // The candidate is evaluated before persistence. A failed save never discards it.
-    projectWorkspace(candidate, this.catalog, "unsaved");
+    projectWorkspace(candidate, this.catalog, this.setup, "unsaved");
     this.current = candidate;
     this.persistence = "saving";
-    this.currentModel = projectWorkspace(candidate, this.catalog, this.persistence);
+    this.currentModel = projectWorkspace(candidate, this.catalog, this.setup, this.persistence);
     try {
       await this.dependencies.rosterRepository.save(candidate);
       this.persistence = "saved-local";
     } catch {
       this.persistence = "save-error";
     }
-    this.currentModel = projectWorkspace(candidate, this.catalog, this.persistence);
+    this.currentModel = projectWorkspace(candidate, this.catalog, this.setup, this.persistence);
     return this.currentModel;
   }
 }
@@ -320,6 +372,156 @@ function ensureRosterStructure(stored: StoredRoster, catalog: DomainCatalog): St
   return { ...stored, roster };
 }
 
+function battlefleetsFor(
+  stored: StoredRoster,
+  setup: RosterSetupCatalog,
+): readonly BattlefleetSetupOption[] {
+  const options =
+    setup.contentVersion === stored.roster.catalogContentVersion
+      ? setup.factions.find((candidate) => candidate.id === stored.faction.id)?.battlefleets
+      : null;
+  if (options?.length) return options;
+  return [
+    {
+      id: stored.battlefleet.id,
+      factionId: stored.faction.id,
+      label: stored.battlefleet.label,
+      summary: "Текущий Battlefleet сохранён в составе.",
+      requiredElements: stored.requiredElements,
+    },
+  ];
+}
+
+function changeBattlefleet(
+  stored: StoredRoster,
+  catalog: DomainCatalog,
+  battlefleet: BattlefleetSetupOption,
+  createId: () => string,
+): {
+  readonly roster: StoredRoster;
+  readonly preservedShipCount: number;
+  readonly removedShipCount: number;
+} {
+  if (battlefleet.id === stored.battlefleet.id)
+    return {
+      roster: stored,
+      preservedShipCount: shipRoots(stored, catalog).length,
+      removedShipCount: 0,
+    };
+
+  const previousInstances = stored.roster.instances;
+  const reserved = { ...previousInstances };
+  const instances: Record<string, RosterSelectionInstance> = {};
+  const rootId = freshInstanceId({ ...reserved, ...instances }, createId);
+  instances[rootId] = selection(rootId, battlefleet.id as EntityId, null, null, rootId);
+
+  const elementInstances = new Map<string, RosterSelectionInstance>();
+  for (const required of battlefleet.requiredElements) {
+    const placement = Object.values(catalog.placements)
+      .filter(
+        (candidate) =>
+          candidate.ownerId === battlefleet.id && candidate.definitionId === required.id,
+      )
+      .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id))[0];
+    if (!placement) continue;
+    const id = freshInstanceId({ ...reserved, ...instances }, createId);
+    const element = selection(id, required.id as EntityId, placement.id, rootId, rootId);
+    instances[id] = element;
+    elementInstances.set(required.id, element);
+  }
+
+  let preservedShipCount = 0;
+  let removedShipCount = 0;
+  for (const ship of shipRoots(stored, catalog)) {
+    const previousParent = ship.parentInstanceId ? previousInstances[ship.parentInstanceId] : null;
+    const placements = Object.values(catalog.placements)
+      .filter(
+        (candidate) =>
+          candidate.definitionId === ship.definitionId &&
+          candidate.resolved &&
+          !candidate.ambiguous &&
+          elementInstances.has(candidate.ownerId),
+      )
+      .sort((left, right) => {
+        const leftKeepsElement = left.ownerId === previousParent?.definitionId ? 0 : 1;
+        const rightKeepsElement = right.ownerId === previousParent?.definitionId ? 0 : 1;
+        return (
+          leftKeepsElement - rightKeepsElement ||
+          left.order - right.order ||
+          left.id.localeCompare(right.id)
+        );
+      });
+    const placement = placements[0];
+    const parent = placement ? elementInstances.get(placement.ownerId) : null;
+    if (!placement || !parent) {
+      removedShipCount += 1;
+      continue;
+    }
+    const subtree = descendantsIncluding(stored.roster, ship.id);
+    for (const id of subtree) {
+      const original = previousInstances[id];
+      if (!original) continue;
+      instances[id] =
+        original.id === ship.id
+          ? {
+              ...original,
+              placementId: placement.id,
+              parentInstanceId: parent.id,
+              forceInstanceId: rootId,
+            }
+          : { ...original, forceInstanceId: rootId };
+    }
+    preservedShipCount += 1;
+  }
+
+  const snapshot: RosterSnapshot = {
+    ...stored.roster,
+    rootInstanceIds: [rootId],
+    instances,
+  };
+  return {
+    roster: {
+      ...stored,
+      battlefleet: { id: battlefleet.id, label: battlefleet.label },
+      requiredElements: battlefleet.requiredElements.map((element) => ({ ...element })),
+      roster: snapshot,
+    },
+    preservedShipCount,
+    removedShipCount,
+  };
+}
+
+function shipRoots(stored: StoredRoster, catalog: DomainCatalog): RosterSelectionInstance[] {
+  return Object.values(stored.roster.instances)
+    .filter((instance) => {
+      const parent = instance.parentInstanceId
+        ? stored.roster.instances[instance.parentInstanceId]
+        : null;
+      return (
+        ["Unit", "Model"].includes(catalog.entities[instance.definitionId]?.kind ?? "") &&
+        catalog.entities[parent?.definitionId ?? ""]?.kind === "BattlefleetElement"
+      );
+    })
+    .sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function compatibleShipCount(
+  stored: StoredRoster,
+  catalog: DomainCatalog,
+  battlefleet: BattlefleetSetupOption,
+): number {
+  const elementIds = new Set(battlefleet.requiredElements.map((element) => element.id));
+  return shipRoots(stored, catalog).filter((ship) =>
+    Object.values(catalog.placements).some(
+      (placement) =>
+        placement.definitionId === ship.definitionId &&
+        placement.resolved &&
+        !placement.ambiguous &&
+        elementIds.has(placement.ownerId),
+    ),
+  ).length;
+}
+
 function applyCommand(
   stored: StoredRoster,
   catalog: DomainCatalog,
@@ -327,6 +529,11 @@ function applyCommand(
   createId: () => string,
 ): { readonly snapshot: RosterSnapshot; readonly createdInstanceId: RosterInstanceId | null } {
   const snapshot = stored.roster;
+  if (command.type === "change-battlefleet")
+    throw new WorkspaceCommandError(
+      "UNKNOWN_BATTLEFLEET",
+      "Смена Battlefleet должна выполняться на уровне рабочей сессии.",
+    );
   if (
     command.type === "replace-exclusive" ||
     command.type === "set-choice-quantity" ||
@@ -429,6 +636,7 @@ function duplicateSubtree(
 function projectWorkspace(
   stored: StoredRoster,
   catalog: DomainCatalog,
+  setup: RosterSetupCatalog,
   persistence: PersistenceState,
 ): RosterWorkspaceReadModel {
   const evaluation = evaluateRoster(catalog, stored.roster);
@@ -450,6 +658,17 @@ function projectWorkspace(
     : "unavailable";
   const errorCount = problems.filter((problem) => problem.severity === "error").length;
   const warningCount = problems.filter((problem) => problem.severity === "warning").length;
+  const totalShipCount = shipRoots(stored, catalog).length;
+  const battlefleets = battlefleetsFor(stored, setup).map((battlefleet) => {
+    const compatible = compatibleShipCount(stored, catalog, battlefleet);
+    return {
+      id: battlefleet.id,
+      label: battlefleet.label,
+      summary: battlefleet.summary,
+      compatibleShipCount: compatible,
+      removedShipCount: totalShipCount - compatible,
+    };
+  });
   const validity: ValidityState =
     evaluation.status === "indeterminate"
       ? "unavailable"
@@ -463,7 +682,9 @@ function projectWorkspace(
       id: stored.id,
       name: stored.name,
       faction: stored.faction.label,
+      battlefleetId: stored.battlefleet.id,
       battlefleet: stored.battlefleet.label,
+      battlefleets,
     },
     summary: {
       points,

@@ -4,6 +4,7 @@ import {
   createDemonstrationFleetCatalogGateway,
   createDemonstrationWorkspaceRoster,
 } from "../../infrastructure/catalog/demonstration-fleet-catalog";
+import { createDemonstrationRosterSetupGateway } from "../../infrastructure/catalog/demonstration-roster-setup";
 import type { RosterRepository, StoredRoster } from "./create-roster";
 import {
   filterCatalogItems,
@@ -259,6 +260,57 @@ describe("roster workspace application boundary", () => {
     expect(childIds[0]!.some((id) => childIds[1]!.includes(id))).toBe(false);
   });
 
+  it("changes Battlefleet, preserves compatible ships and recalculates the whole roster", async () => {
+    const fixture = harness([
+      "flagship-ship",
+      "flagship-model",
+      "line-ship",
+      "next-battlefleet",
+      "next-line-element",
+    ]);
+    const session = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
+    await session.execute({ type: "add", definitionId: "demo-ship-001" });
+    await session.execute({ type: "add", definitionId: "demo-ship-002" });
+
+    expect(session.model.summary.points).toBe("405");
+    expect(session.model.roster.battlefleets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "demo-empire-line-squadron",
+          compatibleShipCount: 1,
+          removedShipCount: 1,
+        }),
+      ]),
+    );
+
+    const execution = await session.executeDetailed({
+      type: "change-battlefleet",
+      battlefleetId: "demo-empire-line-squadron",
+    });
+
+    expect(execution.battlefleetChange).toEqual({
+      preservedShipCount: 1,
+      removedShipCount: 1,
+    });
+    expect(execution.model.roster).toMatchObject({
+      battlefleetId: "demo-empire-line-squadron",
+      battlefleet: "Line Squadron",
+    });
+    expect(execution.model.elements).toHaveLength(1);
+    expect(execution.model.elements[0]).toMatchObject({
+      definitionId: "demo-line",
+      instances: [expect.objectContaining({ id: "line-ship", definitionId: "demo-ship-002" })],
+    });
+    expect(execution.model.summary).toMatchObject({ points: "55", victoryPoints: "2" });
+    expect(fixture.saved.get("scaffold-demo")!).toMatchObject({
+      battlefleet: { id: "demo-empire-line-squadron", label: "Line Squadron" },
+      requiredElements: [{ id: "demo-line", label: "Line Element", minimum: 1 }],
+    });
+
+    const reopened = await openRosterWorkspace("scaffold-demo", fixture.dependencies);
+    expect(reopened!.model).toEqual(execution.model);
+  });
+
   it("opens, targets, saves and reloads a Crown Vanguard roster created by KAN-33", async () => {
     const fixture = harness(["crown-ship-1", "crown-model-1"]);
     const crown = crownRoster();
@@ -330,6 +382,7 @@ function harness(ids: string[] = []) {
   let index = 0;
   const dependencies: RosterWorkspaceDependencies = {
     catalogGateway: createDemonstrationFleetCatalogGateway(),
+    setupGateway: createDemonstrationRosterSetupGateway(),
     rosterRepository: repository,
     createId: () => ids[index++] ?? `generated-${index}`,
     now: () => "2026-08-02T12:00:00.000Z",

@@ -37,6 +37,7 @@ const victoryPointsTypeId = entityId("demo-cost-type-vp");
 
 export function createDemonstrationFleetCatalog(): DomainCatalog {
   const empireBattlefleetId = entityId("demo-empire-patrol");
+  const empireLineBattlefleetId = entityId("demo-empire-line-squadron");
   const flagshipElementId = entityId("demo-flagship");
   const lineElementId = entityId("demo-line");
   const crownBattlefleetId = entityId("demo-crown-vanguard");
@@ -49,6 +50,7 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
   );
   const entities: DomainEntity[] = [
     entity("Battlefleet", empireBattlefleetId, "Harbour Patrol"),
+    entity("Battlefleet", empireLineBattlefleetId, "Line Squadron"),
     entity("BattlefleetElement", flagshipElementId, "Flagship Element"),
     entity("BattlefleetElement", lineElementId, "Line Element"),
     entity("Battlefleet", crownBattlefleetId, "Vanguard Exercise"),
@@ -61,6 +63,7 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
   const placements: Placement[] = [
     placement("demo-placement-flagship-element", empireBattlefleetId, flagshipElementId, 0),
     placement("demo-placement-line-element", empireBattlefleetId, lineElementId, 1),
+    placement("demo-placement-line-squadron-element", empireLineBattlefleetId, lineElementId, 0),
     placement("demo-placement-command-element", crownBattlefleetId, commandElementId, 0),
     placement("demo-placement-patrol-element", crownBattlefleetId, patrolElementId, 1),
   ];
@@ -392,7 +395,7 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
     placements: Object.fromEntries(placements.map((candidate) => [candidate.id, candidate])),
     slots: Object.fromEntries(slots.map((candidate) => [candidate.id, candidate])),
     aliases: {},
-    roots: [empireBattlefleetId, crownBattlefleetId],
+    roots: [empireBattlefleetId, empireLineBattlefleetId, crownBattlefleetId],
     diagnostics: [],
   };
 }

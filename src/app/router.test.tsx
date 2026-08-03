@@ -91,6 +91,7 @@ const testDependencies = {
     now: () => "2026-08-02T10:00:00.000Z",
   },
   rosterWorkspace: {
+    setupGateway: rosterCreation.setupGateway,
     catalogGateway: createDemonstrationFleetCatalogGateway(),
     rosterRepository,
     createId: () => crypto.randomUUID(),

@@ -33,7 +33,7 @@ export interface RosterSetupCatalog {
 
 export interface RosterSetupGateway {
   readonly contractVersion: 1;
-  load(): Promise<RosterSetupCatalog>;
+  load(contentVersion?: string): Promise<RosterSetupCatalog>;
 }
 
 export const rosterSetupCatalogSchema = z.object({

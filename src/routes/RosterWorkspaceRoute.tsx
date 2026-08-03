@@ -238,18 +238,67 @@ export function RosterWorkspaceRoute({
       );
   }
 
+  async function changeBattlefleet(battlefleetId: string) {
+    if (battlefleetId === model.roster.battlefleetId) return;
+    const option = model.roster.battlefleets.find((candidate) => candidate.id === battlefleetId);
+    if (!option) return;
+    if (
+      option.removedShipCount > 0 &&
+      !window.confirm(
+        `При смене Battlefleet будет удалено несовместимых кораблей: ${option.removedShipCount}. Продолжить?`,
+      )
+    )
+      return;
+    const result = await execute(
+      { type: "change-battlefleet", battlefleetId },
+      `Battlefleet изменён на ${option.label}.`,
+    );
+    if (!result?.battlefleetChange) return;
+    setSelectedId(null);
+    setSelectedTarget("");
+    setEditorInstanceId(null);
+    setContextOrigin(null);
+    setActiveView("composition");
+    setIssueReturnId(null);
+    if (location.search)
+      void navigate({ pathname: location.pathname, search: "" }, { replace: true });
+    const { preservedShipCount, removedShipCount } = result.battlefleetChange;
+    setAnnouncement(
+      `Battlefleet изменён на ${option.label}. Сохранено кораблей: ${preservedShipCount}. Удалено несовместимых: ${removedShipCount}. Points ${result.model.summary.points}, VP ${result.model.summary.victoryPoints}.`,
+    );
+  }
+
   return (
     <div className="fleet-workspace" data-active-view={resolvedActiveView}>
       <header className="fleet-workspace__heading">
         <div>
-          <p className="eyebrow">
-            {model.roster.faction} · {model.roster.battlefleet}
-          </p>
+          <p className="eyebrow">{model.roster.faction}</p>
           <h1>{model.roster.name}</h1>
         </div>
-        <Link className="button button--secondary" to="/rosters/new">
-          Новый флот
-        </Link>
+        <div className="fleet-workspace__actions">
+          <label className="battlefleet-switcher">
+            <span>Battlefleet</span>
+            <select
+              aria-describedby="battlefleet-switcher-hint"
+              disabled={busy || model.roster.battlefleets.length < 2}
+              onChange={(event) => void changeBattlefleet(event.target.value)}
+              value={model.roster.battlefleetId}
+            >
+              {model.roster.battlefleets.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                  {option.removedShipCount > 0 ? ` · удалит ${option.removedShipCount}` : ""}
+                </option>
+              ))}
+            </select>
+            <small id="battlefleet-switcher-hint">
+              Состав, доступность и очки пересчитаются автоматически.
+            </small>
+          </label>
+          <Link className="button button--secondary" to="/rosters/new">
+            Новый флот
+          </Link>
+        </div>
       </header>
 
       <nav
