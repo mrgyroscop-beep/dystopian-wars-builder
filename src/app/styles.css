@@ -796,7 +796,8 @@ h3 {
 }
 
 .form-field input,
-.form-field select {
+.form-field select,
+.form-field textarea {
   width: 100%;
   min-height: 3rem;
   padding: 0.65rem 0.75rem;
@@ -805,6 +806,28 @@ h3 {
   border: 1px solid var(--line-strong);
   border-radius: 0.25rem;
   font-weight: 500;
+}
+
+.form-field textarea {
+  min-height: 10rem;
+  resize: vertical;
+}
+
+.feedback-form {
+  max-width: 48rem;
+}
+
+.feedback-preview {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+}
+
+.feedback-preview p {
+  margin: 0;
 }
 
 .form-field input:hover,

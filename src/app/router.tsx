@@ -5,6 +5,7 @@ import type { CreateRosterDependencies } from "../application/rosters/create-ros
 import type { RosterLibraryDependencies } from "../application/rosters/roster-library";
 import type { RosterWorkspaceDependencies } from "../application/rosters/workspace";
 import { AppShell } from "./shell/AppShell";
+import { FeedbackRoute } from "../routes/FeedbackRoute";
 import { RouteErrorBoundary } from "../routes/RouteErrorBoundary";
 import { NewRosterRoute } from "../routes/NewRosterRoute";
 import { NotFoundRoute } from "../routes/NotFoundRoute";
@@ -32,6 +33,7 @@ export function createAppRoutes({
       children: [
         { index: true, element: <RosterLibraryRoute dependencies={rosterLibrary} /> },
         { path: "rosters/new", element: <NewRosterRoute {...rosterCreation} /> },
+        { path: "feedback", element: <FeedbackRoute healthGateway={healthGateway} /> },
         {
           path: "rosters/:rosterId",
           element: <RosterWorkspaceRoute dependencies={rosterWorkspace} />,

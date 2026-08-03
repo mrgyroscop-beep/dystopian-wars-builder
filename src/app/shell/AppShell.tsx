@@ -1,12 +1,15 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 const navigationItems = [
   { to: "/", label: "Флоты", end: true },
   { to: "/rosters/new", label: "Создать", end: false },
+  { to: "/feedback", label: "Обратная связь", end: false },
   { to: "/settings", label: "Настройки", end: false },
 ] as const;
 
 export function AppShell() {
+  const location = useLocation();
+  const feedbackSource = safeScreen(location.pathname);
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -33,6 +36,7 @@ export function AppShell() {
                 }
                 end={item.end}
                 key={item.to}
+                state={item.to === "/feedback" ? { from: feedbackSource } : undefined}
                 to={item.to}
               >
                 {item.label}
@@ -51,4 +55,10 @@ export function AppShell() {
       </footer>
     </div>
   );
+}
+
+function safeScreen(pathname: string): string {
+  if (pathname === "/rosters/new") return "new-roster";
+  if (pathname.startsWith("/rosters/")) return "roster-workspace";
+  return pathname;
 }
