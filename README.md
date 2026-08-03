@@ -43,34 +43,25 @@ Static asset fallback serves `index.html` for deep SPA links, while
 
 ## Development workflow
 
-1. Start from an up-to-date `main` branch.
-2. Create a Jira-linked branch named `codex/KAN-XX-short-description`.
-3. Commit changes with the Jira key in every commit subject.
-4. Open a pull request and complete the repository template.
-5. Review the final diff and wait for `Required CI` before merging.
+1. Update `main`.
+2. Run only checks relevant to the change.
+3. Review the diff and commit with the Jira key in the subject.
+4. Push `main`; GitHub Actions builds and deploys production.
+5. One HTTP smoke confirms the site returns `200 OK`.
 
-Direct work on `main`, force-pushes and merge commits are not part of the
-supported process. See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete
 conventions and [docs/repository-settings.md](docs/repository-settings.md) for
 the applied GitHub settings and public-repository safeguards.
 
 ## Continuous integration
 
-The `Required CI` job has a stable name so it can be required by branch
-protection. Run the same checks locally:
+The deployment workflow intentionally runs no test suite. It builds, deploys and
+makes one HTTP request to production. Run specialist checks only when their area
+changes, for example:
 
 ```powershell
-npm run typecheck
-npm run lint
-npm run format:check
-npm run check:architecture
-npm run test:catalog:policy
 npm run test:unit
-npm run test:catalog
-npm run test:catalog:real
 npm run test:worker
-npm run build
-npm run test:catalog:bundle
 npm run test:e2e:smoke
 ```
 
@@ -81,15 +72,10 @@ the update, promotion and rollback contract.
 
 `typecheck` first verifies that `worker-configuration.d.ts` still matches
 `wrangler.jsonc`; regenerate it with `npm run types:generate` after any binding
-change. E2E creates ignored screenshots and JSON metadata under `artifacts/`.
-Each review-evidence sidecar records the route, fixture state, viewport and exact
-review commit SHA; CI publishes the directory as a workflow artifact.
+change. Failed E2E runs retain a trace and screenshot in GitHub Actions.
 
-After `Required CI`, one small same-repository preview job uploads a native
-Cloudflare Worker version with the stable `pr-N` alias and verifies it. There is no
-custom deployment controller, per-PR Worker, artifact transport, rollback package or
-cleanup service. Verify a deployed URL manually with
-`npm run preview:smoke -- <url> <commit-sha>`. See [preview
+Pushing `main` runs one `wrangler deploy` and one production `200 OK` smoke.
+Rollback selects the previous Worker deployment. See [preview
 operations](docs/preview-operations.md) and
 [ADR-0005](docs/architecture/ADR-0005-simple-cloudflare-previews.md).
 
@@ -119,6 +105,6 @@ See [ADR-0001](docs/architecture/ADR-0001-cloudflare-spa-worker.md),
 
 ## Release and rollback
 
-Releases must be traceable to an immutable commit on `main`; recovery uses a
-reviewed revert rather than rewriting history. The operational checklist is in
+Releases are traceable to the pushed `main` SHA. Recovery selects the previous
+Cloudflare deployment. The operational checklist is in
 [docs/release-and-rollback.md](docs/release-and-rollback.md).

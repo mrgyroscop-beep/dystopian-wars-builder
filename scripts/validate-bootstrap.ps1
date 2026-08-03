@@ -13,7 +13,7 @@ $requiredFiles = @(
     ".gitignore",
     ".github/CODEOWNERS",
     ".github/pull_request_template.md",
-    ".github/workflows/ci.yml",
+    ".github/workflows/deploy.yml",
     "CONTRIBUTING.md",
     "README.md",
     "docs/release-and-rollback.md",
@@ -48,26 +48,23 @@ if (Test-Path -LiteralPath ".gitignore") {
     }
 }
 
-if (Test-Path -LiteralPath ".github/workflows/ci.yml") {
-    $workflow = Get-Content -LiteralPath ".github/workflows/ci.yml" -Raw
+if (Test-Path -LiteralPath ".github/workflows/deploy.yml") {
+    $workflow = Get-Content -LiteralPath ".github/workflows/deploy.yml" -Raw
     $workflowMarkers = @(
-        "name: CI",
+        "name: Deploy",
         "push:",
-        "pull_request:",
-        "required-ci:",
-        "name: Required CI",
+        "- main",
+        "wrangler deploy",
         "npm run build",
-        "npm run lint",
-        "npm run test:unit",
-        "npm run test:e2e:smoke"
+        "npm run smoke:production"
     )
     foreach ($marker in $workflowMarkers) {
         if (-not $workflow.Contains($marker)) {
-            Add-ValidationError "CI workflow marker is missing: $marker"
+            Add-ValidationError "Deploy workflow marker is missing: $marker"
         }
     }
     if ($workflow.Contains("`t")) {
-        Add-ValidationError "CI workflow contains a tab; YAML indentation must use spaces."
+        Add-ValidationError "Deploy workflow contains a tab; YAML indentation must use spaces."
     }
 }
 
@@ -82,7 +79,7 @@ if (Test-Path -LiteralPath ".github/pull_request_template.md") {
 
 if (Test-Path -LiteralPath "CONTRIBUTING.md") {
     $contributing = Get-Content -LiteralPath "CONTRIBUTING.md" -Raw
-    foreach ($marker in @("codex/KAN-XX-short-description", "Required CI", "review the final diff", "pull request")) {
+    foreach ($marker in @("main", "relevant", "Review the diff", "Push")) {
         if (-not $contributing.Contains($marker)) {
             Add-ValidationError "CONTRIBUTING marker is missing: $marker"
         }

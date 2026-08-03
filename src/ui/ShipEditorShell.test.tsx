@@ -187,7 +187,7 @@ describe("ShipEditorShell", () => {
 
     await waitFor(() => expect(screen.getByRole("dialog", { name: "Глоссарий" })).toBeVisible());
     expect(glossary.scrollTop).toBe(64);
-    expect(glossaryItem).toHaveFocus();
+    await waitFor(() => expect(glossaryItem).toHaveFocus());
   });
 });
 

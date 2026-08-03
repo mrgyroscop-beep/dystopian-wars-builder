@@ -48,15 +48,15 @@ export function ShipEditorShell({
   const [fleetEditorOpen, setFleetEditorOpen] = useState(false);
   const [localRuleId, setLocalRuleId] = useState<string | null>(null);
   const ruleReturn = useRef<RuleReturn | null>(null);
-  const previousRuleId = useRef<string | null>(ruleId ?? null);
   const tabsId = useId();
   const activeRuleId = ruleId === undefined ? localRuleId : ruleId;
+  const previousActiveRuleId = useRef<string | null>(activeRuleId);
   const visibleTab: EditorTab = activeRuleId ? "rules" : tab;
 
   useEffect(() => {
-    if (previousRuleId.current && !ruleId) restoreRuleReturn(ruleReturn);
-    previousRuleId.current = ruleId ?? null;
-  }, [ruleId]);
+    if (previousActiveRuleId.current && !activeRuleId) restoreRuleReturn(ruleReturn);
+    previousActiveRuleId.current = activeRuleId;
+  }, [activeRuleId]);
 
   function focusGroup(groupId: ShipEditorGroupId | null) {
     if (!groupId || model.dataState !== "ready") return;
@@ -103,10 +103,7 @@ export function ShipEditorShell({
 
   function closeRule() {
     if (onRuleBack) onRuleBack();
-    else {
-      setLocalRuleId(null);
-      restoreRuleReturn(ruleReturn);
-    }
+    else setLocalRuleId(null);
   }
 
   if (model.dataState !== "ready")

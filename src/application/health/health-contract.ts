@@ -5,7 +5,7 @@ export const CATALOG_VERSION = "not-imported";
 
 export const healthResponseSchema = z.object({
   status: z.literal("ok"),
-  environment: z.enum(["local", "preview"]),
+  environment: z.enum(["local", "production"]),
   appVersion: z.string().min(1),
   catalogVersion: z.string().min(1),
   commitSha: z.string().regex(/^[0-9a-f]{40}$/),

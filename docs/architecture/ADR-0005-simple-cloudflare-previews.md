@@ -1,6 +1,6 @@
 # ADR-0005: Simple Cloudflare pull-request previews
 
-- Status: accepted; supersedes the custom preview-controller design
+- Status: superseded by KAN-58 direct-main production flow
 - Jira: KAN-39
 - Date: 2026-08-02
 

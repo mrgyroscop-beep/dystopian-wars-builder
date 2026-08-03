@@ -1,64 +1,19 @@
 # Contributing
 
-All repository changes are linked to Jira and delivered through pull requests.
+This is a small project with one production branch: `main`.
 
-## Branches
+## Normal workflow
 
-- `main` is the protected, releasable branch. Do not commit to it directly.
-- Start from the latest `origin/main`.
-- Name working branches `codex/KAN-XX-short-description`, for example
-  `codex/KAN-38-git-workflow`.
-- Use one Jira issue per branch. Split unrelated work into another issue and
-  pull request.
+1. Make a focused Jira-linked change on `main`.
+2. Run only the checks relevant to that change.
+3. Review the diff and commit with the Jira key in the subject.
+4. Push `main`; GitHub Actions builds, deploys and checks production once.
 
-## Commits
+Do not force-push or delete `main`. Do not commit credentials, `.env` files,
+reference PDFs/STLs, upstream XML exports or unapproved generated catalog data.
 
-Use an imperative subject prefixed with the Jira key:
+The full unit, catalog, Worker and Playwright suites remain available for risky
+changes, but they are intentionally not part of every release.
 
-```text
-KAN-38 add required CI workflow
-```
-
-Keep commits focused and do not commit generated files, credentials, `.env`
-files, reference PDFs or STL models. Do not rewrite shared branch history.
-
-## Pull requests
-
-Every change to `main` must arrive through a pull request. The author must:
-
-1. fill in the Jira key, scope, checks, risks and rollback sections;
-2. keep the branch current with `main`;
-3. review the final diff after the last push;
-4. resolve all review conversations;
-5. pass the stable `Required CI` check.
-
-Use squash merge to keep one traceable change on `main`. The pull request title
-and resulting commit must retain the Jira key. This personal repository does not
-require a second reviewer or a GitHub approval; the author and `Required CI` are
-the release gate.
-
-## Continuous integration contract
-
-The application must expose and pass all of these scripts:
-
-- `typecheck`
-- `build`
-- `lint`
-- `format:check`
-- `check:architecture`
-- `test:unit`
-- `test:worker`
-- `test:e2e:smoke`
-
-CI installs locked dependencies with `npm ci`, installs the Playwright Chromium
-runtime and runs every check. A failing or missing check blocks merge; tests or
-protections must not be weakened to make a change pass. Run `wrangler types`
-after any binding change and commit the generated `worker-configuration.d.ts`.
-
-## Review, release and rollback
-
-Reviewers compare the pull request with `main`, verify the acceptance criteria
-and record any unresolved risk. Release and rollback steps are documented in
-[`docs/release-and-rollback.md`](docs/release-and-rollback.md). Production
-deployment and production data changes require their own explicitly authorised
-task.
+Production rollback uses the previous Cloudflare Worker deployment. Data
+migrations require their own rollback plan.
