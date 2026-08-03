@@ -54,4 +54,6 @@ jobs:
           --var "FEEDBACK_AUTOMATION_TOKEN_SHA256:7966d7e6d941b53bfa9729d8dd2dd82e8410030e3f50f0a74dc227f16430e67c"
 
       - name: Check production is online
+        env:
+          RELEASE_SHA: ${{ github.sha }}
         run: npm run smoke:production

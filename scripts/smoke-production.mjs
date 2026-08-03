@@ -1,4 +1,29 @@
+import { setTimeout as delay } from "node:timers/promises";
+
 const baseUrl = "https://dystopian-wars-builder.mrgyroscop.workers.dev";
+const expectedSha = process.env.RELEASE_SHA;
+let releaseReady = false;
+
+for (let attempt = 1; attempt <= 12; attempt += 1) {
+  try {
+    const health = await fetch(`${baseUrl}/api/health`, {
+      signal: AbortSignal.timeout(10_000),
+    });
+    const payload = health.status === 200 ? await health.json() : null;
+    if (health.status === 200 && (!expectedSha || payload?.commitSha === expectedSha)) {
+      releaseReady = true;
+      break;
+    }
+  } catch {
+    // Deployment propagation can briefly reset connections between attempts.
+  }
+  await delay(5_000);
+}
+
+if (!releaseReady) {
+  throw new Error("Production did not expose the expected release before the smoke timeout");
+}
+
 const response = await fetch(`${baseUrl}/`, {
   redirect: "follow",
   signal: AbortSignal.timeout(10_000),
