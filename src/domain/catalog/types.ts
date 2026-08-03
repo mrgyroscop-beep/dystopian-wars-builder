@@ -350,6 +350,7 @@ export interface Slot {
     readonly contractVersion: 1;
     readonly selection: "option";
     readonly evaluation: "deferred-to-kan-32";
+    readonly profileRole?: "psa" | "fps-1" | "fps-2" | "fps-3" | null;
   };
   readonly provenance: Provenance;
 }
@@ -425,6 +426,7 @@ export interface DomainVocabulary {
   readonly attachmentIds: ReadonlySet<string>;
   readonly escortIds: ReadonlySet<string>;
   readonly doctrineIds: ReadonlySet<string>;
+  readonly profileSlotRoles?: Readonly<Record<string, "psa" | "fps-1" | "fps-2" | "fps-3">>;
 }
 
 export interface ContentHasher {

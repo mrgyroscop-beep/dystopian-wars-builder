@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -36,7 +36,8 @@ describe("ShipEditorShell", () => {
 
     const profile = screen.getByRole("tab", { name: "Профиль" });
     await user.click(profile);
-    expect(screen.getByText(/будет подключён в KAN-36/u)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Профиль корабля" })).toBeInTheDocument();
+    expect(screen.getByText("Базовый профиль")).toBeInTheDocument();
     await user.keyboard("{Home}");
     expect(screen.getByRole("tab", { name: "Настройка" })).toHaveFocus();
     await user.keyboard("{ArrowLeft}");
@@ -131,6 +132,63 @@ describe("ShipEditorShell", () => {
       "-1",
     );
   });
+
+  it("returns from a rule to the preserved Rules tab and focus origin", async () => {
+    const user = userEvent.setup();
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    const { container } = render(
+      <div className="context-pane">
+        <ShipEditorShell
+          busy={false}
+          model={editorModel(null)}
+          onAdd={vi.fn()}
+          onBack={vi.fn()}
+          onCommand={vi.fn()}
+        />
+      </div>,
+    );
+    await user.click(screen.getByRole("tab", { name: "Правила" }));
+    const contextPane = container.querySelector<HTMLElement>(".context-pane")!;
+    contextPane.scrollTop = 120;
+    const origin = screen.getByRole("button", { name: "Открыть правило Torrent" });
+    await user.click(origin);
+    contextPane.scrollTop = 0;
+    expect(screen.getByRole("heading", { name: "Torrent" })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: /К правилам/u }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Открыть правило Torrent" })).toHaveFocus(),
+    );
+    expect(screen.getByRole("tab", { name: "Правила" })).toHaveAttribute("aria-selected", "true");
+    expect(contextPane.scrollTop).toBe(120);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+  });
+
+  it("returns from a glossary rule to its preserved scroll and exact item", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    render(
+      <ShipEditorShell
+        busy={false}
+        model={editorModel(null)}
+        onAdd={vi.fn()}
+        onBack={vi.fn()}
+        onCommand={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("tab", { name: "Правила" }));
+    await user.click(screen.getByRole("button", { name: "Глоссарий" }));
+    const glossary = screen.getByRole("dialog", { name: "Глоссарий" });
+    glossary.scrollTop = 64;
+    const glossaryItem = within(glossary).getByRole("button", { name: /Torrent/u });
+    await user.click(glossaryItem);
+    expect(screen.getByRole("heading", { name: "Torrent" })).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: /К правилам/u }));
+
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "Глоссарий" })).toBeVisible());
+    expect(glossary.scrollTop).toBe(64);
+    expect(glossaryItem).toHaveFocus();
+  });
 });
 
 function editorModel(instanceId: string | null): ShipEditorReadyReadModel {
@@ -170,6 +228,34 @@ function editorModel(instanceId: string | null): ShipEditorReadyReadModel {
         targetGroupLabel: "PSA",
       },
     ],
+    profileRules: {
+      variant: instanceId ? "effective" : "base",
+      sourceCatalogVersion: "test-catalog",
+      versionState: "current",
+      sections: [
+        { id: "model", label: "Model", rows: [] },
+        { id: "properties", label: "Properties", rows: [] },
+        { id: "systems", label: "Systems", rows: [] },
+      ],
+      weapons: [],
+      rules: [
+        {
+          id: "rule-torrent",
+          label: "Torrent",
+          description: {
+            plainText: "Описание Torrent.",
+            blocks: [
+              { type: "paragraph", children: [{ type: "text", value: "Описание Torrent." }] },
+            ],
+            contentUnavailable: false,
+            diagnostics: [],
+          },
+          available: true,
+          diagnostic: null,
+        },
+      ],
+      diagnostics: [],
+    },
     breakdown: [
       { label: "Базовая стоимость", value: "350" },
       { label: "Выбранные опции", value: "0" },

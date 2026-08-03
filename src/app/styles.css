@@ -1828,11 +1828,306 @@ button.button {
 }
 
 .ship-editor__configuration,
+.ship-editor__profile,
+.ship-editor__rules,
 .editor-unsupported {
   display: grid;
   gap: 1rem;
   padding: 0.9rem;
   overflow: hidden;
+}
+
+/* KAN-36 profile and rules keep the editor's compact navigation-log language. */
+.profile-panel,
+.rules-panel,
+.rule-sheet {
+  display: grid;
+  min-width: 0;
+  gap: 0.85rem;
+}
+
+.profile-panel__heading,
+.rules-panel__heading,
+.weapon-card > header,
+.glossary-dialog > header {
+  display: flex;
+  min-width: 0;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.profile-panel__heading h4,
+.rules-panel__heading h4,
+.profile-section h4,
+.weapon-profiles h4,
+.rule-sheet h4,
+.glossary-dialog h4 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.catalog-version,
+.rules-panel__version,
+.weapon-card > header span,
+.profile-section dd small,
+.weapon-table th small {
+  color: var(--text-secondary);
+  font-family: "Roboto Mono", "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+}
+
+.catalog-version {
+  padding: 0.35rem 0.5rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  overflow-wrap: anywhere;
+}
+
+.profile-section,
+.weapon-profiles {
+  min-width: 0;
+  padding: 0.75rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+.profile-section dl,
+.weapon-card dl {
+  display: grid;
+  gap: 1px;
+  margin: 0.55rem 0 0;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.profile-section dl > div,
+.weapon-card dl > div {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(5.5rem, 2fr) minmax(0, 3fr);
+  gap: 0.55rem;
+  padding: 0.5rem;
+  background: var(--surface);
+}
+
+.profile-section dt,
+.weapon-card dt {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.profile-section dd,
+.weapon-card dd {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.profile-empty,
+.rules-panel__version {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.weapon-profiles h4 {
+  margin-bottom: 0.55rem;
+}
+
+.weapon-table-wrap,
+.structured-table-wrap {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.weapon-table,
+.structured-table-wrap table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: clamp(0.58rem, 1.2vw, 0.74rem);
+}
+
+.weapon-table th,
+.weapon-table td,
+.structured-table-wrap th,
+.structured-table-wrap td {
+  padding: 0.38rem 0.25rem;
+  text-align: left;
+  border: 1px solid var(--border);
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.weapon-table th {
+  background: var(--surface-selected);
+}
+
+.weapon-table tbody th {
+  display: table-cell;
+  background: var(--surface);
+}
+
+.weapon-table th small {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.weapon-cards {
+  display: none;
+}
+
+.profile-diagnostics {
+  padding: 0.65rem;
+  color: var(--error-text);
+  background: var(--error-tint);
+  border-left: 3px solid currentColor;
+}
+
+.profile-diagnostics summary {
+  min-height: 2.75rem;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.profile-diagnostics ul {
+  padding-left: 1.2rem;
+  margin: 0.45rem 0 0;
+  font-size: 0.74rem;
+}
+
+.rules-panel__heading button,
+.rule-list button,
+.rule-sheet__back,
+.glossary-dialog button,
+.structured-reference {
+  min-height: 2.75rem;
+  color: var(--brand);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.35rem;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.rules-panel__heading button,
+.rule-sheet__back,
+.glossary-dialog button {
+  padding: 0.55rem 0.7rem;
+}
+
+.rule-list,
+.glossary-dialog ul {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.rule-list button,
+.glossary-dialog li button {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.65rem;
+  text-align: left;
+}
+
+.rule-list button > span {
+  display: grid;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.rule-list small {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+}
+
+.rule-sheet__back {
+  justify-self: start;
+}
+
+.rule-sheet h4:focus {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
+
+.rule-unavailable {
+  padding: 0.75rem;
+  color: var(--error-text);
+  background: var(--error-tint);
+  border-left: 3px solid currentColor;
+}
+
+.rule-unavailable p,
+.structured-text p {
+  margin: 0.4rem 0 0;
+  line-height: 1.55;
+}
+
+.structured-text {
+  display: grid;
+  min-width: 0;
+  gap: 0.7rem;
+}
+
+.structured-text > :first-child {
+  margin-top: 0;
+}
+
+.structured-reference {
+  min-height: 2.75rem;
+  padding: 0.35rem 0.5rem;
+  margin-inline: 0.15rem;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.structured-text__unavailable {
+  color: var(--error-text);
+}
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(20 38 45 / 62%);
+}
+
+.glossary-dialog {
+  width: min(30rem, 100%);
+  max-height: min(36rem, calc(100vh - 2rem));
+  padding: 1rem;
+  background: var(--surface);
+  border: 2px solid var(--brand);
+  border-radius: 0.55rem;
+  box-shadow: 0 18px 50px rgb(20 38 45 / 28%);
+  overflow: auto;
+}
+
+.glossary-dialog > header {
+  margin-bottom: 0.75rem;
+}
+
+.glossary-dialog > header button {
+  min-width: 2.75rem;
+  padding: 0;
+  font-size: 1.4rem;
 }
 
 .model-quantity {
@@ -2147,6 +2442,37 @@ button.button {
 
   .editor-option--quantity input {
     width: 100%;
+  }
+}
+
+@media (max-width: 37.4375rem) {
+  .weapon-table-wrap {
+    display: none;
+  }
+
+  .weapon-cards {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .weapon-card {
+    min-width: 0;
+    padding: 0.65rem;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-left: 3px solid var(--brand);
+    border-radius: 0.35rem;
+  }
+
+  .profile-panel__heading,
+  .rules-panel__heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profile-panel__heading .catalog-version,
+  .rules-panel__heading button {
+    align-self: flex-start;
   }
 }
 

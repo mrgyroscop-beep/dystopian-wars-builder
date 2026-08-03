@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { HealthGateway } from "../application/health/health-contract";
 import type { StoredRoster } from "../application/rosters/create-roster";
@@ -60,6 +60,8 @@ const rosterCreation = {
   createId: () => "created-roster",
   now: () => "2026-08-02T10:00:00.000Z",
 };
+
+afterEach(cleanup);
 const testDependencies = {
   healthGateway: { read: readHealth } satisfies HealthGateway,
   rosterCreation,
@@ -104,6 +106,26 @@ describe("application routes", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Состав" })).toBeVisible();
+  });
+
+  it("opens a stable-ID rule deep link and focuses its heading", async () => {
+    renderRoute(
+      "/rosters/scaffold-demo?ship=demo-ship-001&shipMode=preview&rule=synthetic-rule-torrent",
+    );
+
+    const heading = await screen.findByRole("heading", { name: "Torrent" });
+    await waitFor(() => expect(heading).toHaveFocus());
+    const visibleSource = screen
+      .getAllByText("Источник: каталог demonstration-1")
+      .find((source) => !source.closest("[hidden]"));
+    expect(visibleSource).toBeVisible();
+  });
+
+  it("focuses the ship heading after resolving a direct editor link", async () => {
+    renderRoute("/rosters/scaffold-demo?ship=demo-ship-001&shipMode=preview");
+
+    const heading = await screen.findByRole("heading", { name: "Akita Demonstrator" });
+    await waitFor(() => expect(heading).toHaveFocus());
   });
 
   it("uses the HealthGateway injected by the application composition root", async () => {

@@ -4,6 +4,7 @@ import {
   chunkDomainCatalog,
   domainCatalogSchema,
   MAX_CHUNK_BYTES,
+  PINNED_DW4_VOCABULARY,
   loadDomainCatalog,
   normalizeCatalog,
   parseCostAmount,
@@ -648,6 +649,33 @@ describe("normalized catalog contract", () => {
     expect(
       Object.values(catalog.entities).find((entity) => entity.id.endsWith(":weapon"))?.kind,
     ).toBe("Weapon");
+  });
+
+  it("normalizes profile slot provenance from explicit vocabulary, never its label", () => {
+    const input: CatalogNormalizationInput = {
+      source,
+      graph: {
+        schemaVersion: 2,
+        documents: [
+          {
+            ...document,
+            root: root([
+              node("selectionEntryGroups", {}, [
+                node("selectionEntryGroup", { id: "slot", name: "PSA misleading label" }),
+              ]),
+            ]),
+          },
+        ],
+      },
+    };
+    const explicit = normalizeCatalog(input, {
+      vocabulary: {
+        ...PINNED_DW4_VOCABULARY,
+        profileSlotRoles: { slot: "fps-2" },
+      },
+    });
+    expect(Object.values(explicit.slots)[0]?.semantics.profileRole).toBe("fps-2");
+    expect(Object.values(normalizeCatalog(input).slots)[0]?.semantics.profileRole).toBeNull();
   });
 
   it("preserves safe rich-text AST, extensions and reportable unresolved resolution chains", () => {

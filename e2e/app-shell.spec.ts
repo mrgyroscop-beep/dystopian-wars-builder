@@ -542,7 +542,8 @@ test("configures Akita 0/4 → 4/4, fixes fleet-level Kagutsuchi and retries a f
   await page.getByRole("button", { name: "Настроить" }).click();
   await expect(page.getByLabel("Количество Tanuki Escort")).toHaveValue("4");
   await page.getByRole("tab", { name: "Профиль" }).click();
-  await expect(page.getByText(/будет подключён в KAN-36/u)).toBeVisible();
+  await expect(page.getByText("Эффективный профиль")).toBeVisible();
+  await expect(page.getByText("PSA", { exact: true })).toBeVisible();
 });
 
 test("returns exact focus on mobile and keeps editor chrome below the workspace switcher", async ({
@@ -646,6 +647,133 @@ test("supports Arrow keys, Home and End in editor tabs", async ({ page }) => {
   await expect(configuration).toBeFocused();
   await page.keyboard.press("ArrowLeft");
   await expect(page.getByRole("tab", { name: "Правила" })).toBeFocused();
+});
+
+test("shows preview/configured profiles and returns from stable-ID rule navigation", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/rosters/scaffold-demo");
+  await page.getByLabel("Поиск").fill("Akita Demonstrator");
+  await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
+  await page.getByRole("tab", { name: "Профиль" }).click();
+  await expect(page.getByText("Базовый профиль")).toBeVisible();
+  await expect(page.locator(".weapon-table tbody tr")).toHaveCount(1);
+  await expect(page.getByRole("row", { name: /Fore Battery/u })).toContainText("Torrent");
+  await captureReviewEvidence(
+    page,
+    {
+      route: "/rosters/scaffold-demo",
+      state: "akita-preview-profile",
+      viewport: { name: "desktop-1440x1000", width: 1440, height: 1000 },
+    },
+    path.resolve("artifacts/review-evidence/akita-profile"),
+    "desktop-1440x1000",
+  );
+
+  await page.getByRole("tab", { name: "Настройка" }).click();
+  await page.getByRole("button", { name: "Добавить в состав" }).click();
+  await page.getByRole("radio", { name: /Heavy Battery/u }).check();
+  await page.getByRole("tab", { name: "Профиль" }).click();
+  await expect(page.getByText("Эффективный профиль")).toBeVisible();
+  await expect(page.getByRole("row", { name: /Heavy Battery/u })).toContainText("PSA");
+
+  await page.setViewportSize({ width: 1440, height: 450 });
+  await page.getByRole("tab", { name: "Правила" }).click();
+  const contextPane = page.locator(".context-pane");
+  const editorScroll = await contextPane.evaluate((element) => {
+    element.scrollTop = Math.min(80, element.scrollHeight - element.clientHeight);
+    return element.scrollTop;
+  });
+  expect(editorScroll).toBeGreaterThan(0);
+  const origin = page.getByRole("button", { name: "Открыть правило Torrent" });
+  await origin.evaluate((element) => element.focus({ preventScroll: true }));
+  await origin.press("Enter");
+  await contextPane.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await expect(page).toHaveURL(/rule=synthetic-rule-torrent/u);
+  await expect(page.getByRole("heading", { name: "Torrent" })).toBeFocused();
+  const backToRules = page.getByRole("button", { name: /К правилам/u });
+  await backToRules.evaluate((element) => element.focus({ preventScroll: true }));
+  await backToRules.press("Enter");
+  await expect(page.getByRole("button", { name: "Открыть правило Torrent" })).toBeFocused();
+  await expect(page.getByRole("tab", { name: "Правила" })).toHaveAttribute("aria-selected", "true");
+  await expect.poll(() => contextPane.evaluate((element) => element.scrollTop)).toBe(editorScroll);
+
+  const glossary = page.getByRole("button", { name: "Глоссарий" });
+  await page.setViewportSize({ width: 1440, height: 180 });
+  await glossary.evaluate((element) => element.focus({ preventScroll: true }));
+  await glossary.press("Enter");
+  const dialog = page.getByRole("dialog", { name: "Глоссарий" });
+  await expect(dialog).toBeVisible();
+  const glossaryScroll = await dialog.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    return element.scrollTop;
+  });
+  expect(glossaryScroll).toBeGreaterThan(0);
+  const glossaryItem = dialog.getByRole("button", { name: /Torrent/u });
+  await glossaryItem.evaluate((element) => element.focus({ preventScroll: true }));
+  await glossaryItem.press("Enter");
+  await expect(page.getByRole("heading", { name: "Torrent" })).toBeFocused();
+  await backToRules.evaluate((element) => element.focus({ preventScroll: true }));
+  await backToRules.press("Enter");
+  await expect(dialog).toBeVisible();
+  await expect(glossaryItem).toBeFocused();
+  await expect.poll(() => dialog.evaluate((element) => element.scrollTop)).toBe(glossaryScroll);
+  await page.keyboard.press("Escape");
+  await expect(glossary).toBeFocused();
+});
+
+for (const viewport of [
+  { name: "desktop-1440", width: 1440, height: 1000 },
+  { name: "tablet-1024", width: 1024, height: 900 },
+  { name: "boundary-600", width: 600, height: 900 },
+  { name: "cards-599", width: 599, height: 900 },
+  { name: "mobile-390", width: 390, height: 844 },
+] as const) {
+  test(`keeps equivalent profile data without overflow at ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto("/rosters/scaffold-demo?ship=demo-ship-001&shipMode=preview");
+    const heading = page.getByRole("heading", { level: 3, name: "Akita Demonstrator" });
+    await expect(heading).toBeVisible();
+    await expect(heading).toBeFocused();
+    await page.getByRole("tab", { name: "Профиль" }).click();
+    if (viewport.width < 600) {
+      await expect(page.locator(".weapon-table-wrap")).toBeHidden();
+      await expect(page.locator(".weapon-card")).toHaveCount(1);
+      await expect(page.locator(".weapon-card")).toContainText("Fore Battery");
+      await expect(page.locator(".weapon-card")).toContainText("Torrent");
+    } else {
+      await expect(page.locator(".weapon-cards")).toBeHidden();
+      await expect(page.locator(".weapon-table tbody tr")).toHaveCount(1);
+      await expect(page.getByRole("row", { name: /Fore Battery/u })).toContainText("Torrent");
+    }
+    const overflow = await page.evaluate(() => ({
+      document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      editor:
+        (document.querySelector(".ship-editor")?.scrollWidth ?? 0) -
+        (document.querySelector(".ship-editor")?.clientWidth ?? 0),
+    }));
+    expect(overflow.document).toBeLessThanOrEqual(0);
+    expect(overflow.editor).toBeLessThanOrEqual(0);
+  });
+}
+
+test("keeps profile reflow and Axe serious-critical zero at 200% text zoom", async ({ page }) => {
+  // A 512 CSS-pixel viewport represents a 1024px browser viewport at 200% page zoom.
+  await page.setViewportSize({ width: 512, height: 900 });
+  await page.goto("/rosters/scaffold-demo?ship=demo-ship-001&shipMode=preview");
+  await page.getByRole("tab", { name: "Профиль" }).click();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    ),
+  ).toBeLessThanOrEqual(0);
+  await page.getByRole("tab", { name: "Правила" }).click();
+  await page.getByRole("button", { name: "Глоссарий" }).click();
+  await page.addScriptTag({ content: axe.source });
+  expect(await seriousAxeViolations(page)).toEqual([]);
 });
 
 test("has no serious or critical Axe violations in the builder reference state", async ({

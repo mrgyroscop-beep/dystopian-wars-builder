@@ -346,6 +346,7 @@ export const domainCatalogSchema = z
               contractVersion,
               selection: z.literal("option"),
               evaluation: z.literal("deferred-to-kan-32"),
+              profileRole: z.enum(["psa", "fps-1", "fps-2", "fps-3"]).nullable().optional(),
             })
             .strict(),
           provenance,

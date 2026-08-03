@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 
 import {
@@ -49,6 +49,8 @@ export function RosterWorkspaceRoute({
   readonly dependencies: RosterWorkspaceDependencies;
 }) {
   const params = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const parsedRosterId = rosterIdSchema.safeParse(params.rosterId);
   const rosterId = parsedRosterId.success ? parsedRosterId.data : null;
   const [state, setState] = useState<RouteState>({ kind: "loading" });
@@ -64,6 +66,12 @@ export function RosterWorkspaceRoute({
   const [commandError, setCommandError] = useState<string | null>(null);
   const [issueReturnId, setIssueReturnId] = useState<string | null>(null);
   const title = state.kind === "ready" ? state.model.roster.name : "Состав флота";
+  const direct = directEditorLink(location.search);
+  const directMode = direct?.mode ?? null;
+  const directRuleId = direct?.ruleId ?? null;
+  const directShipId = direct?.shipId ?? null;
+  const directFocusKey = directMode && directShipId ? `${directMode}:${directShipId}` : null;
+  const handledDirectFocusKey = useRef<string | null>(null);
   useDocumentTitle(title);
 
   useEffect(() => {
@@ -85,13 +93,41 @@ export function RosterWorkspaceRoute({
     };
   }, [dependencies, rosterId]);
 
+  useEffect(() => {
+    if (!directFocusKey) {
+      handledDirectFocusKey.current = null;
+      return;
+    }
+    if (state.kind !== "ready") return;
+    if (directRuleId) {
+      handledDirectFocusKey.current = directFocusKey;
+      return;
+    }
+    if (handledDirectFocusKey.current === directFocusKey) return;
+    handledDirectFocusKey.current = directFocusKey;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById("ship-editor-title")?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [directFocusKey, directRuleId, state.kind]);
+
   if (!parsedRosterId.success || state.kind === "missing") return <InvalidRoster />;
   if (state.kind === "loading") return <LoadingWorkspace />;
   if (state.kind === "error") return <UnavailableWorkspace />;
 
   const { model, session } = state;
+  const directInstance =
+    direct?.mode === "instance"
+      ? (model.elements
+          .flatMap((element) => element.instances)
+          .find((candidate) => candidate.id === direct.shipId) ?? null)
+      : null;
+  const resolvedSelectedId =
+    direct?.mode === "preview" ? direct.shipId : (directInstance?.definitionId ?? selectedId);
+  const resolvedEditorInstanceId = directInstance?.id ?? editorInstanceId;
+  const resolvedActiveView: WorkspaceView = direct ? "context" : activeView;
   const filtered = filterCatalogItems(model.catalog, query, category);
-  const selected = model.catalog.find((item) => item.id === selectedId) ?? null;
+  const selected = model.catalog.find((item) => item.id === resolvedSelectedId) ?? null;
 
   async function execute(
     command: Parameters<RosterWorkspaceSession["execute"]>[0],
@@ -105,7 +141,7 @@ export function RosterWorkspaceRoute({
       setState({ kind: "ready", session, model: result.model });
       const refreshedEditor =
         "groupId" in command || command.type === "set-model-quantity"
-          ? session.editor(editorInstanceId, selected?.id ?? null)
+          ? session.editor(resolvedEditorInstanceId, selected?.id ?? null)
           : null;
       setAnnouncement(
         refreshedEditor?.dataState === "ready"
@@ -194,6 +230,8 @@ export function RosterWorkspaceRoute({
     const origin = contextOrigin;
     setActiveView(origin?.view ?? "composition");
     setAnnouncement("Возврат из редактора корабля.");
+    if (location.search)
+      void navigate({ pathname: location.pathname, search: "" }, { replace: true });
     if (origin)
       requestAnimationFrame(() =>
         document.getElementById(origin.elementId)?.focus({ preventScroll: true }),
@@ -201,7 +239,7 @@ export function RosterWorkspaceRoute({
   }
 
   return (
-    <div className="fleet-workspace" data-active-view={activeView}>
+    <div className="fleet-workspace" data-active-view={resolvedActiveView}>
       <header className="fleet-workspace__heading">
         <div>
           <p className="eyebrow">
@@ -221,7 +259,8 @@ export function RosterWorkspaceRoute({
         {(["catalog", "context"] as const).map((view) => (
           <button
             aria-current={
-              (view === "catalog" && activeView !== "context") || activeView === view
+              (view === "catalog" && resolvedActiveView !== "context") ||
+              resolvedActiveView === view
                 ? "page"
                 : undefined
             }
@@ -240,7 +279,7 @@ export function RosterWorkspaceRoute({
       >
         {(["composition", "catalog", "context"] as const).map((view) => (
           <button
-            aria-current={activeView === view ? "page" : undefined}
+            aria-current={resolvedActiveView === view ? "page" : undefined}
             key={view}
             onClick={() => setActiveView(view)}
             type="button"
@@ -285,7 +324,7 @@ export function RosterWorkspaceRoute({
           onCategory={setCategory}
           onPreview={openPreview}
           query={query}
-          selectedId={selectedId}
+          selectedId={resolvedSelectedId}
           setQuery={setQuery}
           total={model.catalog.length}
         />
@@ -323,9 +362,26 @@ export function RosterWorkspaceRoute({
           onAdd={() => void addSelected()}
           onFollowIssue={followIssue}
           onTarget={setSelectedTarget}
-          editor={selected ? session.editor(editorInstanceId, selected.id) : null}
+          editor={selected ? session.editor(resolvedEditorInstanceId, selected.id) : null}
           onEditorCommand={(command, message) => void execute(command, message)}
           onEditorBack={closeEditor}
+          onOpenRule={(ruleId) => {
+            if (!selected) return;
+            const search = new URLSearchParams(location.search);
+            search.set("ship", resolvedEditorInstanceId ?? selected.id);
+            search.set("shipMode", resolvedEditorInstanceId ? "instance" : "preview");
+            search.set("rule", ruleId);
+            void navigate({ pathname: location.pathname, search: `?${search.toString()}` });
+          }}
+          onRuleBack={() => {
+            const search = new URLSearchParams(location.search);
+            search.delete("rule");
+            void navigate(
+              { pathname: location.pathname, search: search.size ? `?${search.toString()}` : "" },
+              { replace: true },
+            );
+          }}
+          ruleId={direct?.ruleId ?? null}
           selected={selected}
           selectedTarget={selectedTarget}
         />
@@ -603,6 +659,9 @@ function ContextPane({
   editor,
   onEditorBack,
   onEditorCommand,
+  onOpenRule,
+  onRuleBack,
+  ruleId,
   selected,
   selectedTarget,
 }: {
@@ -614,6 +673,9 @@ function ContextPane({
   readonly editor: ShipEditorReadModel | null;
   readonly onEditorBack: () => void;
   readonly onEditorCommand: (command: ShipEditorCommand, message: string) => void;
+  readonly onOpenRule: (ruleId: string) => void;
+  readonly onRuleBack: () => void;
+  readonly ruleId: string | null;
   readonly selected: CatalogItemReadModel | null;
   readonly selectedTarget: string;
 }) {
@@ -630,6 +692,9 @@ function ContextPane({
           onAdd={onAdd}
           onBack={onEditorBack}
           onCommand={onEditorCommand}
+          onOpenRule={onOpenRule}
+          onRuleBack={onRuleBack}
+          ruleId={ruleId}
         />
       ) : selected ? (
         <article className="catalog-preview">
@@ -797,4 +862,25 @@ function InvalidRoster() {
 
 function safeId(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/gu, "-");
+}
+
+function directEditorLink(search: string): {
+  readonly shipId: string;
+  readonly mode: "preview" | "instance";
+  readonly ruleId: string | null;
+} | null {
+  const params = new URLSearchParams(search);
+  const shipId = params.get("ship");
+  const mode = params.get("shipMode");
+  const ruleId = params.get("rule");
+  if (!stableToken(shipId) || (mode !== "preview" && mode !== "instance")) return null;
+  return { shipId, mode, ruleId: stableToken(ruleId) ? ruleId : null };
+}
+
+function stableToken(value: string | null): value is string {
+  return Boolean(
+    value &&
+    value.length <= 240 &&
+    !/^(?:https?|javascript|data|vbscript|mailto):|^\/\//iu.test(value),
+  );
 }

@@ -275,6 +275,9 @@ export function normalizeCatalog(
           contractVersion: 1,
           selection: "option",
           evaluation: "deferred-to-kan-32",
+          profileRole: node.attributes.id
+            ? (vocabulary.profileSlotRoles?.[node.attributes.id] ?? null)
+            : null,
         },
         provenance: entity.provenance,
       });

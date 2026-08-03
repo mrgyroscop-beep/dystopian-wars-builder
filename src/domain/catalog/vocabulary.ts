@@ -24,4 +24,5 @@ export const PINNED_DW4_VOCABULARY: DomainVocabulary = {
   ]),
   escortIds: new Set(["bd6e-dbef-4baf-e017"]),
   doctrineIds: new Set(["3a8e-29a8-4109-7c1c"]),
+  profileSlotRoles: {},
 };

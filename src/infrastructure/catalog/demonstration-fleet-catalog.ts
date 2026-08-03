@@ -133,6 +133,10 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
   }
 
   const modelId = entityId("demo-akita-model");
+  const modelProfileId = entityId("demo-akita-profile");
+  const baseWeaponId = entityId("demo-akita-fore-battery-profile");
+  const torrentRuleId = entityId("synthetic-rule-torrent");
+  const submergedRuleId = entityId("synthetic-rule-submerged");
   const psaSlotId = slotId("demo-akita-slot-psa");
   const fps1SlotId = slotId("demo-akita-slot-fps-1");
   const fps2SlotId = slotId("demo-akita-slot-fps-2");
@@ -174,6 +178,11 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
           "demo.catalog": "hidden",
         },
         costIds: points === 0 ? [] : [pointCostId],
+        fields: kind === "Weapon" ? weaponFields(id, label) : [],
+        ruleIds:
+          kind === "Weapon"
+            ? [torrentRuleId, ...(label.includes("Torpedo") ? [submergedRuleId] : [])]
+            : [],
       }),
     );
     if (points !== 0)
@@ -187,6 +196,27 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
         "demo.catalog": "hidden",
       },
       slotIds: [psaSlotId, fps1SlotId, fps2SlotId, fps3SlotId, attachmentSlotId, escortSlotId],
+      profileIds: [modelProfileId, baseWeaponId],
+      ruleIds: [torrentRuleId, submergedRuleId],
+    }),
+    entity("Profile", modelProfileId, "Akita Model", {
+      fields: profileFields(modelProfileId, [
+        ["Hull", "8"],
+        ["Armour", "5"],
+        ["Speed", '7"'],
+      ]),
+    }),
+    entity("Weapon", baseWeaponId, "Fore Battery", {
+      fields: weaponFields(baseWeaponId, "Fore Battery"),
+      ruleIds: [torrentRuleId],
+    }),
+    entity("Rule", torrentRuleId, "Torrent", {
+      description: presentation("Атака Torrent игнорирует штраф за стрельбу через препятствия."),
+    }),
+    entity("Rule", submergedRuleId, "Submerged", {
+      description: presentation(
+        "Submerged-модель использует специальные правила глубины и обнаружения.",
+      ),
     }),
     expressionEntity("Condition", sealedAvailabilityId, {
       operator: "instanceOf",
@@ -277,6 +307,12 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
     [escortSlotId, "Escort", "Escorts", 0, 4, ["demo-akita-tanuki-escort"]],
   ] as const;
   const slots: Slot[] = [];
+  const profileRoles = new Map<SlotId, NonNullable<Slot["semantics"]["profileRole"]>>([
+    [psaSlotId, "psa"],
+    [fps1SlotId, "fps-1"],
+    [fps2SlotId, "fps-2"],
+    [fps3SlotId, "fps-3"],
+  ]);
   placements.push(
     placement("demo-akita-model-placement", entityId("demo-ship-001"), modelId, 0, null, {
       cardinality: selectionCardinality(1, 1),
@@ -305,9 +341,20 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
       return candidate.id;
     });
     const constraintIds = addCardinalityConstraints(entities, id, minimum, maximum);
-    slots.push(
-      editorSlot(id, modelId, kind, label, minimum, maximum, optionPlacements, constraintIds),
+    const slot = editorSlot(
+      id,
+      modelId,
+      kind,
+      label,
+      minimum,
+      maximum,
+      optionPlacements,
+      constraintIds,
     );
+    slots.push({
+      ...slot,
+      semantics: { ...slot.semantics, profileRole: profileRoles.get(id) ?? null },
+    });
   }
   for (const [id, ownerId] of [
     [empireDoctrineSlotId, empireBattlefleetId],
@@ -547,6 +594,33 @@ function editorSlot(
     semantics: { contractVersion: 1, selection: "option", evaluation: "deferred-to-kan-32" },
     provenance: provenance(ownerId),
   };
+}
+
+function weaponFields(ownerId: EntityId, label: string): DomainEntity["fields"] {
+  const seed = [...label].reduce((sum, character) => sum + character.codePointAt(0)!, 0);
+  return profileFields(ownerId, [
+    ["Weapon", label],
+    ["Arc", seed % 2 === 0 ? "Fore" : "Port / Starboard"],
+    ["Close", String(8 + (seed % 4))],
+    ["Standard", String(5 + (seed % 4))],
+    ["Extreme", String(2 + (seed % 3))],
+    ["Qualities", label.includes("Torpedo") ? "Torrent, Submerged" : "Torrent"],
+  ]);
+}
+
+function profileFields(
+  ownerId: EntityId,
+  values: readonly (readonly [string, string])[],
+): DomainEntity["fields"] {
+  return values.map(([label, value], order) => ({
+    contractVersion: 1,
+    sourceTag: "demonstration-field",
+    order,
+    label: presentation(label),
+    value: presentation(value),
+    attributes: {},
+    provenance: provenance(ownerId),
+  }));
 }
 
 function selectionCardinality(minimum: number, maximum: number): Slot["cardinality"] {
