@@ -103,6 +103,14 @@ async function expectEditorTouchTargets(page: Page) {
   expect(touchTargets.filter((target) => target.width < 44 || target.height < 44)).toEqual([]);
 }
 
+async function chooseEditorOption(page: Page, groupName: RegExp, optionName: RegExp) {
+  const group = page.getByRole("group", { name: groupName });
+  const option = group.getByRole("radio", { name: optionName });
+
+  if ((await option.count()) === 0) await group.locator(".editor-group__summary").click();
+  await group.getByRole("radio", { name: optionName }).check();
+}
+
 test("supports SPA routes, keyboard navigation and browser history", async ({ page }) => {
   await page.goto("/");
 
@@ -447,7 +455,7 @@ test("keeps Composition fixed and switches only the tablet side pane", async ({ 
   await expect(page.getByRole("navigation", { name: "Область билдера", exact: true })).toBeHidden();
 });
 
-test("configures Akita 0/4 → 4/4, fixes fleet-level Kagutsuchi and retries a failed save", async ({
+test("configures the Akita baseline, fixes fleet-level Kagutsuchi and retries a failed save", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -455,13 +463,15 @@ test("configures Akita 0/4 → 4/4, fixes fleet-level Kagutsuchi and retries a f
   await page.getByLabel("Поиск").fill("Akita Demonstrator");
   await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
   await expect(page.getByText("Только чтение")).toBeVisible();
-  await expect(page.getByText("0 / 4")).toBeVisible();
+  await expect(page.getByText("4 / 4")).toBeVisible();
   await page.getByRole("button", { name: "Добавить в состав" }).click();
   await expect(page.getByText("Редактирование")).toBeVisible();
   await expect(page.getByRole("heading", { level: 3, name: "Akita Demonstrator" })).toBeFocused();
   const editorMarkup = await page.locator(".ship-editor").evaluate((element) => element.outerHTML);
   expect(editorMarkup).not.toMatch(/DEMO-|opaque|demo-akita-slot|:slot/iu);
-  await expect(page.locator(".editor-problems li")).toHaveCount(4);
+  await expect(page.locator(".editor-problems li")).toHaveCount(0);
+
+  await chooseEditorOption(page, /PSA/u, /Heavy Battery/u);
 
   await page.getByRole("button", { name: "Настроить доктрину" }).click();
   await page.getByLabel("Количество Kagutsuchi Doctrine").fill("1");
@@ -481,11 +491,11 @@ test("configures Akita 0/4 → 4/4, fixes fleet-level Kagutsuchi and retries a f
   );
   await requirement.click();
   await expect(page.getByRole("group", { name: /PSA/u })).toBeFocused();
-  await page.getByRole("radio", { name: /Magma Cast Generator/u }).check();
+  await chooseEditorOption(page, /PSA/u, /Magma Cast Generator/u);
   await expect(requirement).toHaveCount(0);
-  await page.getByRole("radio", { name: /Fury Generator/u }).check();
-  await page.getByRole("radio", { name: /Rocket Battery/u }).check();
-  await page.getByRole("radio", { name: /Shield Generator/u }).check();
+  await chooseEditorOption(page, /FPS 1/u, /Fury Generator/u);
+  await chooseEditorOption(page, /FPS 2/u, /Rocket Battery/u);
+  await chooseEditorOption(page, /FPS 3/u, /Shield Generator/u);
   await expect(page.getByText("4 / 4")).toBeVisible();
   await expect(page.locator(".editor-problems li")).toHaveCount(0);
   await page.getByLabel("Количество Repair Crane").fill("1");
@@ -569,6 +579,7 @@ test("returns exact focus on mobile and keeps editor chrome below the workspace 
   await expect(origin).toBeFocused();
   await origin.click();
   await page.getByRole("button", { name: "Добавить в состав" }).click();
+  await chooseEditorOption(page, /PSA/u, /Heavy Battery/u);
   await page.getByRole("button", { name: "Настроить доктрину" }).click();
   await page.getByLabel("Количество Kagutsuchi Doctrine").fill("1");
   await expect(
@@ -580,10 +591,10 @@ test("returns exact focus on mobile and keeps editor chrome below the workspace 
     path.resolve("artifacts/review-evidence/akita-conditional"),
     viewport.name,
   );
-  await page.getByRole("radio", { name: /Magma Cast Generator/u }).check();
-  await page.getByRole("radio", { name: /Fury Generator/u }).check();
-  await page.getByRole("radio", { name: /Rocket Battery/u }).check();
-  await page.getByRole("radio", { name: /Shield Generator/u }).check();
+  await chooseEditorOption(page, /PSA/u, /Magma Cast Generator/u);
+  await chooseEditorOption(page, /FPS 1/u, /Fury Generator/u);
+  await chooseEditorOption(page, /FPS 2/u, /Rocket Battery/u);
+  await chooseEditorOption(page, /FPS 3/u, /Shield Generator/u);
   await page.getByLabel("Количество Repair Crane").fill("1");
   await expect(page.getByText("375 / 1000")).toBeVisible();
   await expect(page.locator(".roster-instance-list small")).toHaveText("375 Points · 9 VP");
@@ -673,7 +684,7 @@ test("shows preview/configured profiles and returns from stable-ID rule navigati
 
   await page.getByRole("tab", { name: "Настройка" }).click();
   await page.getByRole("button", { name: "Добавить в состав" }).click();
-  await page.getByRole("radio", { name: /Heavy Battery/u }).check();
+  await chooseEditorOption(page, /PSA/u, /Heavy Battery/u);
   await page.getByRole("tab", { name: "Профиль" }).click();
   await expect(page.getByText("Эффективный профиль")).toBeVisible();
   await expect(page.getByRole("row", { name: /Heavy Battery/u })).toContainText("PSA");
@@ -821,10 +832,6 @@ for (const scenario of [
     await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
     if (scenario.configured) {
       await page.getByRole("button", { name: "Добавить в состав" }).click();
-      await page.getByRole("radio", { name: /Magma Cast Generator/u }).check();
-      await page.getByRole("radio", { name: /Fury Generator/u }).check();
-      await page.getByRole("radio", { name: /Rocket Battery/u }).check();
-      await page.getByRole("radio", { name: /Shield Generator/u }).check();
       await expect(page.getByText("4 / 4")).toBeVisible();
     }
     await page.addScriptTag({ content: axe.source });

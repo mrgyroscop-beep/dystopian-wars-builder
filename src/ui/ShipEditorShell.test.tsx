@@ -28,8 +28,15 @@ describe("ShipEditorShell", () => {
 
     expect(screen.getByText("Только чтение")).toBeInTheDocument();
     expect(screen.getAllByRole("group")).toHaveLength(6);
+    const add = screen.getByRole("button", { name: "Добавить в состав" });
+    const problems = screen.getByRole("heading", { name: "Что исправить" });
+    expect(add.compareDocumentPosition(problems) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Magma Cast Generator/u })).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "Добавить в состав" }));
+    expect(screen.queryByRole("radio", { name: /Fury/u })).not.toBeInTheDocument();
+    await user.click(within(screen.getByRole("group", { name: /FPS 1/u })).getByRole("button"));
+    expect(screen.queryByRole("radio", { name: /Magma Cast Generator/u })).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Fury/u })).toBeDisabled();
+    await user.click(add);
     expect(onAdd).toHaveBeenCalledOnce();
     await user.click(screen.getByRole("button", { name: /Назад/u }));
     expect(onBack).toHaveBeenCalledOnce();
@@ -61,8 +68,7 @@ describe("ShipEditorShell", () => {
       />,
     );
 
-    const radios = screen.getAllByRole("radio");
-    expect(new Set(radios.map((radio) => radio.getAttribute("name"))).size).toBe(4);
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
     await user.click(screen.getByRole("radio", { name: /Heavy Battery/u }));
     expect(onCommand).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -73,7 +79,7 @@ describe("ShipEditorShell", () => {
       expect.any(String),
     );
     await user.click(screen.getByRole("button", { name: /PSA: требуется выбор/u }));
-    expect(document.getElementById("ship-editor-group-unit-0")).toHaveFocus();
+    await waitFor(() => expect(document.getElementById("ship-editor-group-unit-0")).toHaveFocus());
     expect(document.body.innerHTML).not.toMatch(/opaque-slot|DEMO-/u);
     expect(document.body.textContent).not.toMatch(/opaque-slot|DEMO-/u);
   });

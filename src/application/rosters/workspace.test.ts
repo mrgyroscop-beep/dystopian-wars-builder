@@ -344,7 +344,7 @@ describe("roster workspace application boundary", () => {
 
     const reopened = await openRosterWorkspace(crown.id, dependencies);
     expect(reopened!.model).toEqual(added);
-    expect(Object.keys(fixture.saved.get(crown.id)!.roster.instances)).toHaveLength(5);
+    expect(Object.keys(fixture.saved.get(crown.id)!.roster.instances)).toHaveLength(9);
   });
 });
 

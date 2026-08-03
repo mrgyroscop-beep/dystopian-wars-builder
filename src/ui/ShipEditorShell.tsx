@@ -46,6 +46,9 @@ export function ShipEditorShell({
 }) {
   const [tab, setTab] = useState<EditorTab>(ruleId ? "rules" : "configuration");
   const [fleetEditorOpen, setFleetEditorOpen] = useState(false);
+  const [openGroupId, setOpenGroupId] = useState<ShipEditorGroupId | null>(() =>
+    model.dataState === "ready" ? (model.groups[0]?.id ?? null) : null,
+  );
   const [localRuleId, setLocalRuleId] = useState<string | null>(null);
   const ruleReturn = useRef<RuleReturn | null>(null);
   const tabsId = useId();
@@ -60,9 +63,12 @@ export function ShipEditorShell({
 
   function focusGroup(groupId: ShipEditorGroupId | null) {
     if (!groupId || model.dataState !== "ready") return;
-    const target = document.getElementById(groupDomId(model, groupId));
-    if (target && "scrollIntoView" in target) target.scrollIntoView({ block: "center" });
-    target?.focus({ preventScroll: true });
+    setOpenGroupId(groupId);
+    requestAnimationFrame(() => {
+      const target = document.getElementById(groupDomId(model, groupId));
+      if (target && "scrollIntoView" in target) target.scrollIntoView({ block: "center" });
+      target?.focus({ preventScroll: true });
+    });
   }
 
   function selectTab(next: EditorTab) {
@@ -178,6 +184,15 @@ export function ShipEditorShell({
           <span data-state={model.system}>Система: {axisLabel(model.system)}</span>
         </div>
 
+        {model.mode === "preview" ? (
+          <div className="preview-primary-action">
+            <button className="button preview-add" disabled={busy} onClick={onAdd} type="button">
+              Добавить в состав
+            </button>
+            <small>Корабль будет добавлен с минимальной базовой комплектацией.</small>
+          </div>
+        ) : null}
+
         <div className="editor-tabs" role="tablist" aria-label="Раздел корабля">
           {editorTabs.map(([value, label]) => (
             <button
@@ -236,98 +251,21 @@ export function ShipEditorShell({
             )}
           </section>
 
-          {model.problems.length ? (
-            <section className="editor-problems" aria-labelledby={`${tabsId}-problems-title`}>
-              <h4 id={`${tabsId}-problems-title`}>Что исправить</h4>
-              <ul>
-                {model.problems.map((problem) => (
-                  <li key={problem.id}>
-                    <button onClick={() => focusGroup(problem.targetGroupId)} type="button">
-                      <strong>{problem.title}</strong>
-                      <span>{problem.detail}</span>
-                      <em>Перейти к {problem.targetGroupLabel} →</em>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-
           <div className="editor-groups">
             {model.groups.map((group, groupIndex) => (
-              <fieldset
-                className="editor-group"
-                disabled={busy || model.mode === "preview"}
-                id={`ship-editor-group-unit-${groupIndex}`}
+              <EditorGroup
+                busy={busy}
+                domId={`ship-editor-group-unit-${groupIndex}`}
+                group={group}
                 key={group.id}
-                tabIndex={-1}
-              >
-                <legend>
-                  <span>{group.label}</span>
-                  <small>
-                    {group.minimum}–{group.maximum}
-                  </small>
-                </legend>
-                <p>{group.help}</p>
-                {group.options.map((option) => {
-                  const unavailable = option.availability !== "available";
-                  return group.control === "exclusive" ? (
-                    <label
-                      className="editor-option"
-                      data-availability={option.availability}
-                      key={option.id}
-                    >
-                      <input
-                        checked={option.selectedQuantity === 1}
-                        disabled={unavailable}
-                        name={`ship-unit-${groupIndex}`}
-                        onChange={() =>
-                          model.instanceId &&
-                          onCommand(
-                            {
-                              type: "replace-exclusive",
-                              instanceId: model.instanceId,
-                              groupId: group.id,
-                              optionId: option.id,
-                            },
-                            `${group.label}: выбрано ${option.label}.`,
-                          )
-                        }
-                        type="radio"
-                      />
-                      <OptionCopy option={option} />
-                    </label>
-                  ) : (
-                    <label
-                      className="editor-option editor-option--quantity"
-                      data-availability={option.availability}
-                      key={option.id}
-                    >
-                      <OptionCopy option={option} />
-                      <input
-                        aria-label={`Количество ${option.label}`}
-                        max={group.maximum}
-                        min={group.minimum}
-                        onChange={(event) =>
-                          model.instanceId &&
-                          onCommand(
-                            {
-                              type: "set-choice-quantity",
-                              instanceId: model.instanceId,
-                              groupId: group.id,
-                              optionId: option.id,
-                              quantity: event.currentTarget.valueAsNumber,
-                            },
-                            `${group.label}: ${event.currentTarget.valueAsNumber} из ${group.maximum}.`,
-                          )
-                        }
-                        type="number"
-                        value={option.selectedQuantity}
-                      />
-                    </label>
-                  );
-                })}
-              </fieldset>
+                model={model}
+                nameToken={`unit-${groupIndex}`}
+                onCommand={onCommand}
+                onToggle={() =>
+                  setOpenGroupId((current) => (current === group.id ? null : group.id))
+                }
+                open={openGroupId === group.id}
+              />
             ))}
           </div>
 
@@ -374,15 +312,30 @@ export function ShipEditorShell({
                   model={model}
                   nameToken={`fleet-${groupIndex}`}
                   onCommand={onCommand}
+                  onToggle={() =>
+                    setOpenGroupId((current) => (current === group.id ? null : group.id))
+                  }
+                  open={openGroupId === group.id}
                 />
               ))}
             </section>
           ) : null}
 
-          {model.mode === "preview" ? (
-            <button className="button preview-add" disabled={busy} onClick={onAdd} type="button">
-              Добавить в состав
-            </button>
+          {model.problems.length ? (
+            <section className="editor-problems" aria-labelledby={`${tabsId}-problems-title`}>
+              <h4 id={`${tabsId}-problems-title`}>Что исправить</h4>
+              <ul>
+                {model.problems.map((problem) => (
+                  <li key={problem.id}>
+                    <button onClick={() => focusGroup(problem.targetGroupId)} type="button">
+                      <strong>{problem.title}</strong>
+                      <span>{problem.detail}</span>
+                      <em>Перейти к {problem.targetGroupLabel} →</em>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ) : null}
         </section>
       ) : visibleTab === "profile" ? (
@@ -447,6 +400,8 @@ function EditorGroup({
   model,
   nameToken,
   onCommand,
+  onToggle,
+  open,
 }: {
   readonly busy: boolean;
   readonly domId: string;
@@ -454,76 +409,113 @@ function EditorGroup({
   readonly model: ShipEditorReadyReadModel;
   readonly nameToken: string;
   readonly onCommand: (command: ShipEditorCommand, announcement: string) => void;
+  readonly onToggle: () => void;
+  readonly open: boolean;
 }) {
+  const selected = group.options.filter((option) => option.selectedQuantity > 0);
+  const selectedCount = selected.reduce((sum, option) => sum + option.selectedQuantity, 0);
+  const summary = selected.length
+    ? selected
+        .map((option) =>
+          option.selectedQuantity > 1
+            ? `${option.label} ×${option.selectedQuantity}`
+            : option.label,
+        )
+        .join(", ")
+    : group.minimum > 0
+      ? "Требуется выбор"
+      : "Без опций";
   return (
-    <fieldset
+    <section
+      aria-labelledby={`${domId}-title`}
       className="editor-group"
-      disabled={busy || model.mode === "preview"}
+      data-open={open}
       id={domId}
+      role="group"
       tabIndex={-1}
     >
-      <legend>
-        <span>{group.label}</span>
-        <small>
-          {group.minimum}–{group.maximum}
-        </small>
-      </legend>
-      <p>{group.help}</p>
-      {group.options.map((option) =>
-        group.control === "exclusive" ? (
-          <label className="editor-option" data-availability={option.availability} key={option.id}>
-            <input
-              checked={option.selectedQuantity === 1}
-              disabled={option.availability !== "available"}
-              name={`ship-${nameToken}`}
-              onChange={() =>
-                model.instanceId &&
-                onCommand(
-                  {
-                    type: "replace-exclusive",
-                    instanceId: model.instanceId,
-                    groupId: group.id,
-                    optionId: option.id,
-                  },
-                  `${group.label}: выбрано ${option.label}.`,
-                )
-              }
-              type="radio"
-            />
-            <OptionCopy option={option} />
-          </label>
-        ) : (
-          <label
-            className="editor-option editor-option--quantity"
-            data-availability={option.availability}
-            key={option.id}
-          >
-            <OptionCopy option={option} />
-            <input
-              aria-label={`Количество ${option.label}`}
-              disabled={option.availability !== "available"}
-              max={group.maximum}
-              min={group.minimum}
-              onChange={(event) =>
-                model.instanceId &&
-                onCommand(
-                  {
-                    type: "set-choice-quantity",
-                    instanceId: model.instanceId,
-                    groupId: group.id,
-                    optionId: option.id,
-                    quantity: event.currentTarget.valueAsNumber,
-                  },
-                  `${group.label}: ${event.currentTarget.valueAsNumber} из ${group.maximum}.`,
-                )
-              }
-              type="number"
-              value={option.selectedQuantity}
-            />
-          </label>
-        ),
-      )}
-    </fieldset>
+      <button
+        aria-expanded={open}
+        className="editor-group__summary"
+        id={`${domId}-title`}
+        onClick={onToggle}
+        type="button"
+      >
+        <span aria-hidden="true" className="editor-group__chevron">
+          {open ? "▾" : "▸"}
+        </span>
+        <span>
+          <strong>{group.label}</strong>
+          <small>
+            {selectedCount}/{group.maximum}
+          </small>
+        </span>
+        <em>{summary}</em>
+      </button>
+      {open ? (
+        <div className="editor-group__body">
+          <p>{group.help}</p>
+          {group.options.map((option) =>
+            group.control === "exclusive" ? (
+              <label
+                className="editor-option"
+                data-availability={option.availability}
+                key={option.id}
+              >
+                <input
+                  checked={option.selectedQuantity === 1}
+                  disabled={busy || model.mode === "preview" || option.availability !== "available"}
+                  name={`ship-${nameToken}`}
+                  onChange={() =>
+                    model.instanceId &&
+                    onCommand(
+                      {
+                        type: "replace-exclusive",
+                        instanceId: model.instanceId,
+                        groupId: group.id,
+                        optionId: option.id,
+                      },
+                      `${group.label}: выбрано ${option.label}.`,
+                    )
+                  }
+                  type="radio"
+                />
+                <OptionCopy option={option} />
+              </label>
+            ) : (
+              <label
+                className="editor-option editor-option--quantity"
+                data-availability={option.availability}
+                key={option.id}
+              >
+                <OptionCopy option={option} />
+                <input
+                  aria-label={`Количество ${option.label}`}
+                  disabled={busy || model.mode === "preview" || option.availability !== "available"}
+                  max={group.maximum}
+                  min={group.minimum}
+                  onChange={(event) =>
+                    model.instanceId &&
+                    onCommand(
+                      {
+                        type: "set-choice-quantity",
+                        instanceId: model.instanceId,
+                        groupId: group.id,
+                        optionId: option.id,
+                        quantity: event.currentTarget.valueAsNumber,
+                      },
+                      `${group.label}: ${event.currentTarget.valueAsNumber} из ${group.maximum}.`,
+                    )
+                  }
+                  type="number"
+                  value={option.selectedQuantity}
+                />
+              </label>
+            ),
+          )}
+        </div>
+      ) : null}
+    </section>
   );
 }
 

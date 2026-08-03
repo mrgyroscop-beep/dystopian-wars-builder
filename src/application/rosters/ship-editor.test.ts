@@ -16,7 +16,7 @@ import {
 } from "./ship-editor";
 
 describe("catalog-driven ship editor application boundary", () => {
-  it("materializes one placed structural Model and projects an honest 0/4 instance", () => {
+  it("materializes one structural Model with the minimum valid base loadout", () => {
     const fixture = setup();
     const structured = materializeShipStructure(
       fixture.snapshot,
@@ -45,19 +45,21 @@ describe("catalog-driven ship editor application boundary", () => {
       mode: "instance",
       basePoints: "350",
       victoryPoints: "9",
-      mandatory: { selected: 0, required: 4 },
-      validity: "invalid",
+      mandatory: { selected: 4, required: 4 },
+      validity: "valid",
       modelQuantity: { value: 1, fixed: true },
     });
     expect(model.groups.filter((group) => group.control === "exclusive")).toHaveLength(4);
-    expect(model.problems).toHaveLength(4);
-    expect(new Set(model.problems.map((problem) => problem.targetGroupLabel)).size).toBe(4);
-    expect(model.problems.every((problem) => problem.title.endsWith("требуется выбор"))).toBe(true);
+    expect(model.problems).toEqual([]);
   });
 
-  it("uses fleet-level Kagutsuchi and the real error modifier without auto-applying Magma", () => {
+  it("uses fleet-level Kagutsuchi and keeps the base loadout user-editable", () => {
     const fixture = setup();
     let snapshot = materialize(fixture);
+    expect(option(project(snapshot, fixture), "PSA", "Magma Cast Generator").selectedQuantity).toBe(
+      1,
+    );
+    snapshot = choose(snapshot, fixture, "PSA", "Heavy Battery");
     snapshot = choose(snapshot, fixture, "Доктрина флота", "Kagutsuchi Doctrine");
 
     let model = project(snapshot, fixture);
@@ -198,7 +200,7 @@ describe("catalog-driven ship editor application boundary", () => {
     };
     const hidden = project(snapshot, { ...fixture, catalog: hiddenCatalog });
     expect(hidden.groups.map((candidate) => candidate.label)).not.toContain("FPS 2");
-    expect(hidden.mandatory).toEqual({ selected: 0, required: 3 });
+    expect(hidden.mandatory).toEqual({ selected: 3, required: 3 });
     expect(hidden.problems.some((problem) => problem.detail.includes("selected option"))).toBe(
       true,
     );
@@ -235,12 +237,13 @@ describe("catalog-driven ship editor application boundary", () => {
     expect(unknown.validity).toBe("indeterminate");
   });
 
-  it("projects exactly four mandatory problems in preview and none after 4/4", () => {
+  it("projects a complete 4/4 base loadout and keeps every choice replaceable", () => {
     const fixture = setup();
     let snapshot = materialize(fixture);
+    expect(project(snapshot, fixture).mandatory).toEqual({ selected: 4, required: 4 });
     expect(
       project(snapshot, fixture).problems.filter((problem) => problem.id.startsWith("mandatory:")),
-    ).toHaveLength(4);
+    ).toEqual([]);
     for (const [groupLabel, optionLabel] of [
       ["PSA", "Magma Cast Generator"],
       ["FPS 1", "Fury Generator"],
@@ -314,15 +317,16 @@ describe("catalog-driven ship editor application boundary", () => {
         "saved-local",
       ),
     );
-    expect(preview.profileRules.variant).toBe("base");
+    expect(preview.profileRules.variant).toBe("effective");
     expect(preview.profileRules.sections.map((section) => section.label)).toEqual([
       "Model",
       "Properties",
       "Systems",
     ]);
-    expect(preview.profileRules.weapons).toHaveLength(1);
-    expect(preview.profileRules.weapons[0]?.id).toBe(
-      entityByLabel(fixture.catalog, "Fore Battery").id,
+    expect(preview.profileRules.weapons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: entityByLabel(fixture.catalog, "Fore Battery").id }),
+      ]),
     );
     expect(preview.profileRules.rules.map((rule) => rule.label)).toEqual(["Torrent", "Submerged"]);
 

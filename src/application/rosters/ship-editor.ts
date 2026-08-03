@@ -133,30 +133,30 @@ export function materializeShipStructure(
 ): RosterSnapshot {
   const placement = editorModelPlacement(catalog, unit.definitionId);
   if (!placement?.definitionId) return snapshot;
-  if (
-    Object.values(snapshot.instances).some(
-      (candidate) =>
-        candidate.parentInstanceId === unit.id && candidate.placementId === placement.id,
-    )
-  )
-    return snapshot;
-  const id = freshId(snapshot.instances, createId);
-  const quantity = placementCardinality(placement)?.minimum ?? 1;
-  return {
-    ...snapshot,
-    instances: {
-      ...snapshot.instances,
-      [id]: selection(
-        id,
-        placement.definitionId,
-        placement.id,
-        null,
-        unit.id,
-        unit.forceInstanceId ?? unit.id,
-        quantity,
-      ),
-    },
-  };
+  let materialized = snapshot;
+  const modelExists = Object.values(snapshot.instances).some(
+    (candidate) => candidate.parentInstanceId === unit.id && candidate.placementId === placement.id,
+  );
+  if (!modelExists) {
+    const id = freshId(snapshot.instances, createId);
+    const quantity = placementCardinality(placement)?.minimum ?? 1;
+    materialized = {
+      ...snapshot,
+      instances: {
+        ...snapshot.instances,
+        [id]: selection(
+          id,
+          placement.definitionId,
+          placement.id,
+          null,
+          unit.id,
+          unit.forceInstanceId ?? unit.id,
+          quantity,
+        ),
+      },
+    };
+  }
+  return materializeMinimumOptions(materialized, catalog, unit);
 }
 
 export function applyShipEditorCommand(
@@ -275,7 +275,7 @@ export function projectShipEditor(
 
   const projected = storedUnit
     ? { snapshot, unit: storedUnit }
-    : previewSnapshot(snapshot, targetDefinitionId, modelPlacement);
+    : previewSnapshot(snapshot, catalog, targetDefinitionId, modelPlacement);
   const evaluation = evaluateRoster(catalog, projected.snapshot);
   const modelInstance = Object.values(projected.snapshot.instances).find(
     (candidate) =>
@@ -578,6 +578,7 @@ function slotsForDefinition(catalog: DomainCatalog, definitionId: string): Slot[
 
 function previewSnapshot(
   source: RosterSnapshot,
+  catalog: DomainCatalog,
   definitionId: string,
   modelPlacement: Placement,
 ): { readonly snapshot: RosterSnapshot; readonly unit: RosterSelectionInstance } {
@@ -593,16 +594,122 @@ function previewSnapshot(
     unitId,
     placementCardinality(modelPlacement)?.minimum ?? 1,
   );
+  const preview = {
+    contractVersion: 1 as const,
+    id: `preview-${source.id}`,
+    catalogContentVersion: source.catalogContentVersion,
+    rootInstanceIds: [unitId],
+    instances: { [unitId]: unit, [modelId]: model },
+  };
   return {
     unit,
-    snapshot: {
-      contractVersion: 1,
-      id: `preview-${source.id}`,
-      catalogContentVersion: source.catalogContentVersion,
-      rootInstanceIds: [unitId],
-      instances: { [unitId]: unit, [modelId]: model },
-    },
+    snapshot: materializeMinimumOptions(preview, catalog, unit),
   };
+}
+
+function materializeMinimumOptions(
+  snapshot: RosterSnapshot,
+  catalog: DomainCatalog,
+  unit: RosterSelectionInstance,
+): RosterSnapshot {
+  let current = snapshot;
+  const blocked = new Set<string>();
+  for (let attempt = 0; attempt < 64; attempt += 1) {
+    const evaluation = evaluateRoster(catalog, current);
+    const owners = descendantsIncluding(current, unit.id);
+    const target = evaluation.slots.find((candidate) => {
+      const minimum = candidate.minimum === null ? null : Number(candidate.minimum);
+      return (
+        owners.has(candidate.ownerInstanceId) &&
+        candidate.visibility === "visible" &&
+        !candidate.helper &&
+        minimum !== null &&
+        Number.isSafeInteger(minimum) &&
+        candidate.selected < minimum &&
+        !blocked.has(`${candidate.ownerInstanceId}:${candidate.slotId}`)
+      );
+    });
+    if (!target) break;
+    const slot = catalog.slots[target.slotId];
+    const owner = current.instances[target.ownerInstanceId];
+    if (!slot || !owner || target.minimum === null) {
+      blocked.add(`${target.ownerInstanceId}:${target.slotId}`);
+      continue;
+    }
+    const placement = slot.optionPlacementIds
+      .map((id) => catalog.placements[id])
+      .filter((candidate): candidate is Placement => Boolean(candidate?.definitionId))
+      .filter((candidate) =>
+        evaluation.availability.some(
+          (availability) =>
+            availability.ownerInstanceId === owner.id &&
+            availability.placementId === candidate.id &&
+            availability.state === "available",
+        ),
+      )
+      .sort(
+        (left, right) =>
+          baseOptionPoints(catalog, left) - baseOptionPoints(catalog, right) ||
+          left.order - right.order ||
+          left.id.localeCompare(right.id),
+      )[0];
+    if (!placement?.definitionId) {
+      blocked.add(`${target.ownerInstanceId}:${target.slotId}`);
+      continue;
+    }
+    const minimum = Number(target.minimum);
+    const quantity = Math.max(1, minimum - target.selected);
+    const id = baseOptionInstanceId(current.instances, unit.id, placement.id);
+    current = {
+      ...current,
+      instances: {
+        ...current.instances,
+        [id]: selection(
+          id,
+          placement.definitionId,
+          placement.id,
+          slot.id,
+          owner.id,
+          unit.forceInstanceId ?? unit.id,
+          quantity,
+        ),
+      },
+    };
+  }
+  return current;
+}
+
+function baseOptionInstanceId(
+  instances: Readonly<Record<string, RosterSelectionInstance>>,
+  unitId: string,
+  placementIdValue: string,
+): RosterInstanceId {
+  const seed = `${unitId}:${placementIdValue}`;
+  let hash = 2_166_136_261;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  const base = `${unitId.replace(/[^a-zA-Z0-9_-]/gu, "-")}-base-${(hash >>> 0).toString(36)}`;
+  for (let suffix = 0; suffix < 100; suffix += 1) {
+    const id = rosterInstanceId(suffix === 0 ? base : `${base}-${suffix}`);
+    if (!instances[id]) return id;
+  }
+  throw new Error("Base loadout could not produce a unique instance ID");
+}
+
+function baseOptionPoints(catalog: DomainCatalog, placement: Placement): number {
+  const definition = placement.definitionId ? catalog.entities[placement.definitionId] : null;
+  return [...(definition?.costIds ?? []), ...placement.overlay.costIds].reduce((sum, id) => {
+    const cost = catalog.entities[id];
+    if (
+      cost?.kind !== "Cost" ||
+      cost.semantics.resource !== "points" ||
+      (cost.amount.state !== "value" && cost.amount.state !== "zero")
+    )
+      return sum;
+    return sum + Number(cost.amount.value);
+  }, 0);
 }
 
 function cardinality(slot: Slot): { readonly minimum: number; readonly maximum: number } | null {
