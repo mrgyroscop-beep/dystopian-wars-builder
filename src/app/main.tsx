@@ -3,19 +3,25 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 
 import { createHttpHealthGateway } from "../infrastructure/health/http-health-gateway";
+import { createHttpPasskeyAuthGateway } from "../infrastructure/auth/http-passkey-auth-gateway";
 import { createDemonstrationRosterSetupGateway } from "../infrastructure/catalog/demonstration-roster-setup";
 import {
   createDemonstrationFleetCatalogGateway,
   createDemonstrationWorkspaceRoster,
 } from "../infrastructure/catalog/demonstration-fleet-catalog";
 import { createBrowserRosterRepository } from "../infrastructure/rosters/browser-roster-repository";
+import { createSynchronizingRosterRepository } from "../infrastructure/rosters/synchronizing-roster-repository";
 import { createAppRouter } from "./router";
 import "./styles.css";
 
-const rosterRepository = createBrowserRosterRepository(window.localStorage);
+const rosterRepository = createSynchronizingRosterRepository(
+  createBrowserRosterRepository(window.localStorage),
+  window.localStorage,
+);
 const createId = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const router = createAppRouter({
+  authGateway: createHttpPasskeyAuthGateway(),
   healthGateway: createHttpHealthGateway(),
   rosterCreation: {
     setupGateway: createDemonstrationRosterSetupGateway(),
@@ -36,6 +42,7 @@ const router = createAppRouter({
     fallbackRoster: (id) =>
       id === "scaffold-demo" ? createDemonstrationWorkspaceRoster(id) : null,
   },
+  rosterSync: rosterRepository,
 });
 
 const rootElement = document.getElementById("root");

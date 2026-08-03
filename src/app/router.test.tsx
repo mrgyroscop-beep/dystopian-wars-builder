@@ -27,6 +27,12 @@ const rosterRepository = {
   }),
   read: vi.fn((id: string) => Promise.resolve(storedRosters.get(id) ?? null)),
 };
+const syncRepository = {
+  ...rosterRepository,
+  list: () => Promise.resolve([...storedRosters.values()]),
+  syncNow: () =>
+    Promise.resolve({ uploaded: 0, downloaded: 0, conflicts: 0, authenticated: false }),
+};
 const rosterCreation = {
   setupGateway: {
     contractVersion: 1 as const,
@@ -63,13 +69,18 @@ const rosterCreation = {
 
 afterEach(cleanup);
 const testDependencies = {
+  authGateway: {
+    contractVersion: 1 as const,
+    session: () => Promise.resolve(null),
+    register: () => Promise.reject(new Error("not used")),
+    login: () => Promise.reject(new Error("not used")),
+    logout: () => Promise.resolve(),
+    deleteAccount: () => Promise.resolve(),
+  },
   healthGateway: { read: readHealth } satisfies HealthGateway,
   rosterCreation,
   rosterLibrary: {
-    rosterRepository: {
-      ...rosterRepository,
-      list: () => Promise.resolve([...storedRosters.values()]),
-    },
+    rosterRepository: syncRepository,
     createId: () => crypto.randomUUID(),
     now: () => "2026-08-02T10:00:00.000Z",
   },
@@ -81,6 +92,7 @@ const testDependencies = {
     fallbackRoster: (id: string) =>
       id === "scaffold-demo" ? createDemonstrationWorkspaceRoster(id) : null,
   },
+  rosterSync: syncRepository,
 };
 
 function renderRoute(path: string) {

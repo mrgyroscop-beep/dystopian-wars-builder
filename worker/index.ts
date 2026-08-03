@@ -1,14 +1,22 @@
 import { Hono } from "hono";
+import { z } from "zod";
 
 import { healthResponseSchema } from "../src/application/health/health-contract";
+import { authRoutes } from "./auth";
+import { assertSameOrigin, HttpError } from "./http";
+import { rosterRoutes } from "./rosters";
 import { applyApiSecurityHeaders, createSafeRequestId, writeSafeErrorLog } from "./security";
 
 const app = new Hono<{ Bindings: Env }>();
 
 app.use("/api/*", async (context, next) => {
+  assertSameOrigin(context);
   await next();
   applyApiSecurityHeaders(context.res.headers);
 });
+
+app.route("/api/auth", authRoutes);
+app.route("/api/rosters", rosterRoutes);
 
 app.get("/api/health", (context) => {
   const payload = healthResponseSchema.parse({
@@ -35,7 +43,14 @@ app.notFound((context) =>
   ),
 );
 
-app.onError((_error, context) => {
+app.onError((error, context) => {
+  if (error instanceof HttpError)
+    return context.json({ error: { code: error.code, message: error.message } }, error.status);
+  if (error instanceof z.ZodError)
+    return context.json(
+      { error: { code: "invalid_request", message: "Request data is invalid." } },
+      400,
+    );
   const requestId = createSafeRequestId(context.req.header("cf-ray"));
   writeSafeErrorLog(console, {
     requestId,

@@ -33,7 +33,6 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
 
   const refresh = useCallback(async () => {
     if (fixture) return;
-    setState({ kind: "loading" });
     try {
       setState({ kind: "ready", rosters: await dependencies.rosterRepository.list() });
     } catch {
@@ -42,7 +41,8 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
   }, [dependencies, fixture]);
 
   useEffect(() => {
-    void refresh();
+    const timeout = window.setTimeout(() => void refresh(), 0);
+    return () => window.clearTimeout(timeout);
   }, [refresh]);
 
   async function saveName(roster: StoredRoster) {
@@ -137,7 +137,14 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
       ) : state.kind === "error" ? (
         <StatePanel
           action={
-            <button className="button" onClick={() => void refresh()} type="button">
+            <button
+              className="button"
+              onClick={() => {
+                setState({ kind: "loading" });
+                void refresh();
+              }}
+              type="button"
+            >
               Повторить
             </button>
           }

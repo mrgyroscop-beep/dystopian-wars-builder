@@ -22,4 +22,12 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"],
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dystopian-wars-builder",
+      "database_id": "28cc2aa5-e19e-4704-af06-ef13f15eb05a",
+      "migrations_dir": "./migrations",
+    },
+  ],
 }
