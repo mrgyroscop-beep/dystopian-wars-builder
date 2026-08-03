@@ -26,7 +26,6 @@
     "test:roster": "vitest run src/domain/roster/roster.test.ts --config vitest.config.ts",
     "test:domain:real": "vitest run --config vitest.domain-real.config.mjs",
     "test:worker": "vitest run --config vitest.worker.config.ts",
-    "smoke:production": "node scripts/smoke-production.mjs",
     "preview:smoke": "node scripts/smoke-preview.mjs",
     "test:e2e:smoke": "playwright test",
     "test:e2e:install": "playwright install chromium",
