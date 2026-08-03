@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { healthResponseSchema } from "../src/application/health/health-contract";
 import { authRoutes } from "./auth";
+import { feedbackRoutes, isFeedbackAutomationPath } from "./feedback";
 import { assertSameOrigin, HttpError } from "./http";
 import { rosterRoutes } from "./rosters";
 import { applyApiSecurityHeaders, createSafeRequestId, writeSafeErrorLog } from "./security";
@@ -10,12 +11,13 @@ import { applyApiSecurityHeaders, createSafeRequestId, writeSafeErrorLog } from 
 const app = new Hono<{ Bindings: Env }>();
 
 app.use("/api/*", async (context, next) => {
-  assertSameOrigin(context);
+  if (!isFeedbackAutomationPath(context.req.path)) assertSameOrigin(context);
   await next();
   applyApiSecurityHeaders(context.res.headers);
 });
 
 app.route("/api/auth", authRoutes);
+app.route("/api/feedback", feedbackRoutes);
 app.route("/api/rosters", rosterRoutes);
 
 app.get("/api/health", (context) => {

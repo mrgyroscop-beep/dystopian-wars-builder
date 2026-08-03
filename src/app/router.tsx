@@ -2,6 +2,7 @@ import { createBrowserRouter, type RouteObject } from "react-router-dom";
 
 import type { HealthGateway } from "../application/health/health-contract";
 import type { AuthGateway } from "../application/auth/auth-contract";
+import type { FeedbackGateway } from "../application/feedback/feedback-contract";
 import type { CreateRosterDependencies } from "../application/rosters/create-roster";
 import type { RosterLibraryDependencies } from "../application/rosters/roster-library";
 import type { RosterSyncGateway } from "../application/rosters/roster-sync";
@@ -17,6 +18,7 @@ import { SettingsRoute } from "../routes/SettingsRoute";
 
 export interface AppDependencies {
   authGateway: AuthGateway;
+  feedbackGateway: FeedbackGateway;
   healthGateway: HealthGateway;
   rosterCreation: CreateRosterDependencies;
   rosterLibrary: RosterLibraryDependencies;
@@ -26,6 +28,7 @@ export interface AppDependencies {
 
 export function createAppRoutes({
   authGateway,
+  feedbackGateway,
   healthGateway,
   rosterCreation,
   rosterLibrary,
@@ -39,7 +42,12 @@ export function createAppRoutes({
       children: [
         { index: true, element: <RosterLibraryRoute dependencies={rosterLibrary} /> },
         { path: "rosters/new", element: <NewRosterRoute {...rosterCreation} /> },
-        { path: "feedback", element: <FeedbackRoute healthGateway={healthGateway} /> },
+        {
+          path: "feedback",
+          element: (
+            <FeedbackRoute feedbackGateway={feedbackGateway} healthGateway={healthGateway} />
+          ),
+        },
         {
           path: "rosters/:rosterId",
           element: <RosterWorkspaceRoute dependencies={rosterWorkspace} />,

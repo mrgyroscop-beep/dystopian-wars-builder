@@ -5,6 +5,8 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { healthResponseSchema } from "../src/application/health/health-contract";
 import { sha256 } from "./http";
 
+const feedbackAutomationToken = "test-feedback-automation-token-with-enough-entropy";
+
 declare global {
   // Cloudflare's generated Env augmentation uses a namespace by design.
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -21,6 +23,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await env.DB.batch([
+    env.DB.prepare("DELETE FROM feedback"),
     env.DB.prepare("DELETE FROM roster_revisions"),
     env.DB.prepare("DELETE FROM rosters"),
     env.DB.prepare("DELETE FROM sessions"),
@@ -113,6 +116,95 @@ describe("Worker API", () => {
     await expect(response.json()).resolves.toEqual({
       error: { code: "invalid_credentials", message: "Неверный email или пароль." },
     });
+  });
+
+  it("stores private feedback idempotently and normalizes the optional email", async () => {
+    const body = {
+      requestId: "12345678-1234-4123-8123-123456789abc",
+      kind: "idea",
+      message: "Добавьте французский ORBAT.",
+      email: "Admiral@Example.com",
+      source: "/feedback",
+      appVersion: "0.1.0",
+      catalogVersion: "not-imported",
+      commitSha: "test-sha",
+    };
+    const request = () =>
+      exports.default.fetch("http://example.com/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: "http://example.com" },
+        body: JSON.stringify(body),
+      });
+    const first = await request();
+    const duplicate = await request();
+
+    expect(first.status).toBe(201);
+    expect(duplicate.status).toBe(200);
+    const receipt = await first.json<{ id: string; duplicate: boolean }>();
+    await expect(duplicate.json()).resolves.toEqual({ ...receipt, duplicate: true });
+    await expect(
+      env.DB.prepare("SELECT contact_email FROM feedback").first<string>("contact_email"),
+    ).resolves.toBe("admiral@example.com");
+  });
+
+  it("leases feedback only to the authorized automation and acknowledges its claim", async () => {
+    const submitted = await exports.default.fetch("http://example.com/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://example.com" },
+      body: JSON.stringify({
+        requestId: "87654321-4321-4123-8123-cba987654321",
+        kind: "bug",
+        message: "Не открывается карточка корабля.",
+        email: "captain@example.com",
+        source: "/rosters/demo",
+        appVersion: "0.1.0",
+        catalogVersion: "not-imported",
+        commitSha: "test-sha",
+      }),
+    });
+    expect(submitted.status).toBe(201);
+
+    const denied = await exports.default.fetch("http://example.com/api/feedback/automation/claim", {
+      method: "POST",
+      headers: { Authorization: "Bearer wrong", "Content-Type": "application/json" },
+      body: JSON.stringify({ limit: 1, leaseSeconds: 900 }),
+    });
+    expect(denied.status).toBe(401);
+
+    const claimed = await exports.default.fetch(
+      "http://example.com/api/feedback/automation/claim",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${feedbackAutomationToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ limit: 1, leaseSeconds: 900 }),
+      },
+    );
+    const claim = await claimed.json<{
+      items: Array<{ id: string; contact: string; claimToken: string }>;
+    }>();
+    expect(claim.items[0]).toMatchObject({ contact: "captain@example.com" });
+
+    const acknowledged = await exports.default.fetch(
+      `http://example.com/api/feedback/automation/${claim.items[0]?.id}/ack`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${feedbackAutomationToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ claimToken: claim.items[0]?.claimToken }),
+      },
+    );
+    expect(acknowledged.status).toBe(200);
+    await expect(
+      env.DB.prepare("SELECT state, contact_email FROM feedback").first<{
+        state: string;
+        contact_email: string | null;
+      }>(),
+    ).resolves.toEqual({ state: "acknowledged", contact_email: null });
   });
 
   it("isolates rosters by user and reports optimistic concurrency conflicts", async () => {

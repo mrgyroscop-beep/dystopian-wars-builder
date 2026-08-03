@@ -1,6 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 
+import type {
+  FeedbackGateway,
+  FeedbackKind,
+  FeedbackReceipt,
+} from "../application/feedback/feedback-contract";
 import {
   getHealth,
   type HealthGateway,
@@ -8,17 +13,24 @@ import {
 } from "../application/health/health-contract";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 
-const newIssueUrl = "https://github.com/mrgyroscop-beep/dystopian-wars-builder/issues/new";
-
-export function FeedbackRoute({ healthGateway }: { healthGateway: HealthGateway }) {
+export function FeedbackRoute({
+  feedbackGateway,
+  healthGateway,
+}: {
+  feedbackGateway: FeedbackGateway;
+  healthGateway: HealthGateway;
+}) {
   useDocumentTitle("Обратная связь");
   const location = useLocation();
   const source = safeSource((location.state as { from?: unknown } | null)?.from);
-  const [kind, setKind] = useState("Отзыв");
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const [kind, setKind] = useState<FeedbackKind>("feedback");
   const [message, setMessage] = useState("");
+  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const [preparedUrl, setPreparedUrl] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<FeedbackReceipt | null>(null);
   const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -26,35 +38,41 @@ export function FeedbackRoute({ healthGateway }: { healthGateway: HealthGateway 
     return () => controller.abort();
   }, [healthGateway]);
 
-  function prepare(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalized = message.trim();
     if (normalized.length < 10) {
       setError("Опишите вопрос хотя бы десятью символами.");
-      setPreparedUrl(null);
+      setReceipt(null);
       return;
     }
+    setBusy(true);
     setError("");
-    const target = new URL(newIssueUrl);
-    target.searchParams.set("title", `${kind}: ${normalized.slice(0, 80)}`);
-    target.searchParams.set(
-      "body",
-      [
-        `## ${kind}`,
-        "",
-        normalized,
-        "",
-        "## Безопасный контекст",
-        "",
-        `- Экран: ${source}`,
-        `- Версия приложения: ${health?.appVersion ?? "недоступна"}`,
-        `- Версия каталога: ${health?.catalogVersion ?? "недоступна"}`,
-        `- Commit: ${health?.commitSha ?? "недоступен"}`,
-        "",
-        "Состав флота и данные браузера не приложены.",
-      ].join("\n"),
-    );
-    setPreparedUrl(target.toString());
+    setReceipt(null);
+    try {
+      const result = await feedbackGateway.submit({
+        requestId,
+        kind,
+        message: normalized,
+        email: email.trim(),
+        source,
+        appVersion: health?.appVersion ?? "unavailable",
+        catalogVersion: health?.catalogVersion ?? "unavailable",
+        commitSha: health?.commitSha ?? "unavailable",
+      });
+      setReceipt(result);
+      setMessage("");
+      setEmail("");
+      setRequestId(crypto.randomUUID());
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "Не удалось отправить обращение.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -63,19 +81,18 @@ export function FeedbackRoute({ healthGateway }: { healthGateway: HealthGateway 
         <p className="eyebrow">Связаться с проектом</p>
         <h1>Обратная связь</h1>
         <p className="page-lead">
-          Мы подготовим черновик GitHub-обращения. Вы увидите его целиком и отправите
-          самостоятельно.
+          Сообщение попадёт в закрытую очередь проекта. Если хотите получить ответ, оставьте email.
         </p>
       </div>
 
-      <form className="panel feedback-form" onSubmit={prepare}>
+      <form className="panel feedback-form" onSubmit={(event) => void submit(event)}>
         <div className="form-grid">
           <label className="form-field form-field--wide">
             Тип обращения
-            <select onChange={(event) => setKind(event.target.value)} value={kind}>
-              <option>Отзыв</option>
-              <option>Ошибка</option>
-              <option>Предложение</option>
+            <select onChange={(event) => setKind(event.target.value as FeedbackKind)} value={kind}>
+              <option value="feedback">Отзыв</option>
+              <option value="bug">Ошибка</option>
+              <option value="idea">Предложение</option>
             </select>
           </label>
           <label className="form-field form-field--wide">
@@ -88,6 +105,22 @@ export function FeedbackRoute({ healthGateway }: { healthGateway: HealthGateway 
               value={message}
             />
           </label>
+          <label className="form-field form-field--wide">
+            Email <span className="field-optional">необязательно</span>
+            <input
+              aria-describedby="feedback-email-note"
+              autoComplete="email"
+              inputMode="email"
+              maxLength={254}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="admiral@example.com"
+              type="email"
+              value={email}
+            />
+            <small id="feedback-email-note">
+              Добавим адрес в Jira-задачу, чтобы связаться с вами после исправления.
+            </small>
+          </label>
         </div>
         {error ? (
           <p className="form-submit-error" role="alert">
@@ -95,28 +128,23 @@ export function FeedbackRoute({ healthGateway }: { healthGateway: HealthGateway 
           </p>
         ) : null}
         <div className="button-row">
-          <button className="button" type="submit">
-            Подготовить обращение
+          <button className="button" disabled={busy} type="submit">
+            {busy ? "Отправляем…" : "Отправить обращение"}
           </button>
         </div>
       </form>
 
-      {preparedUrl ? (
+      {receipt ? (
         <section className="feedback-preview" aria-live="polite">
-          <strong>Черновик готов</strong>
+          <strong>Обращение принято</strong>
           <p>
-            GitHub откроет заполненную форму. Проверьте текст и нажмите Submit только если всё
-            верно.
+            Спасибо. Номер обращения: <code>{receipt.id}</code>.
           </p>
-          <a className="button" href={preparedUrl} rel="noreferrer" target="_blank">
-            Открыть и проверить
-          </a>
         </section>
       ) : null}
 
       <p className="panel__copy">
-        Форма не читает localStorage, не прикладывает состав флота и ничего не отправляет
-        автоматически.
+        Форма не читает localStorage и не прикладывает состав флота или другие данные браузера.
       </p>
     </div>
   );

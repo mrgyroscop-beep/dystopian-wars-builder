@@ -44,7 +44,7 @@ export async function readBoundedJson(context: RequestContext): Promise<unknown>
 
 export class HttpError extends Error {
   constructor(
-    readonly status: 400 | 401 | 403 | 404 | 409 | 413 | 429,
+    readonly status: 400 | 401 | 403 | 404 | 405 | 409 | 413 | 429 | 503,
     readonly code: string,
     message: string,
   ) {

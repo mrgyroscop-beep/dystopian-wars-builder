@@ -4,6 +4,7 @@ import { RouterProvider } from "react-router-dom";
 
 import { createHttpHealthGateway } from "../infrastructure/health/http-health-gateway";
 import { createHttpPasswordAuthGateway } from "../infrastructure/auth/http-password-auth-gateway";
+import { createHttpFeedbackGateway } from "../infrastructure/feedback/http-feedback-gateway";
 import { createDemonstrationRosterSetupGateway } from "../infrastructure/catalog/demonstration-roster-setup";
 import {
   createDemonstrationFleetCatalogGateway,
@@ -22,6 +23,7 @@ const createId = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const router = createAppRouter({
   authGateway: createHttpPasswordAuthGateway(),
+  feedbackGateway: createHttpFeedbackGateway(),
   healthGateway: createHttpHealthGateway(),
   rosterCreation: {
     setupGateway: createDemonstrationRosterSetupGateway(),

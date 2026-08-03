@@ -3,6 +3,7 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { HealthGateway } from "../application/health/health-contract";
+import type { FeedbackGateway } from "../application/feedback/feedback-contract";
 import type { StoredRoster } from "../application/rosters/create-roster";
 import {
   createDemonstrationFleetCatalogGateway,
@@ -16,6 +17,10 @@ const readHealth = vi.fn<HealthGateway["read"]>().mockResolvedValue({
   appVersion: "test-version",
   catalogVersion: "test-catalog",
   commitSha: "0000000000000000000000000000000000000000",
+});
+const submitFeedback = vi.fn<FeedbackGateway["submit"]>().mockResolvedValue({
+  id: "fb_12345678-1234-4123-8123-123456789abc",
+  duplicate: false,
 });
 
 const storedRosters = new Map<string, StoredRoster>();
@@ -77,6 +82,7 @@ const testDependencies = {
     logout: () => Promise.resolve(),
     deleteAccount: () => Promise.resolve(),
   },
+  feedbackGateway: { contractVersion: 1 as const, submit: submitFeedback },
   healthGateway: { read: readHealth } satisfies HealthGateway,
   rosterCreation,
   rosterLibrary: {
@@ -158,6 +164,27 @@ describe("application routes", () => {
     expect(screen.getByLabelText(/^Пароль/u)).toHaveAttribute("type", "password");
     expect(screen.getByRole("button", { name: "Создать аккаунт" })).toBeVisible();
     expect(readHealth).toHaveBeenCalledOnce();
+  });
+
+  it("submits private feedback with an optional email", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    submitFeedback.mockClear();
+    renderRoute("/feedback");
+
+    await user.type(screen.getByLabelText("Сообщение"), "Добавьте французский ORBAT.");
+    await user.type(screen.getByLabelText(/Email/u), "Admiral@Example.com");
+    await user.click(screen.getByRole("button", { name: "Отправить обращение" }));
+
+    await waitFor(() =>
+      expect(submitFeedback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Добавьте французский ORBAT.",
+          email: "Admiral@Example.com",
+        }),
+      ),
+    );
+    expect(await screen.findByText(/fb_12345678/u)).toBeVisible();
   });
 
   it("creates a roster, saves it locally and opens its mandatory elements", async () => {
