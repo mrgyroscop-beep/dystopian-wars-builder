@@ -41,10 +41,10 @@ const router = createAppRouter({
   rosterWorkspace: {
     catalogGateway: {
       contractVersion: 1,
-      load: (contentVersion) =>
+      load: (contentVersion, factionId) =>
         contentVersion === "demonstration-1"
           ? demonstrationCatalog.load(contentVersion)
-          : publishedCatalog.catalogGateway.load(contentVersion),
+          : publishedCatalog.catalogGateway.load(contentVersion, factionId),
     },
     rosterRepository,
     createId,

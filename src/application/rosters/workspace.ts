@@ -122,7 +122,7 @@ export type RosterWorkspaceCommand =
 
 export interface RosterCatalogGateway {
   readonly contractVersion: 1;
-  load(contentVersion: string): Promise<DomainCatalog>;
+  load(contentVersion: string, factionId?: string): Promise<DomainCatalog>;
 }
 
 export interface RosterWorkspaceDependencies {
@@ -163,7 +163,10 @@ export async function openRosterWorkspace(
   const stored =
     (await dependencies.rosterRepository.read(id)) ?? dependencies.fallbackRoster?.(id);
   if (!stored) return null;
-  const catalog = await dependencies.catalogGateway.load(stored.roster.catalogContentVersion);
+  const catalog = await dependencies.catalogGateway.load(
+    stored.roster.catalogContentVersion,
+    stored.faction.id,
+  );
   const session = new WorkspaceSession(stored, catalog, dependencies);
   await session.prepare();
   return session;

@@ -8,12 +8,8 @@
 
 /catalog/releases/*
   Cache-Control: public, max-age=31536000, immutable
-  Content-Type: text/plain; charset=utf-8
 
-/catalog/index.json
-  Cache-Control: no-cache
-
-/catalog/bundles.json
+/catalog/factions.json
   Cache-Control: no-cache
 
 /catalog/setup.json

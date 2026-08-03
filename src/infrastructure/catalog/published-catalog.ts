@@ -1,69 +1,47 @@
+import { z } from "zod";
+
 import {
   rosterSetupCatalogSchema,
   type RosterSetupGateway,
 } from "../../application/rosters/create-roster";
 import type { RosterCatalogGateway } from "../../application/rosters/workspace";
-import {
-  catalogIndexSchema,
-  loadDomainCatalog,
-  type CatalogIndex,
-  type ContentHasher,
-  type DomainCatalogRepository,
-} from "../../domain/catalog";
-import { z } from "zod";
+import { DOMAIN_SCHEMA_VERSION, type DomainCatalog } from "../../domain/catalog";
 
 export interface PublishedCatalogClient {
   readonly setupGateway: RosterSetupGateway;
   readonly catalogGateway: RosterCatalogGateway;
 }
 
+const factionManifestSchema = z.object({
+  schemaVersion: z.literal(1),
+  contentVersion: z.string().regex(/^[0-9a-f]{64}$/u),
+  factions: z.record(
+    z.string(),
+    z.object({
+      label: z.string().min(1),
+      path: z.string().regex(/^releases\/[0-9a-f]{64}\/factions\/[a-z0-9-]+\.json\.gz$/u),
+      sha256: z.string().regex(/^[0-9a-f]{64}$/u),
+      bytes: z
+        .number()
+        .int()
+        .positive()
+        .max(25 * 1024 * 1024),
+      decodedBytes: z.number().int().positive(),
+      entities: z.number().int().positive(),
+    }),
+  ),
+});
+
 export function createPublishedCatalogClient(baseUrl = "/catalog"): PublishedCatalogClient {
   const normalizedBase = baseUrl.replace(/\/$/u, "");
-  let indexPromise: Promise<CatalogIndex> | undefined;
-  let bundlesPromise: Promise<z.infer<typeof bundleManifestSchema>> | undefined;
-  const bundlePromises = new Map<string, Promise<Map<string, string>>>();
-  const catalogPromises = new Map<string, Promise<Awaited<ReturnType<typeof loadDomainCatalog>>>>();
+  let manifestPromise: Promise<z.infer<typeof factionManifestSchema>> | undefined;
+  const catalogPromises = new Map<string, Promise<DomainCatalog>>();
 
-  const loadIndex = (): Promise<CatalogIndex> => {
-    if (!indexPromise)
-      indexPromise = fetchJson(`${normalizedBase}/index.json`).then(
-        (value) => catalogIndexSchema.parse(value) as CatalogIndex,
-      );
-    return indexPromise;
-  };
-  const repository: DomainCatalogRepository = {
-    contractVersion: 1,
-    async loadIndex(contentVersion) {
-      const index = await loadIndex();
-      if (index.contentVersion !== contentVersion)
-        throw new Error("Requested catalog version is not published");
-      return index;
-    },
-    loadChunk(sha256) {
-      bundlesPromise ??= fetchJson(`${normalizedBase}/bundles.json`).then((value) =>
-        bundleManifestSchema.parse(value),
-      );
-      return bundlesPromise.then(async (manifest) => {
-        const name = manifest.chunkToBundle[sha256];
-        if (!name) throw new Error("Published catalog chunk is not mapped to a bundle");
-        let pending = bundlePromises.get(name);
-        if (!pending) {
-          pending = fetchText(`${normalizedBase}/releases/${manifest.contentVersion}/${name}`).then(
-            parseBundle,
-          );
-          bundlePromises.set(name, pending);
-        }
-        const value = (await pending).get(sha256);
-        if (!value) throw new Error("Published catalog bundle is missing a chunk");
-        return value;
-      });
-    },
-  };
-  const hasher: ContentHasher = {
-    async sha256(value) {
-      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-      return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-    },
+  const loadManifest = () => {
+    manifestPromise ??= fetchJson(`${normalizedBase}/factions.json`).then((value) =>
+      factionManifestSchema.parse(value),
+    );
+    return manifestPromise;
   };
 
   return {
@@ -76,11 +54,13 @@ export function createPublishedCatalogClient(baseUrl = "/catalog"): PublishedCat
     },
     catalogGateway: {
       contractVersion: 1,
-      load(contentVersion) {
-        let pending = catalogPromises.get(contentVersion);
+      load(contentVersion, factionId) {
+        if (!factionId) return Promise.reject(new Error("Roster faction is required"));
+        const key = `${contentVersion}:${factionId}`;
+        let pending = catalogPromises.get(key);
         if (!pending) {
-          pending = loadDomainCatalog(contentVersion, repository, hasher);
-          catalogPromises.set(contentVersion, pending);
+          pending = loadFactionCatalog(normalizedBase, contentVersion, factionId, loadManifest());
+          catalogPromises.set(key, pending);
         }
         return pending;
       },
@@ -88,36 +68,45 @@ export function createPublishedCatalogClient(baseUrl = "/catalog"): PublishedCat
   };
 }
 
-const bundleManifestSchema = z.object({
-  schemaVersion: z.literal(1),
-  contentVersion: z.string().regex(/^[0-9a-f]{64}$/u),
-  files: z.array(
-    z.object({
-      name: z.string().regex(/^bundle-\d{2}\.ndjson$/u),
-      bytes: z
-        .number()
-        .int()
-        .positive()
-        .max(25 * 1024 * 1024),
-      chunks: z.number().int().positive(),
-    }),
-  ),
-  chunkToBundle: z.record(z.string(), z.string()),
-});
-
-function parseBundle(contents: string): Map<string, string> {
-  const chunks = new Map<string, string>();
-  for (const line of contents.split("\n")) {
-    if (!line) continue;
-    const separator = line.indexOf("\t");
-    if (separator !== 64) throw new Error("Published catalog bundle is malformed");
-    const sha256 = line.slice(0, separator);
-    const value = line.slice(separator + 1);
-    if (!/^[0-9a-f]{64}$/u.test(sha256) || chunks.has(sha256))
-      throw new Error("Published catalog bundle identity is invalid");
-    chunks.set(sha256, value);
+async function loadFactionCatalog(
+  baseUrl: string,
+  contentVersion: string,
+  factionId: string,
+  manifestPromise: Promise<z.infer<typeof factionManifestSchema>>,
+): Promise<DomainCatalog> {
+  const manifest = await manifestPromise;
+  if (manifest.contentVersion !== contentVersion)
+    throw new Error("Requested catalog version is not published");
+  const asset = manifest.factions[factionId];
+  if (!asset) throw new Error("Requested faction catalog is not published");
+  const compressed = await fetchBinary(`${baseUrl}/${asset.path}`);
+  if (compressed.byteLength !== asset.bytes)
+    throw new Error("Faction catalog size does not match its manifest");
+  const contents = await decompressGzip(compressed);
+  if (new TextEncoder().encode(contents).byteLength !== asset.decodedBytes)
+    throw new Error("Decoded faction catalog size does not match its manifest");
+  if ((await sha256(contents)) !== asset.sha256)
+    throw new Error("Faction catalog integrity check failed");
+  const catalog = JSON.parse(contents) as Partial<DomainCatalog>;
+  if (
+    catalog.schemaVersion !== DOMAIN_SCHEMA_VERSION ||
+    catalog.contentVersion !== contentVersion ||
+    catalog.source?.commit === undefined ||
+    !catalog.entities ||
+    !catalog.placements ||
+    !catalog.slots ||
+    !catalog.aliases ||
+    !catalog.roots ||
+    !catalog.diagnostics
+  ) {
+    throw new Error("Faction catalog contract is invalid");
   }
-  return chunks;
+  return catalog as DomainCatalog;
+}
+
+async function sha256(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 async function fetchJson(url: string): Promise<unknown> {
@@ -126,8 +115,15 @@ async function fetchJson(url: string): Promise<unknown> {
   return response.json();
 }
 
-async function fetchText(url: string): Promise<string> {
-  const response = await fetch(url, { headers: { Accept: "application/json" } });
+async function fetchBinary(url: string): Promise<ArrayBuffer> {
+  const response = await fetch(url, { headers: { Accept: "application/gzip" } });
   if (!response.ok) throw new Error(`Catalog request failed with status ${response.status}`);
-  return response.text();
+  return response.arrayBuffer();
+}
+
+async function decompressGzip(value: ArrayBuffer): Promise<string> {
+  if (typeof DecompressionStream === "undefined")
+    throw new Error("This browser cannot decompress the faction catalog");
+  const stream = new Blob([value]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return new Response(stream).text();
 }

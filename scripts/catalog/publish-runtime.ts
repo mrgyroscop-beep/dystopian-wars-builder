@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 
 import { projectRosterSetup } from "../../src/application/rosters/create-roster";
 import {
@@ -8,6 +9,7 @@ import {
   chunkDomainCatalog,
   normalizeCatalog,
   type ContentHasher,
+  type DomainCatalog,
   type LosslessGraph,
 } from "../../src/domain/catalog";
 import { buildDataset } from "./lib/build-dataset.mjs";
@@ -61,22 +63,42 @@ const setup = projectRosterSetup(currentCatalog);
 
 await rm(staging, { recursive: true, force: true });
 const releaseDirectory = path.join(staging, "releases", chunked.index.contentVersion);
-await mkdir(releaseDirectory, { recursive: true });
-let bundleCount = 0;
+const factionDirectory = path.join(releaseDirectory, "factions");
+await mkdir(factionDirectory, { recursive: true });
 try {
-  const bundles = bundleChunks(chunked.chunks);
-  bundleCount = bundles.files.length;
-  await Promise.all(
-    bundles.files.map((file) => writeFile(path.join(releaseDirectory, file.name), file.contents)),
+  const factions = Object.fromEntries(
+    await Promise.all(
+      setup.factions.map(async (faction) => {
+        const scoped = projectFactionCatalog(currentCatalog, faction.id);
+        const contents = canonicalJson(scoped);
+        const decodedBytes = Buffer.byteLength(contents);
+        const compressed = gzipSync(contents, { level: 9 });
+        const bytes = compressed.byteLength;
+        if (bytes > 25 * 1024 * 1024)
+          throw new Error(`Faction catalog ${faction.label} exceeds Cloudflare's asset limit`);
+        const sha256 = createHash("sha256").update(contents).digest("hex");
+        const name = `${safeFileName(faction.label)}-${sha256.slice(0, 12)}.json.gz`;
+        await writeFile(path.join(factionDirectory, name), compressed);
+        return [
+          faction.id,
+          {
+            label: faction.label,
+            path: `releases/${chunked.index.contentVersion}/factions/${name}`,
+            sha256,
+            bytes,
+            decodedBytes,
+            entities: Object.keys(scoped.entities).length,
+          },
+        ] as const;
+      }),
+    ),
   );
-  await writeFile(path.join(staging, "index.json"), canonicalJson(chunked.index));
   await writeFile(
-    path.join(staging, "bundles.json"),
+    path.join(staging, "factions.json"),
     canonicalJson({
       schemaVersion: 1,
       contentVersion: chunked.index.contentVersion,
-      files: bundles.files.map(({ name, bytes, chunks }) => ({ name, bytes, chunks })),
-      chunkToBundle: bundles.chunkToBundle,
+      factions,
     }),
   );
   await writeFile(path.join(staging, "setup.json"), canonicalJson(setup));
@@ -103,39 +125,99 @@ try {
 }
 
 process.stdout.write(
-  `Published catalog ${chunked.index.contentVersion} (${chunked.index.chunks.length} chunks in ${bundleCount} bundles, ${setup.factions.length} factions).\n`,
+  `Published catalog ${chunked.index.contentVersion} (${setup.factions.length} faction assets).\n`,
 );
 
-function bundleChunks(chunks: Readonly<Record<string, string>>) {
-  const maximumBytes = 20 * 1024 * 1024;
-  const files: Array<{ name: string; contents: string; bytes: number; chunks: number }> = [];
-  const chunkToBundle: Record<string, string> = {};
-  let lines: string[] = [];
-  let bytes = 0;
-
-  const flush = () => {
-    if (lines.length === 0) return;
-    const name = `bundle-${files.length.toString().padStart(2, "0")}.ndjson`;
-    const contents = `${lines.join("\n")}\n`;
-    files.push({ name, contents, bytes: Buffer.byteLength(contents), chunks: lines.length });
-    for (const line of lines) {
-      const separator = line.indexOf("\t");
-      chunkToBundle[line.slice(0, separator)] = name;
-    }
-    lines = [];
-    bytes = 0;
+function projectFactionCatalog(catalog: DomainCatalog, factionId: string): DomainCatalog {
+  const faction = catalog.entities[factionId];
+  if (faction?.kind !== "Faction") throw new Error(`Unknown faction ${factionId}`);
+  const entityIds = new Set<string>(
+    Object.values(catalog.entities)
+      .filter((entity) => entity.provenance.documentPath === faction.provenance.documentPath)
+      .map((entity) => entity.id),
+  );
+  const followsOwnedContent = (id: string) => {
+    const documentPath = catalog.entities[id]?.provenance.documentPath;
+    return (
+      documentPath === faction.provenance.documentPath ||
+      documentPath === "Dystopian Wars 4.0.gst" ||
+      documentPath === "Rules Glossary.cat"
+    );
   };
-
-  for (const [sha256, value] of Object.entries(chunks).sort(([left], [right]) =>
-    left.localeCompare(right),
-  )) {
-    const line = `${sha256}\t${value}`;
-    const lineBytes = Buffer.byteLength(line) + 1;
-    if (lineBytes > maximumBytes) throw new Error(`Catalog chunk ${sha256} exceeds bundle budget`);
-    if (bytes + lineBytes > maximumBytes) flush();
-    lines.push(line);
-    bytes += lineBytes;
+  const aliasIds = new Set<string>();
+  let changed = true;
+  while (changed) {
+    const before = entityIds.size + aliasIds.size;
+    for (const id of [...entityIds]) {
+      const entity = catalog.entities[id];
+      if (!entity) continue;
+      collectEntityReferences(entity, catalog, entityIds);
+      for (const alias of entity.identity.migrationAliasIds) aliasIds.add(alias);
+    }
+    for (const placement of Object.values(catalog.placements)) {
+      if (!entityIds.has(placement.ownerId) || !followsOwnedContent(placement.ownerId)) continue;
+      collectEntityReferences(placement, catalog, entityIds);
+    }
+    for (const slot of Object.values(catalog.slots)) {
+      if (!entityIds.has(slot.ownerId) || !followsOwnedContent(slot.ownerId)) continue;
+      collectEntityReferences(slot, catalog, entityIds);
+    }
+    for (const [aliasId, alias] of Object.entries(catalog.aliases)) {
+      if (!aliasIds.has(aliasId) && !alias.entityIds.some((id) => entityIds.has(id))) continue;
+      aliasIds.add(aliasId);
+      for (const id of alias.entityIds) entityIds.add(id);
+    }
+    changed = entityIds.size + aliasIds.size !== before;
   }
-  flush();
-  return { files, chunkToBundle };
+
+  const sourceNodeIds = new Set(
+    [...entityIds].map((id) => catalog.entities[id]?.identity.sourceNodeId).filter(Boolean),
+  );
+  return {
+    ...catalog,
+    entities: selectRecord(catalog.entities, (id) => entityIds.has(id)),
+    placements: selectRecord(
+      catalog.placements,
+      (_id, placement) =>
+        entityIds.has(placement.ownerId) &&
+        followsOwnedContent(placement.ownerId) &&
+        (!placement.definitionId || entityIds.has(placement.definitionId)),
+    ),
+    slots: selectRecord(
+      catalog.slots,
+      (_id, slot) => entityIds.has(slot.ownerId) && followsOwnedContent(slot.ownerId),
+    ),
+    aliases: selectRecord(catalog.aliases, (id) => aliasIds.has(id)),
+    roots: catalog.roots.filter((id) => entityIds.has(id)),
+    diagnostics: catalog.diagnostics.filter((diagnostic) =>
+      sourceNodeIds.has(diagnostic.sourceNodeId),
+    ),
+  };
+}
+
+function collectEntityReferences(value: unknown, catalog: DomainCatalog, ids: Set<string>): void {
+  if (typeof value === "string") {
+    if (catalog.entities[value]) ids.add(value);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectEntityReferences(item, catalog, ids);
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const item of Object.values(value)) collectEntityReferences(item, catalog, ids);
+}
+
+function selectRecord<Value>(
+  source: Readonly<Record<string, Value>>,
+  include: (id: string, value: Value) => boolean,
+): Record<string, Value> {
+  return Object.fromEntries(Object.entries(source).filter(([id, value]) => include(id, value)));
+}
+
+function safeFileName(value: string): string {
+  return value
+    .toLocaleLowerCase("en")
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-|-$/gu, "");
 }
