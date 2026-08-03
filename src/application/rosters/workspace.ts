@@ -641,7 +641,7 @@ function projectWorkspace(
 ): RosterWorkspaceReadModel {
   const evaluation = evaluateRoster(catalog, stored.roster);
   const elements = projectElements(stored, catalog, evaluation);
-  const problems = projectProblems(stored, evaluation, elements);
+  const problems = projectProblems(stored, catalog, evaluation, elements);
   const points = totalFor(evaluation, "points");
   const victoryPoints = totalFor(evaluation, "victory-points");
   if (Number(points) > stored.limits.points)
@@ -722,6 +722,9 @@ function projectCatalog(
   catalog: DomainCatalog,
   stored: StoredRoster,
 ): readonly CatalogItemReadModel[] {
+  const demonstration = Object.values(catalog.entities).some((entity) =>
+    Object.keys(entity.attributes).some((key) => key.startsWith("demo.")),
+  );
   const elementInstances = Object.values(stored.roster.instances).filter(
     (instance) => catalog.entities[instance.definitionId]?.kind === "BattlefleetElement",
   );
@@ -776,15 +779,21 @@ function projectCatalog(
         role: entity.attributes.role || "Корабль",
         nation: entity.attributes.nation || stored.faction.label,
         platform: entity.attributes.platform || "Surface",
-        points: entityCost(entity, catalog, "points"),
-        victoryPoints: entityCost(entity, catalog, "victory-points"),
+        points: entityCost(entity, targets[0]?.placementId, catalog, "points"),
+        victoryPoints: entityCost(entity, targets[0]?.placementId, catalog, "victory-points"),
         preview:
           entity.description?.plainText ||
           "Безопасная демонстрационная карточка без upstream-изображений и игровых данных.",
         availability: { state, reason },
         eligibleTargets: targets,
       };
-    });
+    })
+    .filter(
+      (item) =>
+        demonstration ||
+        item.eligibleTargets.length > 0 ||
+        item.availability.state === "indeterminate",
+    );
   const rank = new Map(fleetCategories.map((category, index) => [category, index]));
   return items.sort(
     (left, right) =>
@@ -834,6 +843,7 @@ function projectElements(
 
 function projectProblems(
   stored: StoredRoster,
+  catalog: DomainCatalog,
   evaluation: RosterEvaluation,
   elements: readonly FleetElementReadModel[],
 ): WorkspaceProblemReadModel[] {
@@ -856,6 +866,17 @@ function projectProblems(
     };
   });
   for (const element of elements) {
+    const definition = catalog.entities[element.definitionId];
+    const evaluatorOwnsMinimum = definition?.constraintIds.some((id) => {
+      const constraint = catalog.entities[id];
+      return (
+        constraint?.kind === "Constraint" &&
+        constraint.expression.field === "selections" &&
+        constraint.expression.operator === "min" &&
+        constraint.expression.evaluable
+      );
+    });
+    if (evaluatorOwnsMinimum) continue;
     if (element.instances.length >= element.minimum) continue;
     problems.push({
       id: `required:${element.id}`,
@@ -955,10 +976,40 @@ function categoryFor(entity: DomainEntity, catalog: DomainCatalog): FleetCategor
 
 function entityCost(
   entity: DomainEntity,
+  incomingPlacementId: string | undefined,
   catalog: DomainCatalog,
   resource: "points" | "victory-points",
 ): string {
-  const values = entity.costIds.flatMap((id) => {
+  const incoming = incomingPlacementId ? catalog.placements[incomingPlacementId] : undefined;
+  let total = costTotal(
+    [...entity.costIds, ...(incoming?.overlay.costIds ?? [])],
+    catalog,
+    resource,
+  );
+  const modelPlacement = Object.values(catalog.placements)
+    .filter(
+      (placement) =>
+        placement.ownerId === entity.id &&
+        placement.definitionId &&
+        catalog.entities[placement.definitionId]?.kind === "Model",
+    )
+    .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id))[0];
+  if (modelPlacement?.definitionId) {
+    const model = catalog.entities[modelPlacement.definitionId];
+    const minimum = cardinalityNumber(modelPlacement.overlay.cardinality?.minimum) ?? 1;
+    total +=
+      minimum *
+      costTotal([...(model?.costIds ?? []), ...modelPlacement.overlay.costIds], catalog, resource);
+  }
+  return String(Number.isInteger(total) ? total : Number(total.toFixed(6)));
+}
+
+function costTotal(
+  ids: readonly string[],
+  catalog: DomainCatalog,
+  resource: "points" | "victory-points",
+): number {
+  const values = ids.flatMap((id) => {
     const cost = catalog.entities[id];
     if (cost?.kind !== "Cost" || cost.semantics.resource !== resource) return [];
     return cost.amount.state === "zero"
@@ -967,7 +1018,17 @@ function entityCost(
         ? [Number(cost.amount.value)]
         : [];
   });
-  return String(values.reduce((sum, value) => sum + value, 0));
+  return values.reduce((sum, value) => sum + value, 0);
+}
+
+function cardinalityNumber(
+  value: { readonly state: string; readonly value?: string } | undefined,
+): number | null {
+  if (!value) return null;
+  if (value.state === "zero") return 0;
+  if (value.state !== "value" || value.value === undefined) return null;
+  const parsed = Number(value.value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function totalFor(evaluation: RosterEvaluation, resource: "points" | "victory-points"): string {

@@ -900,6 +900,15 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       return rawCostMetric(populationInstances, targets[0] ?? null);
     if (expression.field === "name") return { state: "unknown", code: "UNSUPPORTED_NAME_FIELD" };
     const count = populationInstances.reduce((sum, candidate) => {
+      const candidateKind = catalog.entities[candidate.definitionId]?.kind;
+      const categorySelection =
+        expression.field === "selections" &&
+        targets.some((target) => catalog.entities[target]?.kind === "Category");
+      if (
+        categorySelection &&
+        (candidateKind === "Battlefleet" || candidateKind === "BattlefleetElement")
+      )
+        return sum;
       if (targets.length === 0) return sum + candidate.quantity;
       return targets.some((target) => instanceMatches(candidate, target))
         ? sum + candidate.quantity
@@ -924,6 +933,8 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       case "self":
         return { state: "known", instances: [instance] };
       case "parent": {
+        if (catalog.entities[instance.definitionId]?.kind === "BattlefleetElement")
+          return { state: "known", instances: children.get(instance.id) ?? [] };
         const parentId = instance.parentInstanceId;
         return {
           state: "known",

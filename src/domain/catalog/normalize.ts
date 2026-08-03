@@ -97,6 +97,7 @@ const knownModifierOperators = new Set([
   "increment",
   "multiply",
   "set",
+  "set-primary",
 ]);
 const knownConditionGroupOperators = new Set(["and", "or"]);
 const knownFields = new Set([
@@ -108,6 +109,7 @@ const knownFields = new Set([
   "name",
   "error",
   "hidden",
+  "category",
 ]);
 const knownScopes = new Set([
   "ancestor",
@@ -291,6 +293,8 @@ export function normalizeCatalog(
     if (root) connect(root, null, null, 0);
     options.observeMemoryCheckpoint?.();
   }
+
+  attachTargetedModifiers();
 
   for (const alias of aliases.values()) {
     for (const target of alias.entityIds) {
@@ -549,6 +553,22 @@ export function normalizeCatalog(
         provenance: provenanceOf(context, input),
         explicit: true,
       });
+  }
+
+  function attachTargetedModifiers(): void {
+    for (const context of contexts.values()) {
+      if (context.kind !== "Modifier" || !context.entityId) continue;
+      if (!context.ancestorTags.includes("forceEntry")) continue;
+      const field = context.node.attributes.field;
+      if (!field || !/^(?:[0-9a-f]{4}-){3}[0-9a-f]{4}$/iu.test(field)) continue;
+      const targets = resolveTargetLike(field, context, upstreamIndex).filter(
+        (candidate) => candidate.kind === "Constraint",
+      );
+      if (targets.length !== 1 || !targets[0]?.entityId) continue;
+      const target = entities.get(targets[0].entityId);
+      if (target && !target.modifierIds.includes(context.entityId))
+        target.modifierIds.push(context.entityId);
+    }
   }
 
   function referenceResolution(
@@ -1038,16 +1058,19 @@ function overlayOf(
   contexts: ReadonlyMap<string, NodeContext>,
 ): PlacementOverlay {
   const relationIds = (tags: ReadonlySet<string>): EntityId[] => {
-    const result: EntityId[] = [];
+    const result = new Set<EntityId>();
     const visit = (node: LosslessNode): void => {
       const childContext = contexts.get(node.key);
       if (childContext?.entityId && tags.has(childContext.kind ?? ""))
-        result.push(childContext.entityId);
-      else if (structuralContainers.has(node.tag))
+        result.add(childContext.entityId);
+      else if (node.tag === "categoryLink" && node.target && tags.has("Category")) {
+        const target = contexts.get(node.target);
+        if (target?.entityId && target.kind === "Category") result.add(target.entityId);
+      } else if (structuralContainers.has(node.tag))
         for (const child of node.children ?? []) visit(child);
     };
     for (const child of context.node.children ?? []) visit(child);
-    return result.sort();
+    return [...result].sort();
   };
   return {
     categoryIds: relationIds(new Set(["Category"])),

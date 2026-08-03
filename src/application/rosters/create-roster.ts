@@ -55,7 +55,7 @@ export const rosterSetupCatalogSchema = z.object({
             z.object({
               id: z.string().min(1),
               label: z.string().min(1),
-              minimum: z.number().int().min(1),
+              minimum: z.number().int().min(0),
             }),
           ),
         }),
@@ -78,7 +78,7 @@ export const storedRosterSchema = z.object({
     z.object({
       id: z.string().min(1),
       label: z.string().min(1),
-      minimum: z.number().int().min(1),
+      minimum: z.number().int().min(0),
     }),
   ),
   roster: rosterSnapshotSchema,
@@ -254,7 +254,14 @@ function requiredElements(
       const value = Number(constraint.expression.value);
       return Number.isSafeInteger(value) && value > highest ? value : highest;
     }, 0);
-    if (minimum > 0) elements.push({ id: entity.id, label: entity.label.plainText, minimum });
+    const hasShips = Object.values(catalog.placements).some((candidate) => {
+      if (candidate.ownerId !== entity.id || !candidate.definitionId || !candidate.resolved)
+        return false;
+      const definition = catalog.entities[candidate.definitionId];
+      return definition?.kind === "Unit" || definition?.kind === "Model";
+    });
+    if (!hasShips && minimum === 0) continue;
+    elements.push({ id: entity.id, label: entity.label.plainText, minimum });
   }
   return elements.sort(compareLabels);
 }

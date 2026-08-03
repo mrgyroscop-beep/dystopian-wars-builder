@@ -7,6 +7,7 @@ import { projectRosterSetup } from "../../src/application/rosters/create-roster"
 import {
   canonicalJson,
   chunkDomainCatalog,
+  enrichBattlefleetCatalog,
   normalizeCatalog,
   type ContentHasher,
   type DomainCatalog,
@@ -48,10 +49,12 @@ const imported = await buildDataset(lock, sources, provenance);
 const graphJson = imported.files.get("catalog.json");
 if (!graphJson) throw new Error("Imported catalog graph is missing");
 
-const normalized = normalizeCatalog({
-  graph: JSON.parse(graphJson) as LosslessGraph,
-  source: imported.manifest.source.resolved,
-});
+const normalized = enrichBattlefleetCatalog(
+  normalizeCatalog({
+    graph: JSON.parse(graphJson) as LosslessGraph,
+    source: imported.manifest.source.resolved,
+  }),
+);
 const hasher: ContentHasher = {
   sha256(value) {
     return Promise.resolve(createHash("sha256").update(value).digest("hex"));

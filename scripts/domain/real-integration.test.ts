@@ -11,6 +11,7 @@ import { verifyLockedProvenance } from "../catalog/lib/verify-provenance.mjs";
 import {
   canonicalJson,
   chunkDomainCatalog,
+  enrichBattlefleetCatalog,
   MAX_CHUNK_BYTES,
   loadDomainCatalog,
   normalizeCatalog,
@@ -62,17 +63,21 @@ beforeAll(async () => {
   const input = { graph, source: imported.manifest.source.resolved };
   peakHeapBytes = process.memoryUsage().heapUsed;
   const started = performance.now();
-  first = normalizeCatalog(input, {
-    observeMemoryCheckpoint() {
-      peakHeapBytes = Math.max(peakHeapBytes, process.memoryUsage().heapUsed);
-    },
-  });
+  first = enrichBattlefleetCatalog(
+    normalizeCatalog(input, {
+      observeMemoryCheckpoint() {
+        peakHeapBytes = Math.max(peakHeapBytes, process.memoryUsage().heapUsed);
+      },
+    }),
+  );
   elapsedMs = performance.now() - started;
   firstBytes = canonicalJson(first);
   process.stdout.write(`domain-real: normalize complete ${Math.round(elapsedMs)}ms\n`);
   chunks = await chunkDomainCatalog(first, hasher);
   process.stdout.write(`domain-real: chunks complete ${chunks.index.chunks.length}\n`);
-  const secondBytes = canonicalJson(normalizeCatalog(structuredClone(input)));
+  const secondBytes = canonicalJson(
+    enrichBattlefleetCatalog(normalizeCatalog(structuredClone(input))),
+  );
   process.stdout.write("domain-real: second normalize complete\n");
   if (firstBytes !== secondBytes)
     throw new Error("Real normalized model is not byte deterministic");
@@ -414,6 +419,110 @@ describe("pinned real domain model", () => {
     }
     expect(
       projectedBattlefleets.some((battlefleet) => battlefleet.requiredElements.length > 0),
+    ).toBe(true);
+  });
+
+  it("projects playable ships into every Marina Pontificia element without false sibling limits", () => {
+    const setup = projectRosterSetup(first);
+    const alliance = setup.factions.find((faction) => faction.label === "Alliance")!;
+    const marina = alliance.battlefleets.find((battlefleet) =>
+      battlefleet.label.includes("Marina Pontificia"),
+    )!;
+    expect(marina).toBeDefined();
+    expect(marina.requiredElements.map((element) => element.label)).toEqual(
+      expect.arrayContaining(["French", "Papal Flagship", "Portuguese"]),
+    );
+
+    for (const element of marina.requiredElements) {
+      const ships = Object.values(first.placements).filter((placement) => {
+        if (placement.ownerId !== element.id || !placement.definitionId) return false;
+        const definition = first.entities[placement.definitionId];
+        return definition?.kind === "Unit" || definition?.kind === "Model";
+      });
+      expect(ships.length, element.label).toBeGreaterThan(0);
+    }
+
+    const rootId = rosterInstanceId("real:marina:root");
+    const instances: Record<string, RosterSelectionInstance> = {
+      [rootId]: realInstance(rootId, marina.id, null, rootId),
+    };
+    const elementInstances = new Map<string, ReturnType<typeof rosterInstanceId>>();
+    for (const [index, element] of marina.requiredElements.entries()) {
+      const placement = Object.values(first.placements).find(
+        (candidate) => candidate.ownerId === marina.id && candidate.definitionId === element.id,
+      )!;
+      const id = rosterInstanceId(`real:marina:element:${index}`);
+      instances[id] = realInstance(id, element.id, rootId, rootId, placement.id);
+      elementInstances.set(element.label, id);
+    }
+    const evaluation = evaluateRoster(first, {
+      contractVersion: 1,
+      id: "real-marina",
+      catalogContentVersion: first.contentVersion,
+      rootInstanceIds: [rootId],
+      instances,
+    });
+    expect(
+      evaluation.problems.filter(
+        (problem) => problem.code === "CONSTRAINT_MAX_EXCEEDED" && problem.actual === "3",
+      ),
+    ).toEqual([]);
+
+    const french = marina.requiredElements.find((element) => element.label === "French")!;
+    const frenchPlacement = Object.values(first.placements).find((placement) => {
+      if (placement.ownerId !== french.id || !placement.definitionId) return false;
+      return first.entities[placement.definitionId]?.kind === "Unit";
+    })!;
+    const frenchShipId = rosterInstanceId("real:marina:french-ship");
+    const withFrench = evaluateRoster(first, {
+      contractVersion: 1,
+      id: "real-marina-french",
+      catalogContentVersion: first.contentVersion,
+      rootInstanceIds: [rootId],
+      instances: {
+        ...instances,
+        [frenchShipId]: realInstance(
+          frenchShipId,
+          frenchPlacement.definitionId!,
+          elementInstances.get("French")!,
+          rootId,
+          frenchPlacement.id,
+        ),
+      },
+    });
+    expect(
+      withFrench.problems.filter(
+        (problem) =>
+          problem.code === "CONSTRAINT_MIN_NOT_MET" &&
+          problem.target.instanceId === elementInstances.get("Portuguese"),
+      ),
+    ).toEqual([]);
+
+    const papal = marina.requiredElements.find((element) => element.label === "Papal Flagship")!;
+    const papalPlacement = Object.values(first.placements).find((placement) => {
+      if (placement.ownerId !== papal.id || !placement.definitionId) return false;
+      return first.entities[placement.definitionId]?.kind === "Unit";
+    })!;
+    expect(first.entities[papalPlacement.definitionId!]?.label.plainText).toBe(
+      "Concordat Command Cruiser",
+    );
+    const modelPlacement = Object.values(first.placements).find(
+      (placement) =>
+        placement.ownerId === papalPlacement.definitionId &&
+        placement.definitionId &&
+        first.entities[placement.definitionId]?.kind === "Model",
+    )!;
+    const model = first.entities[modelPlacement.definitionId!];
+    expect(
+      model?.costIds.some((id) => {
+        const cost = first.entities[id];
+        return (
+          cost?.kind === "Cost" &&
+          cost.semantics.resource === "points" &&
+          cost.amount.state === "value" &&
+          Number(cost.amount.value) > 0
+        );
+      }),
     ).toBe(true);
   });
 
