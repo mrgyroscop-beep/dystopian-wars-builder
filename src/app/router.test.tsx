@@ -117,7 +117,25 @@ describe("application routes", () => {
     expect(screen.getByRole("main")).toBeVisible();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Флоты" })).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("link", { name: "Создать" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Войти в аккаунт" })).toHaveTextContent("Войти");
     await waitFor(() => expect(document.title).toContain("Флоты"));
+  });
+
+  it("shows the authenticated user name after settings", async () => {
+    const authGateway = {
+      ...testDependencies.authGateway,
+      session: () =>
+        Promise.resolve({ id: "12345678-1234-4123-8123-123456789abc", displayName: "Адмирал" }),
+    };
+    const testRouter = createMemoryRouter(createAppRoutes({ ...testDependencies, authGateway }), {
+      initialEntries: ["/"],
+    });
+    render(<RouterProvider router={testRouter} />);
+
+    expect(await screen.findByRole("link", { name: "Аккаунт: Адмирал" })).toHaveTextContent(
+      "Адмирал",
+    );
   });
 
   it("renders a controlled 404 with a recovery action", () => {

@@ -7,6 +7,7 @@ import {
   type HealthResponse,
 } from "../application/health/health-contract";
 import type { RosterSyncGateway, RosterSyncResult } from "../application/rosters/roster-sync";
+import { announceAuthSessionChanged } from "../app/authSessionEvents";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 
 type HealthState =
@@ -77,6 +78,7 @@ export function SettingsRoute({ authGateway, healthGateway, rosterSync }: Settin
     try {
       const user = await action();
       setAccount({ kind: "authenticated", user });
+      announceAuthSessionChanged();
       setPassword("");
       setAccountMessage(syncMessage(await rosterSync.syncNow()));
     } catch (error) {
@@ -104,6 +106,7 @@ export function SettingsRoute({ authGateway, healthGateway, rosterSync }: Settin
     try {
       await authGateway.logout();
       setAccount({ kind: "anonymous" });
+      announceAuthSessionChanged();
       setPassword("");
       setAccountMessage("Вы вышли. Локальные флоты остались на устройстве.");
     } finally {
@@ -122,6 +125,7 @@ export function SettingsRoute({ authGateway, healthGateway, rosterSync }: Settin
     try {
       await authGateway.deleteAccount();
       setAccount({ kind: "anonymous" });
+      announceAuthSessionChanged();
       setPassword("");
       setAccountMessage("Аккаунт и серверные данные удалены. Локальные флоты сохранены.");
     } finally {

@@ -37,7 +37,7 @@ export function createAppRoutes({
 }: AppDependencies): RouteObject[] {
   return [
     {
-      element: <AppShell />,
+      element: <AppShell authGateway={authGateway} />,
       errorElement: <RouteErrorBoundary />,
       children: [
         { index: true, element: <RosterLibraryRoute dependencies={rosterLibrary} /> },

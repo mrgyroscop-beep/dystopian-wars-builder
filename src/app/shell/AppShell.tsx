@@ -1,15 +1,47 @@
+import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+
+import type { AuthGateway, AuthUser } from "../../application/auth/auth-contract";
+import { AUTH_SESSION_CHANGED_EVENT } from "../authSessionEvents";
 
 const navigationItems = [
   { to: "/", label: "Флоты", end: true },
-  { to: "/rosters/new", label: "Создать", end: false },
   { to: "/feedback", label: "Обратная связь", end: false },
   { to: "/settings", label: "Настройки", end: false },
 ] as const;
 
-export function AppShell() {
+interface AppShellProps {
+  authGateway: AuthGateway;
+}
+
+export function AppShell({ authGateway }: AppShellProps) {
   const location = useLocation();
   const feedbackSource = safeScreen(location.pathname);
+  const [accountUser, setAccountUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    let controller: AbortController | null = null;
+    const refreshSession = () => {
+      controller?.abort();
+      const requestController = new AbortController();
+      controller = requestController;
+      authGateway.session(requestController.signal).then(
+        (user) => setAccountUser(user),
+        () => {
+          if (!requestController.signal.aborted) setAccountUser(null);
+        },
+      );
+    };
+
+    refreshSession();
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, refreshSession);
+    return () => {
+      controller?.abort();
+      window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, refreshSession);
+    };
+  }, [authGateway]);
+
+  const accountLabel = accountUser?.displayName ?? "Войти";
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -42,6 +74,14 @@ export function AppShell() {
                 {item.label}
               </NavLink>
             ))}
+            <Link
+              aria-label={accountUser ? `Аккаунт: ${accountUser.displayName}` : "Войти в аккаунт"}
+              className="primary-nav__account"
+              title={accountUser ? `Аккаунт: ${accountUser.displayName}` : "Войти в аккаунт"}
+              to="/settings#account-title"
+            >
+              {accountLabel}
+            </Link>
           </nav>
         </div>
       </header>
