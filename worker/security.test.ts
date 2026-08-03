@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createSafeRequestId, writeSafeErrorLog } from "./security";
+import { createSafeErrorName, createSafeRequestId, writeSafeErrorLog } from "./security";
 
 describe("Worker diagnostic redaction", () => {
   it("accepts only bounded opaque request ids", () => {
@@ -8,6 +8,10 @@ describe("Worker diagnostic redaction", () => {
     expect(createSafeRequestId("C:\\secret\\token.txt Authorization: Bearer abc")).not.toContain(
       "secret",
     );
+    expect(createSafeErrorName(new DOMException("private detail", "OperationError"))).toBe(
+      "OperationError",
+    );
+    expect(createSafeErrorName({ name: "Authorization: Bearer abc" })).toBe("UnknownError");
   });
 
   it("serializes only allowlisted operational fields", () => {
@@ -16,6 +20,7 @@ describe("Worker diagnostic redaction", () => {
       requestId: "request-1",
       method: "POST",
       route: "api",
+      errorName: "OperationError",
     });
 
     const record = logger.error.mock.calls[0]?.[0];
@@ -25,6 +30,7 @@ describe("Worker diagnostic redaction", () => {
       requestId: "request-1",
       method: "POST",
       route: "api",
+      errorName: "OperationError",
     });
     expect(record).not.toMatch(/authorization|cookie|body|filesystem|token|account/i);
   });

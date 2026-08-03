@@ -1,5 +1,5 @@
 const encoder = new TextEncoder();
-const PASSWORD_ITERATIONS = 600_000;
+const PASSWORD_ITERATIONS = 100_000;
 const PASSWORD_BYTES = 32;
 
 export interface PasswordHash {

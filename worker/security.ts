@@ -1,4 +1,5 @@
 const SAFE_REQUEST_ID = /^[A-Za-z0-9_-]{1,80}$/;
+const SAFE_ERROR_NAME = /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/;
 
 export const SECURITY_HEADERS = {
   "Content-Security-Policy": "default-src 'self'; frame-ancestors 'none'; object-src 'none'",
@@ -19,10 +20,15 @@ export function createSafeRequestId(candidate: string | undefined): string {
   return candidate && SAFE_REQUEST_ID.test(candidate) ? candidate : crypto.randomUUID();
 }
 
+export function createSafeErrorName(error: unknown): string {
+  return error instanceof Error && SAFE_ERROR_NAME.test(error.name) ? error.name : "UnknownError";
+}
+
 interface SafeErrorEvent {
   requestId: string;
   method: string;
   route: "api" | "other";
+  errorName: string;
 }
 
 interface ErrorLogger {
@@ -36,6 +42,7 @@ export function writeSafeErrorLog(logger: ErrorLogger, event: SafeErrorEvent): v
       requestId: event.requestId,
       method: event.method,
       route: event.route,
+      errorName: event.errorName,
     }),
   );
 }

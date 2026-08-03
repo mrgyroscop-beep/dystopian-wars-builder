@@ -6,7 +6,12 @@ import { authRoutes } from "./auth";
 import { feedbackRoutes, isFeedbackAutomationPath } from "./feedback";
 import { assertSameOrigin, HttpError } from "./http";
 import { rosterRoutes } from "./rosters";
-import { applyApiSecurityHeaders, createSafeRequestId, writeSafeErrorLog } from "./security";
+import {
+  applyApiSecurityHeaders,
+  createSafeErrorName,
+  createSafeRequestId,
+  writeSafeErrorLog,
+} from "./security";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -58,6 +63,7 @@ app.onError((error, context) => {
     requestId,
     method: context.req.method,
     route: context.req.path.startsWith("/api/") ? "api" : "other",
+    errorName: createSafeErrorName(error),
   });
 
   return context.json(

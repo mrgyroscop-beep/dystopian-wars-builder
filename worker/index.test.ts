@@ -101,8 +101,11 @@ describe("Worker API", () => {
       user: { displayName: "Admiral" },
     });
     await expect(
-      env.DB.prepare("SELECT email FROM password_credentials").first<string>("email"),
-    ).resolves.toBe("admiral@example.com");
+      env.DB.prepare("SELECT email, password_iterations FROM password_credentials").first<{
+        email: string;
+        password_iterations: number;
+      }>(),
+    ).resolves.toEqual({ email: "admiral@example.com", password_iterations: 100_000 });
   });
 
   it("uses one generic error for invalid credentials", async () => {
