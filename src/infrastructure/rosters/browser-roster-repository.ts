@@ -1,12 +1,9 @@
-import {
-  storedRosterSchema,
-  type RosterRepository,
-  type StoredRoster,
-} from "../../application/rosters/create-roster";
+import { storedRosterSchema, type StoredRoster } from "../../application/rosters/create-roster";
+import type { RosterLibraryRepository } from "../../application/rosters/roster-library";
 
 const keyPrefix = "dwb.roster.v1.";
 
-export function createBrowserRosterRepository(storage: Storage): RosterRepository {
+export function createBrowserRosterRepository(storage: Storage): RosterLibraryRepository {
   return {
     contractVersion: 1,
     save(roster) {
@@ -22,6 +19,24 @@ export function createBrowserRosterRepository(storage: Storage): RosterRepositor
       } catch {
         return Promise.resolve(null);
       }
+    },
+    list() {
+      const rosters: StoredRoster[] = [];
+      for (let index = 0; index < storage.length; index += 1) {
+        const key = storage.key(index);
+        if (!key?.startsWith(keyPrefix)) continue;
+        const value = storage.getItem(key);
+        if (!value) continue;
+        try {
+          const parsed = storedRosterSchema.safeParse(JSON.parse(value));
+          if (parsed.success) rosters.push(parsed.data as unknown as StoredRoster);
+        } catch {
+          // An invalid entry is isolated and never hides valid local fleets.
+        }
+      }
+      return Promise.resolve(
+        rosters.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
+      );
     },
   };
 }

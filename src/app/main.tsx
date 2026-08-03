@@ -23,6 +23,11 @@ const router = createAppRouter({
     createId,
     now,
   },
+  rosterLibrary: {
+    rosterRepository,
+    createId,
+    now,
+  },
   rosterWorkspace: {
     catalogGateway: createDemonstrationFleetCatalogGateway(),
     rosterRepository,

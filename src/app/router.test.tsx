@@ -65,6 +65,14 @@ afterEach(cleanup);
 const testDependencies = {
   healthGateway: { read: readHealth } satisfies HealthGateway,
   rosterCreation,
+  rosterLibrary: {
+    rosterRepository: {
+      ...rosterRepository,
+      list: () => Promise.resolve([...storedRosters.values()]),
+    },
+    createId: () => crypto.randomUUID(),
+    now: () => "2026-08-02T10:00:00.000Z",
+  },
   rosterWorkspace: {
     catalogGateway: createDemonstrationFleetCatalogGateway(),
     rosterRepository,
