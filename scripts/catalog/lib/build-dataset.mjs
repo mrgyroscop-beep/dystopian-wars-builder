@@ -58,7 +58,7 @@ export async function buildDataset(lock, sources, provenance) {
       plainTextFallback: true,
     },
     license: {
-      status: "redistribution-unconfirmed",
+      status: "redistribution-authorized-by-project-owner",
       sourceUrl: `https://github.com/${lock.repository}`,
       sourcePayloadPublished: false,
       generatedPayloadPublished: false,

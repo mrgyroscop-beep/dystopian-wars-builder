@@ -20,6 +20,7 @@ test-results/
 artifacts/
 .cache/
 data/generated/runtime/
+public/catalog/
 .turbo/
 .wrangler/
 .dev.vars

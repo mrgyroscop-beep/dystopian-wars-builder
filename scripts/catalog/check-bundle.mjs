@@ -1,11 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-const markers = [
-  "Nord0rk/Dystopian-Wars-4.0",
-  "859c43ce554b11ce0c00a7dccd2c3889760a5c7c",
-  "SaxesParser",
-];
+const markers = ["SaxesParser"];
 for (const file of await walk("dist")) {
   if (!/\.(?:js|css|html|json)$/u.test(file)) continue;
   const contents = await readFile(file, "utf8");

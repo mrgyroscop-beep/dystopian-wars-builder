@@ -36,6 +36,34 @@ export interface RosterSetupGateway {
   load(): Promise<RosterSetupCatalog>;
 }
 
+export const rosterSetupCatalogSchema = z.object({
+  contractVersion: z.literal(1),
+  contentVersion: z.string().min(1),
+  mode: z.enum(["current", "demonstration"]),
+  notice: z.string().nullable(),
+  factions: z.array(
+    z.object({
+      id: z.string().min(1),
+      label: z.string().min(1),
+      battlefleets: z.array(
+        z.object({
+          id: z.string().min(1),
+          factionId: z.string().min(1),
+          label: z.string().min(1),
+          summary: z.string(),
+          requiredElements: z.array(
+            z.object({
+              id: z.string().min(1),
+              label: z.string().min(1),
+              minimum: z.number().int().min(1),
+            }),
+          ),
+        }),
+      ),
+    }),
+  ),
+});
+
 export const storedRosterSchema = z.object({
   contractVersion: z.literal(1),
   id: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/u),

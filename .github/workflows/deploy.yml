@@ -45,10 +45,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           RELEASE_SHA: ${{ github.sha }}
-        run: >-
-          npx wrangler deploy
-          --var "APP_VERSION:0.1.0"
-          --var "CATALOG_VERSION:not-imported"
-          --var "COMMIT_SHA:${RELEASE_SHA}"
-          --var "DEPLOYMENT_ENV:production"
-          --var "FEEDBACK_AUTOMATION_TOKEN_SHA256:7966d7e6d941b53bfa9729d8dd2dd82e8410030e3f50f0a74dc227f16430e67c"
+        run: |
+          CATALOG_VERSION=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('dist/client/catalog/setup.json', 'utf8')).contentVersion)")
+          npx wrangler deploy \
+            --var "APP_VERSION:0.1.0" \
+            --var "CATALOG_VERSION:${CATALOG_VERSION}" \
+            --var "COMMIT_SHA:${RELEASE_SHA}" \
+            --var "DEPLOYMENT_ENV:production" \
+            --var "FEEDBACK_AUTOMATION_TOKEN_SHA256:7966d7e6d941b53bfa9729d8dd2dd82e8410030e3f50f0a74dc227f16430e67c"

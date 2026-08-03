@@ -1,6 +1,6 @@
 # ADR-0004: Deterministic catalogue ingestion and promotion
 
-- Status: accepted
+- Status: amended
 - Jira: KAN-30
 - Date: 2026-08-01
 
@@ -41,8 +41,11 @@ redistribution licence in scope for this project.
   latest operation/status; operation IDs prevent stale concurrent writers.
   Operational diagnostics use a strict allowlist and an opaque ID, never raw
   exception content. Older releases remain available for rollback.
-- Keep importer dependencies out of browser and Worker bundles. Do not commit or
-  deploy upstream/generated data until redistribution rights are confirmed.
+- Keep importer dependencies out of browser and Worker bundles. Do not commit raw
+  upstream data. On 2026-08-03 the project owner confirmed redistribution rights
+  for the generated catalogue; build-time publication of verified, normalized,
+  content-addressed chunks is therefore permitted. The source XML remains outside
+  Git and deployment artifacts.
 
 ## Consequences
 

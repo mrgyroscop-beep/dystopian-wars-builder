@@ -5,3 +5,16 @@
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   X-Robots-Tag: noindex, nofollow, noarchive
+
+/catalog/releases/*
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/plain; charset=utf-8
+
+/catalog/index.json
+  Cache-Control: no-cache
+
+/catalog/bundles.json
+  Cache-Control: no-cache
+
+/catalog/setup.json
+  Cache-Control: no-cache
