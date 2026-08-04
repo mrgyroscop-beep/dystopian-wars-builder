@@ -4,6 +4,7 @@ node_modules/
 playwright-report/
 test-results/
 worker-configuration.d.ts
+worker/rules-corpus.generated.ts
 package-lock.json
 *.pdf
 *.stl

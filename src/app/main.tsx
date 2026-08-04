@@ -4,6 +4,7 @@ import { RouterProvider } from "react-router-dom";
 
 import { createHttpHealthGateway } from "../infrastructure/health/http-health-gateway";
 import { createHttpPasswordAuthGateway } from "../infrastructure/auth/http-password-auth-gateway";
+import { createHttpRulesAssistantGateway } from "../infrastructure/assistant/http-rules-assistant-gateway";
 import { createHttpFeedbackGateway } from "../infrastructure/feedback/http-feedback-gateway";
 import {
   createDemonstrationFleetCatalogGateway,
@@ -27,6 +28,7 @@ const demonstrationCatalog = createDemonstrationFleetCatalogGateway();
 const demonstrationSetup = createDemonstrationRosterSetupGateway();
 const router = createAppRouter({
   authGateway: createHttpPasswordAuthGateway(),
+  assistantGateway: createHttpRulesAssistantGateway(),
   feedbackGateway: createHttpFeedbackGateway(),
   healthGateway: createHttpHealthGateway(),
   rosterCreation: {

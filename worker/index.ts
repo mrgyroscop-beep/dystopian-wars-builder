@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { healthResponseSchema } from "../src/application/health/health-contract";
 import { authRoutes } from "./auth";
+import { assistantRoutes } from "./assistant";
 import { feedbackRoutes, isFeedbackAutomationPath } from "./feedback";
 import { assertSameOrigin, HttpError } from "./http";
 import { rosterRoutes } from "./rosters";
@@ -22,6 +23,7 @@ app.use("/api/*", async (context, next) => {
 });
 
 app.route("/api/auth", authRoutes);
+app.route("/api/assistant", assistantRoutes);
 app.route("/api/feedback", feedbackRoutes);
 app.route("/api/rosters", rosterRoutes);
 

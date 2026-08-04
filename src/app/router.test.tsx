@@ -82,6 +82,10 @@ const testDependencies = {
     logout: () => Promise.resolve(),
     deleteAccount: () => Promise.resolve(),
   },
+  assistantGateway: {
+    contractVersion: 1 as const,
+    ask: () => Promise.reject(new Error("not used")),
+  },
   feedbackGateway: { contractVersion: 1 as const, submit: submitFeedback },
   healthGateway: { read: readHealth } satisfies HealthGateway,
   rosterCreation,
@@ -161,6 +165,17 @@ describe("application routes", () => {
     expect(screen.getByRole("link", { name: /Открыть ORBAT/u })).toHaveAttribute(
       "href",
       "https://www.dystopianwars.com/factions/empire",
+    );
+  });
+
+  it("asks the user to sign in before opening the rules assistant", async () => {
+    renderRoute("/assistant");
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Старпом" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Старпом" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Войти или создать аккаунт" })).toHaveAttribute(
+      "href",
+      "/settings#account-title",
     );
   });
 

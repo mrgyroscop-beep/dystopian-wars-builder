@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run catalog:publish && tsc -b --pretty false && vite build",
+    "build": "npm run catalog:publish && npm run assistant:publish && tsc -b --pretty false && vite build",
     "preview": "vite preview",
     "typecheck": "wrangler types --check && tsc -b --pretty false",
     "types:generate": "wrangler types",
@@ -31,6 +31,7 @@
     "test:e2e:install": "playwright install chromium",
     "catalog": "node scripts/catalog/cli.mjs",
     "catalog:publish": "tsx scripts/catalog/publish-runtime.ts",
+    "assistant:publish": "node scripts/assistant/publish-rules-corpus.mjs",
     "ci": "npm run typecheck && npm run lint && npm run format:check && npm run check:architecture && npm run test:catalog:policy && npm run test:unit && npm run test:catalog && npm run test:domain:real && npm run test:worker && npm run build && npm run test:catalog:bundle && npm run test:e2e:smoke"
   },
   "dependencies": {

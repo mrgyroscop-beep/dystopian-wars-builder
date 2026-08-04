@@ -121,6 +121,19 @@ describe("Worker API", () => {
     });
   });
 
+  it("requires an account before asking the rules assistant", async () => {
+    const response = await exports.default.fetch("http://example.com/api/assistant/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "http://example.com" },
+      body: JSON.stringify({ question: "How does All-Around work?", history: [] }),
+    });
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "authentication_required" },
+    });
+  });
+
   it("stores private feedback idempotently and normalizes the optional email", async () => {
     const body = {
       requestId: "12345678-1234-4123-8123-123456789abc",
