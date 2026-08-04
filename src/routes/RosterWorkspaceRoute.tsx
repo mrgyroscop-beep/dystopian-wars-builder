@@ -21,7 +21,6 @@ import {
   type ShipEditorReadModel,
   type ShipEditorReadyReadModel,
 } from "../application/rosters/ship-editor";
-import { orbatCardFor } from "../app/orbatCards";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 import { EyeIcon } from "../ui/EyeIcon";
 import { ShipProfileDialog } from "../ui/ProfileDialog";
@@ -49,7 +48,6 @@ type ContextOrigin = { readonly view: "catalog" | "composition"; readonly elemen
 type ProfilePreview = {
   readonly name: string;
   readonly model: ShipEditorReadyReadModel;
-  readonly backgroundUrl: string | null;
 };
 
 export function RosterWorkspaceRoute({
@@ -196,7 +194,6 @@ export function RosterWorkspaceRoute({
     setProfilePreview({
       name,
       model: editor,
-      backgroundUrl: orbatCardFor(model.roster.faction, name),
     });
   }
 
@@ -500,8 +497,8 @@ export function RosterWorkspaceRoute({
       </div>
       {profilePreview ? (
         <ShipProfileDialog
-          backgroundUrl={profilePreview.backgroundUrl}
-          model={profilePreview.model.profileRules}
+          faction={model.roster.faction}
+          model={profilePreview.model}
           name={profilePreview.name}
           onClose={() => setProfilePreview(null)}
         />

@@ -1,25 +1,24 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 
-import type {
-  ShipProfileRulesReadModel,
-  WeaponProfileReadModel,
-} from "../application/rosters/profile-rules";
-import { ProfilePanel, WeaponProfiles } from "./ProfileRules";
+import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
+import type { WeaponProfileReadModel } from "../application/rosters/profile-rules";
+import { WeaponProfiles } from "./ProfileRules";
+import { ShipCardProfile } from "./ShipCardProfile";
 
 export function ShipProfileDialog({
-  backgroundUrl,
+  faction,
   model,
   name,
   onClose,
 }: {
-  readonly backgroundUrl: string | null;
-  readonly model: ShipProfileRulesReadModel;
+  readonly faction: string;
+  readonly model: ShipEditorReadyReadModel;
   readonly name: string;
   readonly onClose: () => void;
 }) {
   return (
-    <InspectorDialog backgroundUrl={backgroundUrl} name={name} onClose={onClose}>
-      <ProfilePanel model={model} />
+    <InspectorDialog backgroundUrl={null} card name={name} onClose={onClose}>
+      <ShipCardProfile faction={faction} model={model} />
     </InspectorDialog>
   );
 }
@@ -40,12 +39,14 @@ export function WeaponProfileDialog({
 
 function InspectorDialog({
   backgroundUrl,
+  card = false,
   children,
   compact = false,
   name,
   onClose,
 }: {
   readonly backgroundUrl: string | null;
+  readonly card?: boolean;
   readonly children: ReactNode;
   readonly compact?: boolean;
   readonly name: string;
@@ -91,6 +92,7 @@ function InspectorDialog({
         aria-labelledby={titleId}
         aria-modal="true"
         className="profile-dialog"
+        data-card={card ? "true" : undefined}
         data-compact={compact ? "true" : undefined}
         onKeyDown={handleKeyDown}
         open

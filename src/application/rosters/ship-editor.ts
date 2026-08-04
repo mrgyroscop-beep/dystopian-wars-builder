@@ -60,6 +60,12 @@ export interface ShipEditorReadyReadModel {
   readonly mode: "preview" | "instance";
   readonly instanceId: string | null;
   readonly name: string;
+  readonly card?: {
+    readonly role: string;
+    readonly tags: readonly string[];
+    readonly nation: string;
+    readonly platform: string;
+  };
   readonly basePoints: string;
   readonly optionPoints: string;
   readonly derivedPoints: string;
@@ -398,11 +404,29 @@ export function projectShipEditor(
       "Каталог не содержит безопасно интерпретируемую cardinality для структурной Model.",
     );
   const { minimum, maximum } = modelBounds;
+  const unitDefinition = catalog.entities[targetDefinitionId];
+  const categoryLabels = unitDefinition.categoryIds
+    .map((id) => catalog.entities[id]?.label.plainText.trim() ?? "")
+    .filter(Boolean);
+  const cardTags = [
+    unitDefinition.attributes.nation,
+    unitDefinition.attributes.platform,
+    unitDefinition.attributes.role,
+    ...categoryLabels,
+  ].filter(
+    (value, index, values): value is string => Boolean(value) && values.indexOf(value) === index,
+  );
   return {
     dataState: "ready",
     mode: storedUnit ? "instance" : "preview",
     instanceId: storedUnit?.id ?? null,
-    name: catalog.entities[targetDefinitionId].label.plainText,
+    name: unitDefinition.label.plainText,
+    card: {
+      role: unitDefinition.attributes.role || categoryLabels[0] || "Ship",
+      tags: cardTags,
+      nation: unitDefinition.attributes.nation || "",
+      platform: unitDefinition.attributes.platform || "Surface",
+    },
     basePoints: String(basePoints),
     optionPoints: String(optionPoints),
     derivedPoints: String(derivedPoints),
