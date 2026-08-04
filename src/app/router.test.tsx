@@ -146,6 +146,24 @@ describe("application routes", () => {
     expect(screen.getByRole("link", { name: "К моим флотам" })).toHaveAttribute("href", "/");
   });
 
+  it("opens the rules and ORBAT library and filters its official sources", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/reference");
+
+    expect(screen.getByRole("heading", { level: 1, name: "Правила и ORBATs" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Правила" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Найдено материалов: 11")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "ORBATS" }));
+    expect(screen.getByText("Найдено материалов: 8")).toBeVisible();
+    await user.type(screen.getByLabelText("Поиск по библиотеке"), "Empire");
+    expect(screen.getByText("Найдено материалов: 1")).toBeVisible();
+    expect(screen.getByRole("link", { name: /Открыть ORBAT/u })).toHaveAttribute(
+      "href",
+      "https://www.dystopianwars.com/factions/empire",
+    );
+  });
+
   it("renders a deep roster route without loading the library first", async () => {
     renderRoute("/rosters/scaffold-demo");
 

@@ -14,6 +14,7 @@ import { NewRosterRoute } from "../routes/NewRosterRoute";
 import { NotFoundRoute } from "../routes/NotFoundRoute";
 import { RosterLibraryRoute } from "../routes/RosterLibraryRoute";
 import { RosterWorkspaceRoute } from "../routes/RosterWorkspaceRoute";
+import { ReferenceLibraryRoute } from "../routes/ReferenceLibraryRoute";
 import { SettingsRoute } from "../routes/SettingsRoute";
 
 export interface AppDependencies {
@@ -42,6 +43,7 @@ export function createAppRoutes({
       children: [
         { index: true, element: <RosterLibraryRoute dependencies={rosterLibrary} /> },
         { path: "rosters/new", element: <NewRosterRoute {...rosterCreation} /> },
+        { path: "reference", element: <ReferenceLibraryRoute /> },
         {
           path: "feedback",
           element: (
