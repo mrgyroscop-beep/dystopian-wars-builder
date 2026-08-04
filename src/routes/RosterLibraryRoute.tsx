@@ -24,7 +24,7 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedFixture = fixtureStateSchema.safeParse(searchParams.get("state"));
-  const fixture = requestedFixture.success ? requestedFixture.data : null;
+  const fixture = import.meta.env.DEV && requestedFixture.success ? requestedFixture.data : null;
   const [state, setState] = useState<LibraryState>({ kind: "loading" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");

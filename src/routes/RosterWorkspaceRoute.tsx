@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 
@@ -61,6 +61,9 @@ export function RosterWorkspaceRoute({
   const [editorInstanceId, setEditorInstanceId] = useState<string | null>(null);
   const [contextOrigin, setContextOrigin] = useState<ContextOrigin | null>(null);
   const [activeView, setActiveView] = useState<WorkspaceView>("composition");
+  const [catalogCollapsed, setCatalogCollapsed] = useState(false);
+  const [contextCollapsed, setContextCollapsed] = useState(false);
+  const [draggedDefinitionId, setDraggedDefinitionId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [commandError, setCommandError] = useState<string | null>(null);
@@ -199,6 +202,22 @@ export function RosterWorkspaceRoute({
     }
   }
 
+  async function dropShip(definitionId: string, targetElementInstanceId: string) {
+    const item = model.catalog.find((candidate) => candidate.id === definitionId);
+    if (
+      !item?.eligibleTargets.some((target) => target.elementInstanceId === targetElementInstanceId)
+    )
+      return;
+    setSelectedId(item.id);
+    setSelectedTarget(targetElementInstanceId);
+    const result = await execute(
+      { type: "add", definitionId, targetElementInstanceId },
+      `${item.name} добавлен в состав.`,
+    );
+    setDraggedDefinitionId(null);
+    if (result) setActiveView("composition");
+  }
+
   async function retrySave() {
     setBusy(true);
     const next = await session.retrySave();
@@ -317,7 +336,7 @@ export function RosterWorkspaceRoute({
             onClick={() => setActiveView(view)}
             type="button"
           >
-            {view === "catalog" ? "Каталог" : "Контекст"}
+            {view === "catalog" ? "Каталог" : "Инспектор"}
           </button>
         ))}
       </nav>
@@ -326,14 +345,14 @@ export function RosterWorkspaceRoute({
         className="workspace-view-switcher workspace-view-switcher--mobile"
         aria-label="Область билдера"
       >
-        {(["composition", "catalog", "context"] as const).map((view) => (
+        {(["catalog", "composition", "context"] as const).map((view) => (
           <button
             aria-current={resolvedActiveView === view ? "page" : undefined}
             key={view}
             onClick={() => setActiveView(view)}
             type="button"
           >
-            {view === "composition" ? "Состав" : view === "catalog" ? "Каталог" : "Контекст"}
+            {view === "composition" ? "Состав" : view === "catalog" ? "Каталог" : "Корабль"}
           </button>
         ))}
       </nav>
@@ -366,12 +385,25 @@ export function RosterWorkspaceRoute({
         {announcement}
       </p>
 
-      <div className="builder-grid">
+      <div
+        className="builder-grid"
+        data-catalog-collapsed={catalogCollapsed}
+        data-context-collapsed={contextCollapsed}
+      >
         <CatalogPane
           category={category}
+          collapsed={catalogCollapsed}
+          draggedId={draggedDefinitionId}
           filtered={filtered}
           onCategory={setCategory}
+          onDragEnd={() => setDraggedDefinitionId(null)}
+          onDragStart={(item, event) => {
+            setDraggedDefinitionId(item.id);
+            event.dataTransfer.effectAllowed = "copy";
+            event.dataTransfer.setData("application/x-dwb-ship-id", item.id);
+          }}
           onPreview={openPreview}
+          onToggle={() => setCatalogCollapsed((current) => !current)}
           query={query}
           selectedId={resolvedSelectedId}
           setQuery={setQuery}
@@ -380,6 +412,9 @@ export function RosterWorkspaceRoute({
 
         <CompositionPane
           busy={busy}
+          draggedItem={
+            model.catalog.find((candidate) => candidate.id === draggedDefinitionId) ?? null
+          }
           model={model}
           onDelete={(instanceId, name, elementId) =>
             void execute(
@@ -401,12 +436,15 @@ export function RosterWorkspaceRoute({
             setActiveView("context");
             requestAnimationFrame(() => document.getElementById("ship-editor-title")?.focus());
           }}
+          onDrop={(definitionId, elementId) => void dropShip(definitionId, elementId)}
           onReturnToIssue={returnToIssue}
           returnTarget={issueReturnId}
+          selectedInstanceId={resolvedEditorInstanceId}
         />
 
         <ContextPane
           busy={busy}
+          collapsed={contextCollapsed}
           model={model}
           onAdd={() => void addSelected()}
           onFollowIssue={followIssue}
@@ -433,6 +471,7 @@ export function RosterWorkspaceRoute({
           ruleId={direct?.ruleId ?? null}
           selected={selected}
           selectedTarget={selectedTarget}
+          onToggle={() => setContextCollapsed((current) => !current)}
         />
       </div>
     </div>
@@ -496,28 +535,53 @@ function WorkspaceSummary({
 
 function CatalogPane({
   category,
+  collapsed,
+  draggedId,
   filtered,
   onCategory,
+  onDragEnd,
+  onDragStart,
   onPreview,
+  onToggle,
   query,
   selectedId,
   setQuery,
   total,
 }: {
   readonly category: FleetCategory | "all";
+  readonly collapsed: boolean;
+  readonly draggedId: string | null;
   readonly filtered: readonly CatalogItemReadModel[];
   readonly onCategory: (value: FleetCategory | "all") => void;
+  readonly onDragEnd: () => void;
+  readonly onDragStart: (item: CatalogItemReadModel, event: DragEvent<HTMLButtonElement>) => void;
   readonly onPreview: (item: CatalogItemReadModel) => void;
+  readonly onToggle: () => void;
   readonly query: string;
   readonly selectedId: string | null;
   readonly setQuery: (value: string) => void;
   readonly total: number;
 }) {
   return (
-    <section className="builder-pane catalog-pane" aria-labelledby="catalog-title">
+    <section
+      className="builder-pane catalog-pane"
+      aria-labelledby="catalog-title"
+      data-collapsed={collapsed}
+    >
       <div className="builder-pane__header">
-        <p className="eyebrow">{total} учебных записей</p>
-        <h2 id="catalog-title">Каталог</h2>
+        <div className="builder-pane__title">
+          <p className="eyebrow">{total} кораблей</p>
+          <h2 id="catalog-title">Каталог</h2>
+        </div>
+        <button
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "Развернуть каталог" : "Свернуть каталог"}
+          className="pane-toggle"
+          onClick={onToggle}
+          type="button"
+        >
+          <span aria-hidden="true">{collapsed ? "→" : "←"}</span>
+        </button>
       </div>
       <div className="catalog-toolbar">
         <label>
@@ -554,9 +618,13 @@ function CatalogPane({
               aria-pressed={selectedId === item.id}
               className="catalog-row"
               data-availability={item.availability.state}
+              data-dragging={draggedId === item.id ? "true" : undefined}
+              draggable={item.availability.state === "available"}
               id={`catalog-item-${safeId(item.id)}`}
               key={item.id}
               onClick={() => onPreview(item)}
+              onDragEnd={onDragEnd}
+              onDragStart={(event) => onDragStart(item, event)}
               type="button"
             >
               <span className="catalog-row__name">
@@ -594,20 +662,26 @@ function CatalogPane({
 
 function CompositionPane({
   busy,
+  draggedItem,
   model,
   onDelete,
   onDuplicate,
   onEdit,
+  onDrop,
   onReturnToIssue,
   returnTarget,
+  selectedInstanceId,
 }: {
   readonly busy: boolean;
+  readonly draggedItem: CatalogItemReadModel | null;
   readonly model: RosterWorkspaceReadModel;
   readonly onDelete: (instanceId: string, name: string, elementId: string) => void;
   readonly onDuplicate: (instanceId: string, name: string) => void;
   readonly onEdit: (instance: RosterInstanceReadModel) => void;
+  readonly onDrop: (definitionId: string, elementId: string) => void;
   readonly onReturnToIssue: () => void;
   readonly returnTarget: string | null;
+  readonly selectedInstanceId: string | null;
 }) {
   return (
     <section className="builder-pane composition-pane" aria-labelledby="composition-title">
@@ -616,84 +690,103 @@ function CompositionPane({
         <h2 id="composition-title">Состав</h2>
       </div>
       <div className="element-list">
-        {model.elements.map((element) => (
-          <section
-            className="fleet-element"
-            id={`fleet-element-${safeId(element.id)}`}
-            key={element.id}
-            tabIndex={-1}
-            aria-labelledby={`fleet-element-title-${safeId(element.id)}`}
-          >
-            <header>
-              <div>
-                <h3 id={`fleet-element-title-${safeId(element.id)}`}>{element.label}</h3>
-                <p>
-                  {element.instances.length} / {element.minimum} обязательно
-                </p>
-              </div>
-              <span
-                className={
-                  element.instances.length >= element.minimum
-                    ? "element-state element-state--ready"
-                    : "element-state element-state--error"
-                }
-              >
-                <span aria-hidden="true">
-                  {element.instances.length >= element.minimum ? "✓" : "!"}
+        {model.elements.map((element) => {
+          const isDropTarget = Boolean(
+            draggedItem?.eligibleTargets.some((target) => target.elementInstanceId === element.id),
+          );
+          return (
+            <section
+              className="fleet-element"
+              data-drop-target={isDropTarget ? "eligible" : undefined}
+              id={`fleet-element-${safeId(element.id)}`}
+              key={element.id}
+              onDragOver={(event) => {
+                if (isDropTarget) event.preventDefault();
+              }}
+              onDrop={(event) => {
+                if (!isDropTarget || !draggedItem) return;
+                event.preventDefault();
+                onDrop(draggedItem.id, element.id);
+              }}
+              tabIndex={-1}
+              aria-labelledby={`fleet-element-title-${safeId(element.id)}`}
+            >
+              <header>
+                <div>
+                  <h3 id={`fleet-element-title-${safeId(element.id)}`}>{element.label}</h3>
+                  <p>
+                    {element.instances.length} / {element.minimum} обязательно
+                  </p>
+                </div>
+                <span
+                  className={
+                    element.instances.length >= element.minimum
+                      ? "element-state element-state--ready"
+                      : "element-state element-state--error"
+                  }
+                >
+                  <span aria-hidden="true">
+                    {element.instances.length >= element.minimum ? "✓" : "!"}
+                  </span>
+                  {element.instances.length >= element.minimum ? "Заполнен" : "Нужен корабль"}
                 </span>
-                {element.instances.length >= element.minimum ? "Заполнен" : "Нужен корабль"}
-              </span>
-            </header>
-            {returnTarget ? (
-              <button className="issue-return" onClick={onReturnToIssue} type="button">
-                ← Вернуться к проблеме
-              </button>
-            ) : null}
-            {element.instances.length ? (
-              <ul className="roster-instance-list">
-                {element.instances.map((instance) => (
-                  <li id={`roster-instance-${safeId(instance.id)}`} key={instance.id} tabIndex={-1}>
-                    <span>
-                      <strong>{instance.name}</strong>
-                      <small>
-                        {instance.points} Points · {instance.victoryPoints} VP
-                      </small>
-                    </span>
-                    <span className="instance-actions">
-                      <button
-                        disabled={busy}
-                        id={`edit-instance-${safeId(instance.id)}`}
-                        onClick={() => onEdit(instance)}
-                        type="button"
-                      >
-                        Настроить
-                      </button>
-                      <button
-                        disabled={busy}
-                        onClick={() => onDuplicate(instance.id, instance.name)}
-                        type="button"
-                      >
-                        Копировать
-                      </button>
-                      <button
-                        disabled={busy}
-                        onClick={() => onDelete(instance.id, instance.name, element.id)}
-                        type="button"
-                      >
-                        Удалить
-                      </button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="element-empty">
-                <span aria-hidden="true">＋</span>
-                <p>Добавьте подходящий корабль из каталога.</p>
-              </div>
-            )}
-          </section>
-        ))}
+              </header>
+              {returnTarget ? (
+                <button className="issue-return" onClick={onReturnToIssue} type="button">
+                  ← Вернуться к проблеме
+                </button>
+              ) : null}
+              {element.instances.length ? (
+                <ul className="roster-instance-list">
+                  {element.instances.map((instance) => (
+                    <li
+                      aria-current={selectedInstanceId === instance.id ? "true" : undefined}
+                      id={`roster-instance-${safeId(instance.id)}`}
+                      key={instance.id}
+                      tabIndex={-1}
+                    >
+                      <span>
+                        <strong>{instance.name}</strong>
+                        <small>
+                          {instance.points} Points · {instance.victoryPoints} VP
+                        </small>
+                      </span>
+                      <span className="instance-actions">
+                        <button
+                          disabled={busy}
+                          id={`edit-instance-${safeId(instance.id)}`}
+                          onClick={() => onEdit(instance)}
+                          type="button"
+                        >
+                          Настроить
+                        </button>
+                        <button
+                          disabled={busy}
+                          onClick={() => onDuplicate(instance.id, instance.name)}
+                          type="button"
+                        >
+                          Копировать
+                        </button>
+                        <button
+                          disabled={busy}
+                          onClick={() => onDelete(instance.id, instance.name, element.id)}
+                          type="button"
+                        >
+                          Удалить
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="element-empty">
+                  <span aria-hidden="true">＋</span>
+                  <p>Добавьте подходящий корабль из каталога.</p>
+                </div>
+              )}
+            </section>
+          );
+        })}
       </div>
     </section>
   );
@@ -701,6 +794,7 @@ function CompositionPane({
 
 function ContextPane({
   busy,
+  collapsed,
   model,
   onAdd,
   onFollowIssue,
@@ -713,8 +807,10 @@ function ContextPane({
   ruleId,
   selected,
   selectedTarget,
+  onToggle,
 }: {
   readonly busy: boolean;
+  readonly collapsed: boolean;
   readonly model: RosterWorkspaceReadModel;
   readonly onAdd: () => void;
   readonly onFollowIssue: (problemId: string, targetId: string) => void;
@@ -727,12 +823,28 @@ function ContextPane({
   readonly ruleId: string | null;
   readonly selected: CatalogItemReadModel | null;
   readonly selectedTarget: string;
+  readonly onToggle: () => void;
 }) {
   return (
-    <aside className="builder-pane context-pane" aria-labelledby="context-title">
+    <aside
+      className="builder-pane context-pane"
+      aria-labelledby="context-title"
+      data-collapsed={collapsed}
+    >
       <div className="builder-pane__header">
-        <p className="eyebrow">Preview и проблемы</p>
-        <h2 id="context-title">Контекст</h2>
+        <div className="builder-pane__title">
+          <p className="eyebrow">Корабль и проблемы</p>
+          <h2 id="context-title">Инспектор</h2>
+        </div>
+        <button
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "Развернуть инспектор" : "Свернуть инспектор"}
+          className="pane-toggle"
+          onClick={onToggle}
+          type="button"
+        >
+          <span aria-hidden="true">{collapsed ? "←" : "→"}</span>
+        </button>
       </div>
       {editor ? (
         <ShipEditorShell
@@ -817,7 +929,7 @@ function ContextPane({
         <div className="context-empty">
           <span aria-hidden="true">↗</span>
           <h3>Выберите корабль</h3>
-          <p>Preview не меняет состав, totals или сохранённую копию.</p>
+          <p>Просмотр не меняет состав, очки или сохранённую копию.</p>
         </div>
       )}
 

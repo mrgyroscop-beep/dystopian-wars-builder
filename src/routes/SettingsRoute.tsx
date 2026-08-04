@@ -279,21 +279,21 @@ export function SettingsRoute({ authGateway, healthGateway, rosterSync }: Settin
         <div className="panel__header">
           <div>
             <h2 id="health-title">Состояние приложения</h2>
-            <p className="panel__copy">Worker API и версия текущего выпуска.</p>
+            <p className="panel__copy">Доступность сервиса и версия текущего выпуска.</p>
           </div>
-          <span className="badge">GET /api/health</span>
+          <span className="badge">Состояние</span>
         </div>
         {health.kind === "loading" ? (
           <p className="status-line" role="status" aria-busy="true">
-            Проверяем Worker API…
+            Проверяем доступность…
           </p>
         ) : health.kind === "error" ? (
           <div className="status-line status-line--error" role="alert">
-            API недоступен. <small>{health.message}</small>
+            Сервис недоступен. <small>{health.message}</small>
           </div>
         ) : (
           <dl className="definition-list">
-            <dt>Worker API</dt>
+            <dt>Сервис</dt>
             <dd className="status-line">Доступен</dd>
             <dt>Версия приложения</dt>
             <dd>{health.data.appVersion}</dd>

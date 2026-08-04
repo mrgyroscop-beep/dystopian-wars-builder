@@ -93,7 +93,7 @@ export function AppShell({ authGateway }: AppShellProps) {
       </main>
 
       <footer className="site-footer">
-        <p>Технический каркас · игровые данные ещё не импортированы</p>
+        <p>Dystopian Wars 4.0 · локальные флоты доступны без регистрации</p>
       </footer>
     </div>
   );
