@@ -168,9 +168,14 @@ describe("application routes", () => {
     expect(screen.getByText("Найдено материалов: 8")).toBeVisible();
     await user.type(screen.getByLabelText("Поиск по библиотеке"), "Empire");
     expect(screen.getByText("Найдено материалов: 1")).toBeVisible();
-    expect(screen.getByRole("link", { name: /Открыть ORBAT/u })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Открыть раздел/u })).toHaveAttribute(
       "href",
       "https://www.dystopianwars.com/factions/empire",
+    );
+    await user.click(screen.getByRole("button", { name: /Открыть ORBAT/u }));
+    expect(screen.getByTitle("Empire")).toHaveAttribute(
+      "src",
+      "/reference-pdf/orbat-empire#view=FitH",
     );
   });
 

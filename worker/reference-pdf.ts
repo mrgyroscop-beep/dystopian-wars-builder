@@ -15,6 +15,38 @@ const documents = {
     filename: "dystopian-wars-quick-reference.pdf",
     url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/Quick-Reference-Guide_W.pdf",
   },
+  "orbat-alliance": {
+    filename: "dystopian-wars-orbat-alliance-4-01-beta.pdf",
+    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01-Beta_W.pdf",
+  },
+  "orbat-commonwealth": {
+    filename: "dystopian-wars-orbat-commonwealth-4-00a.pdf",
+    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-400a_W.pdf",
+  },
+  "orbat-crown": {
+    filename: "dystopian-wars-orbat-crown-4-02a.pdf",
+    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02a.pdf",
+  },
+  "orbat-empire": {
+    filename: "dystopian-wars-orbat-empire-4-01.pdf",
+    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01_W.pdf",
+  },
+  "orbat-enlightened": {
+    filename: "dystopian-wars-orbat-enlightened-4-01-beta-2.pdf",
+    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01-Beta2_W.pdf",
+  },
+  "orbat-imperium": {
+    filename: "dystopian-wars-orbat-imperium-4-00b.pdf",
+    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Imperium-400b_W.pdf",
+  },
+  "orbat-sultanate": {
+    filename: "dystopian-wars-orbat-sultanate-4-01.pdf",
+    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Sultanate-4.01_W.pdf",
+  },
+  "orbat-union": {
+    filename: "dystopian-wars-orbat-union-4-00a.pdf",
+    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Union-4.00a_W.pdf",
+  },
 } as const;
 
 export const referencePdfRoutes = new Hono<{ Bindings: Env }>();

@@ -2337,6 +2337,12 @@ button.button {
   font-size: 0.7rem;
 }
 
+.reference-card__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
 .reference-card > footer a,
 .reference-card > footer button {
   display: inline-flex;
@@ -2354,10 +2360,21 @@ button.button {
   text-decoration: none;
 }
 
+.reference-card > footer .reference-card__section-link {
+  color: var(--brand);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+}
+
 .reference-card > footer a:hover,
 .reference-card > footer button:hover {
   color: #ffffff;
   background: var(--brand-hover);
+}
+
+.reference-card > footer .reference-card__section-link:hover {
+  color: var(--brand-hover);
+  background: var(--surface-muted);
 }
 
 .reference-viewer {
@@ -2471,6 +2488,10 @@ button.button {
 
   .reference-card {
     min-height: 15rem;
+  }
+
+  .reference-card__actions {
+    grid-template-columns: 1fr;
   }
 
   .reference-viewer > header {

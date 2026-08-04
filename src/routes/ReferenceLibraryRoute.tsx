@@ -17,6 +17,7 @@ interface ReferenceEntry {
   readonly summary: string;
   readonly meta: string;
   readonly href: string;
+  readonly sectionHref?: string;
   readonly action: string;
 }
 
@@ -70,8 +71,9 @@ const orbats: readonly ReferenceEntry[] = factions.map(([slug, title, summary]) 
   eyebrow: "Order of Battle",
   title,
   summary: `${summary}. Актуальный ORBAT, профили и материалы фракции.`,
-  meta: "Официальная страница фракции",
-  href: `https://www.dystopianwars.com/factions/${slug}`,
+  meta: "PDF · English · Warcradle",
+  href: `/reference-pdf/orbat-${slug}`,
+  sectionHref: `https://www.dystopianwars.com/factions/${slug}`,
   action: "Открыть ORBAT",
 }));
 
@@ -214,9 +216,19 @@ export function ReferenceLibraryRoute({
                         {entry.action} <span aria-hidden="true">↓</span>
                       </button>
                     ) : (
-                      <a href={entry.href} rel="noreferrer" target="_blank">
-                        {entry.action} <span aria-hidden="true">↗</span>
-                      </a>
+                      <div className="reference-card__actions">
+                        <a
+                          className="reference-card__section-link"
+                          href={entry.sectionHref}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Открыть раздел <span aria-hidden="true">↗</span>
+                        </a>
+                        <button onClick={() => setSelectedDocument(entry)} type="button">
+                          {entry.action} <span aria-hidden="true">↓</span>
+                        </button>
+                      </div>
                     )}
                   </footer>
                 </article>

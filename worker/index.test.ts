@@ -4,6 +4,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { healthResponseSchema } from "../src/application/health/health-contract";
 import { sha256 } from "./http";
+import { resolveReferenceDocument } from "./reference-pdf";
 
 const feedbackAutomationToken = "test-feedback-automation-token-with-enough-entropy";
 
@@ -81,6 +82,30 @@ describe("Worker API", () => {
         message: "Document not found.",
       },
     });
+  });
+
+  it("allows only the current official ORBAT documents", () => {
+    expect(
+      [
+        "alliance",
+        "commonwealth",
+        "crown",
+        "empire",
+        "enlightened",
+        "imperium",
+        "sultanate",
+        "union",
+      ].map((faction) => resolveReferenceDocument(`orbat-${faction}`)?.url),
+    ).toEqual([
+      "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01-Beta_W.pdf",
+      "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-400a_W.pdf",
+      "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02a.pdf",
+      "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01_W.pdf",
+      "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01-Beta2_W.pdf",
+      "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Imperium-400b_W.pdf",
+      "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Sultanate-4.01_W.pdf",
+      "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Union-4.00a_W.pdf",
+    ]);
   });
 
   it("registers and signs in with email and password", async () => {
