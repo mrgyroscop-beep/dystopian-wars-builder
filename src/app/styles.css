@@ -3437,6 +3437,120 @@ button.button {
   text-align: center;
 }
 
+.ship-card__trait {
+  display: inline;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  color: #07567d;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  cursor: help;
+  font: inherit;
+  font-weight: 700;
+  line-height: inherit;
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.12em;
+}
+
+.ship-card__trait:hover,
+.ship-card__trait:focus-visible {
+  color: #8c1c13;
+  text-decoration-style: solid;
+}
+
+.ship-card__rule-layer {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(7 18 22 / 62%);
+  backdrop-filter: blur(2px);
+}
+
+.ship-card__rule-dismiss {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: default;
+}
+
+.ship-card__rule-dialog {
+  position: relative;
+  width: min(56%, 42rem);
+  max-height: 62%;
+  overflow: auto;
+  color: #171716;
+  background:
+    linear-gradient(rgb(249 246 237 / 94%), rgb(234 226 207 / 96%)),
+    repeating-linear-gradient(90deg, transparent 0 3rem, rgb(23 71 78 / 7%) 3.05rem);
+  border: 0.2rem solid var(--ship-card-accent);
+  border-radius: 0.35rem;
+  box-shadow: 0 1.2rem 3.5rem rgb(0 0 0 / 52%);
+}
+
+.ship-card__rule-dialog > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem 0.65rem;
+  color: #fff;
+  background: color-mix(in srgb, var(--ship-card-accent) 76%, #1a2528);
+}
+
+.ship-card__rule-dialog > header p,
+.ship-card__rule-dialog > header h4 {
+  margin: 0;
+}
+
+.ship-card__rule-dialog > header p {
+  font-family: Arial, sans-serif;
+  font-size: clamp(0.55rem, 0.82vw, 0.78rem);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.ship-card__rule-dialog > header h4 {
+  margin-top: 0.12em;
+  font-size: clamp(1.15rem, 2.3vw, 2.2rem);
+  line-height: 1;
+}
+
+.ship-card__rule-dialog > header button {
+  display: grid;
+  width: 2.25rem;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  place-items: center;
+  color: #13252c;
+  background: #f6f1e3;
+  border: 1px solid rgb(255 255 255 / 60%);
+  border-radius: 50%;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.ship-card__rule-copy {
+  padding: clamp(0.8rem, 1.7vw, 1.45rem);
+  font-size: clamp(0.72rem, 1.22vw, 1.12rem);
+  line-height: 1.42;
+}
+
+.ship-card__rule-copy p {
+  margin: 0;
+}
+
 @media (max-width: 48rem) {
   .profile-dialog__veil {
     background: rgb(246 242 232 / 52%);

@@ -811,7 +811,7 @@ function CompositionPane({
                             {instance.points} Points · {instance.victoryPoints} VP
                           </small>
                           <small className="instance-loadout">
-                            {loadout.length ? loadout.join(" · ") : "Базовая закачка"}
+                            {loadout.length ? loadout.join(" · ") : "Оружие не указано"}
                           </small>
                         </span>
                         <span className="instance-actions">
@@ -858,12 +858,11 @@ function CompositionPane({
 
 function selectedLoadout(editor: ShipEditorReadModel | null): string[] {
   if (editor?.dataState !== "ready") return [];
-  return editor.groups.flatMap((group) =>
-    group.options
-      .filter((option) => option.selectedQuantity > 0)
-      .map((option) =>
-        option.selectedQuantity > 1 ? `${option.label} ×${option.selectedQuantity}` : option.label,
-      ),
+  const quantities = new Map<string, number>();
+  for (const weapon of editor.profileRules.weapons)
+    quantities.set(weapon.weapon, (quantities.get(weapon.weapon) ?? 0) + 1);
+  return [...quantities].map(([weapon, quantity]) =>
+    quantity > 1 ? `${weapon} ×${quantity}` : weapon,
   );
 }
 

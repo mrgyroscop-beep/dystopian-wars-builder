@@ -65,6 +65,13 @@ export function WeaponProfiles({
   readonly weapons: ShipProfileRulesReadModel["weapons"];
 }) {
   const columns = ["Weapon", "Arc", "Close", "Standard", "Extreme", "Qualities"] as const;
+  const cardFields = [
+    ["Arc", "arc"],
+    ["Close", "close"],
+    ["Standard", "standard"],
+    ["Extreme", "extreme"],
+    ["Qualities", "qualities"],
+  ] as const;
   if (weapons.length === 0)
     return (
       <section className="weapon-profiles" aria-labelledby="weapon-profiles-title">
@@ -111,10 +118,10 @@ export function WeaponProfiles({
               {weapon.provenance ? <span>{weapon.provenance}</span> : null}
             </header>
             <dl>
-              {columns.slice(1).map((column) => (
-                <div key={column}>
-                  <dt>{column}</dt>
-                  <dd>{weapon[column.toLocaleLowerCase("en") as keyof typeof weapon]}</dd>
+              {cardFields.map(([label, key]) => (
+                <div key={key}>
+                  <dt>{label}</dt>
+                  <dd>{weapon[key]}</dd>
                 </div>
               ))}
             </dl>

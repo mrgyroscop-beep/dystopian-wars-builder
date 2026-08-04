@@ -31,6 +31,7 @@ export interface WeaponProfileReadModel {
   readonly standard: string;
   readonly extreme: string;
   readonly qualities: string;
+  readonly qualityRules?: readonly RuleReadModel[];
   readonly provenance: ProfileSlotRole | null;
 }
 
@@ -69,7 +70,11 @@ export function projectWeaponDefinition(
           .map((id) => catalog.entities[id])
           .find((candidate) => candidate?.kind === "Weapon");
   if (!weapon) return null;
-  return projectWeapon({ entity: weapon, instance: null, provenance: null, configured: false }, []);
+  return projectWeapon(
+    { entity: weapon, instance: null, provenance: null, configured: false },
+    [],
+    catalog,
+  );
 }
 
 interface SourceDefinition {
@@ -163,7 +168,7 @@ export function projectShipProfileRules(
       { id: "properties", label: "Properties", rows: properties },
       { id: "systems", label: "Systems", rows: systems },
     ],
-    weapons: weaponSources.map((source) => projectWeapon(source, diagnostics)),
+    weapons: weaponSources.map((source) => projectWeapon(source, diagnostics, catalog)),
     rules,
     diagnostics: dedupeDiagnostics(diagnostics),
   };
@@ -281,6 +286,7 @@ function roleLabel(role: NonNullable<Slot["semantics"]["profileRole"]>): Profile
 function projectWeapon(
   source: SourceDefinition,
   diagnostics: ProfileDiagnosticReadModel[],
+  catalog: DomainCatalog,
 ): WeaponProfileReadModel {
   const fields = new Map(
     [...source.entity.fields]
@@ -302,6 +308,7 @@ function projectWeapon(
     standard: value("Standard"),
     extreme: value("Extreme"),
     qualities: value("Qualities"),
+    qualityRules: projectQualityRules(value("Qualities"), catalog),
     provenance: source.provenance,
   };
   const missing = ["Arc", "Close", "Standard", "Extreme", "Qualities"].filter(
@@ -313,6 +320,37 @@ function projectWeapon(
       message: `${row.weapon}: отсутствуют поля ${missing.join(", ")}.`,
     });
   return row;
+}
+
+function projectQualityRules(qualities: string, catalog: DomainCatalog): RuleReadModel[] {
+  const matches = Object.values(catalog.entities)
+    .filter((entity) => entity.kind === "Rule")
+    .flatMap((entity) => {
+      const label = entity.label.plainText.trim();
+      if (label.length < 2) return [];
+      const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(label)}(?=$|[^a-z0-9])`, "iu");
+      const match = pattern.exec(qualities);
+      return match ? [{ entity, index: match.index + match[1]!.length }] : [];
+    })
+    .sort(
+      (left, right) => left.index - right.index || left.entity.id.localeCompare(right.entity.id),
+    );
+
+  return matches.map(({ entity }) => {
+    const description = entity.description ?? null;
+    const available = Boolean(description && !description.contentUnavailable);
+    return {
+      id: entity.id,
+      label: entity.label.plainText,
+      description: available ? description : null,
+      available,
+      diagnostic: available ? null : "Описание правила отсутствует.",
+    };
+  });
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }
 
 function projectRules(

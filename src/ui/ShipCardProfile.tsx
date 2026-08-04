@@ -1,8 +1,17 @@
-import type { CSSProperties } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
-import type { WeaponProfileReadModel } from "../application/rosters/profile-rules";
+import type { RuleReadModel, WeaponProfileReadModel } from "../application/rosters/profile-rules";
 import { orbatTemplateFor } from "../app/orbatTemplates";
+import { SafeStructuredText } from "./ProfileRules";
 
 const statFields = [
   { label: "MAS", aliases: ["mas", "mass"] },
@@ -24,6 +33,11 @@ export function ShipCardProfile({
   readonly faction: string;
   readonly model: ShipEditorReadyReadModel;
 }) {
+  const [activeRule, setActiveRule] = useState<{
+    readonly display: string;
+    readonly rule: RuleReadModel;
+    readonly trigger: HTMLButtonElement;
+  } | null>(null);
   const template = orbatTemplateFor(faction);
   const properties = profileValue(model, ["properties", "property"]);
   const baseSystems = profileValue(model, ["systems", "system"]);
@@ -103,19 +117,37 @@ export function ShipCardProfile({
         className="ship-card__tables"
         data-has-options={hardpointOptions.length ? "true" : "false"}
       >
-        <WeaponTable title="Weapons" weapons={weapons} />
+        <WeaponTable onOpenRule={openRule} title="Weapons" weapons={weapons} />
         {hardpointOptions.length ? (
-          <WeaponTable title="Hardpoint options" weapons={hardpointOptions} />
+          <WeaponTable onOpenRule={openRule} title="Hardpoint options" weapons={hardpointOptions} />
         ) : null}
       </div>
+      {activeRule ? (
+        <RuleDescription
+          display={activeRule.display}
+          onClose={() => setActiveRule(null)}
+          rule={activeRule.rule}
+          trigger={activeRule.trigger}
+        />
+      ) : null}
     </article>
   );
+
+  function openRule(rule: RuleReadModel, display: string, event: MouseEvent<HTMLButtonElement>) {
+    setActiveRule({ display, rule, trigger: event.currentTarget });
+  }
 }
 
 function WeaponTable({
+  onOpenRule,
   title,
   weapons,
 }: {
+  readonly onOpenRule: (
+    rule: RuleReadModel,
+    display: string,
+    event: MouseEvent<HTMLButtonElement>,
+  ) => void;
   readonly title: string;
   readonly weapons: readonly WeaponProfileReadModel[];
 }) {
@@ -142,7 +174,9 @@ function WeaponTable({
                 <td>{weapon.close}</td>
                 <td>{weapon.standard}</td>
                 <td>{weapon.extreme}</td>
-                <td>{weapon.qualities}</td>
+                <td>
+                  <QualityLinks onOpenRule={onOpenRule} weapon={weapon} />
+                </td>
               </tr>
             ))
           ) : (
@@ -153,6 +187,143 @@ function WeaponTable({
         </tbody>
       </table>
     </section>
+  );
+}
+
+function QualityLinks({
+  onOpenRule,
+  weapon,
+}: {
+  readonly onOpenRule: (
+    rule: RuleReadModel,
+    display: string,
+    event: MouseEvent<HTMLButtonElement>,
+  ) => void;
+  readonly weapon: WeaponProfileReadModel;
+}) {
+  const matches = qualityMatches(weapon.qualities, weapon.qualityRules ?? []);
+  if (!matches.length) return weapon.qualities;
+
+  const fragments: React.ReactNode[] = [];
+  let offset = 0;
+  for (const match of matches) {
+    if (match.start > offset) fragments.push(weapon.qualities.slice(offset, match.start));
+    fragments.push(
+      <button
+        aria-label={`Показать описание ${match.text}`}
+        className="ship-card__trait"
+        key={`${match.rule.id}:${match.start}`}
+        onClick={(event) => onOpenRule(match.rule, match.text, event)}
+        type="button"
+      >
+        {match.text}
+      </button>,
+    );
+    offset = match.end;
+  }
+  if (offset < weapon.qualities.length) fragments.push(weapon.qualities.slice(offset));
+  return fragments;
+}
+
+function RuleDescription({
+  display,
+  onClose,
+  rule,
+  trigger,
+}: {
+  readonly display: string;
+  readonly onClose: () => void;
+  readonly rule: RuleReadModel;
+  readonly trigger: HTMLButtonElement;
+}) {
+  const titleId = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeRef.current?.focus();
+    return () => trigger.focus();
+  }, [trigger]);
+
+  function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "Tab") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeRef.current?.focus();
+      return;
+    }
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation();
+    onClose();
+  }
+
+  return (
+    <div className="ship-card__rule-layer">
+      <button
+        aria-label="Закрыть описание правила по фону"
+        className="ship-card__rule-dismiss"
+        onClick={onClose}
+        tabIndex={-1}
+        type="button"
+      />
+      <section
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="ship-card__rule-dialog"
+        role="dialog"
+      >
+        <header>
+          <div>
+            <p>Weapon quality</p>
+            <h4 id={titleId}>{display}</h4>
+          </div>
+          <button
+            aria-label="Закрыть описание правила"
+            onClick={onClose}
+            onKeyDown={handleKeyDown}
+            ref={closeRef}
+            type="button"
+          >
+            ×
+          </button>
+        </header>
+        <div className="ship-card__rule-copy">
+          {rule.description ? (
+            <SafeStructuredText value={rule.description} />
+          ) : (
+            <p>{rule.diagnostic ?? "Описание правила отсутствует."}</p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+interface QualityMatch {
+  readonly end: number;
+  readonly rule: RuleReadModel;
+  readonly start: number;
+  readonly text: string;
+}
+
+function qualityMatches(qualities: string, rules: readonly RuleReadModel[]): QualityMatch[] {
+  const candidates = rules.flatMap((rule) => {
+    const pattern = new RegExp(
+      `(^|[^a-z0-9])(${escapeRegExp(rule.label)}(?:\\s*\\([^)]*\\))?)`,
+      "iu",
+    );
+    const match = pattern.exec(qualities);
+    if (!match?.[2]) return [];
+    const start = match.index + match[1]!.length;
+    return [{ start, end: start + match[2].length, text: match[2], rule }];
+  });
+  candidates.sort((left, right) => left.start - right.start || right.end - left.end);
+  return candidates.filter(
+    (candidate, index) =>
+      !candidates.some(
+        (other, otherIndex) =>
+          otherIndex < index && other.start <= candidate.start && other.end > candidate.start,
+      ),
   );
 }
 
@@ -214,6 +385,10 @@ function normalizeLabel(value: string): string {
     .toLocaleLowerCase("en")
     .replace(/[^a-zа-я0-9]+/giu, " ")
     .trim();
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }
 
 function shortRole(value: string | undefined): string {

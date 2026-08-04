@@ -1,4 +1,5 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
@@ -8,7 +9,8 @@ import { ShipCardProfile } from "./ShipCardProfile";
 afterEach(cleanup);
 
 describe("ShipCardProfile", () => {
-  it("aligns ten stats and renders optional hardpoint profiles in a second table", () => {
+  it("aligns stats, renders hardpoint profiles and opens quality descriptions", async () => {
+    const user = userEvent.setup();
     render(<ShipCardProfile faction="Empire" model={model()} />);
 
     expect(screen.getByRole("article", { name: "Карточка Akita Super Battleship" })).toHaveStyle({
@@ -24,20 +26,31 @@ describe("ShipCardProfile", () => {
     expect(
       within(options).getByRole("row", { name: /Heavy Corrosive Mortar/u }),
     ).toBeInTheDocument();
+
+    const hazard = within(options).getByRole("button", { name: "Показать описание Hazard (1)" });
+    expect(
+      within(options).getByRole("button", { name: "Показать описание Solex (2)" }),
+    ).toBeVisible();
+    await user.click(hazard);
+    expect(screen.getByRole("dialog", { name: "Hazard (1)" })).toHaveTextContent(
+      "Roll X Critical Damage Dice.",
+    );
+    expect(screen.getByRole("button", { name: "Закрыть описание правила" })).toHaveFocus();
+    await user.keyboard("{Tab}{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Hazard (1)" })).not.toBeInTheDocument();
+    expect(hazard).toHaveFocus();
   });
 });
 
 function model(): ShipEditorReadyReadModel {
   const mainWeapon = weapon("odachi", "Odachi Gyorai Salvo", "F", "10", "10", "10", "Torpedo");
-  const optionWeapon = weapon(
-    "mortar",
-    "Heavy Corrosive Mortar",
-    "FPS",
-    "—",
-    "4",
-    "6",
-    "All-Around, Indirect",
-  );
+  const optionWeapon = {
+    ...weapon("mortar", "Heavy Corrosive Mortar", "FPS", "—", "4", "6", "Hazard (1), Solex (2)"),
+    qualityRules: [
+      rule("hazard", "Hazard", "Roll X Critical Damage Dice."),
+      rule("solex", "Solex", "Convert up to X Standard Counters."),
+    ],
+  };
   return {
     dataState: "ready",
     mode: "instance",
@@ -168,4 +181,21 @@ function weapon(
   qualities: string,
 ): WeaponProfileReadModel {
   return { id, weapon: name, arc, close, standard, extreme, qualities, provenance: null };
+}
+
+function rule(id: string, label: string, description: string) {
+  return {
+    id,
+    label,
+    description: {
+      plainText: description,
+      blocks: [
+        { type: "paragraph" as const, children: [{ type: "text" as const, value: description }] },
+      ],
+      contentUnavailable: false,
+      diagnostics: [],
+    },
+    available: true,
+    diagnostic: null,
+  };
 }
