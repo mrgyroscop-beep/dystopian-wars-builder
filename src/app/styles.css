@@ -2124,6 +2124,32 @@ button.button {
   line-height: 1;
 }
 
+.reference-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0.35rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+}
+
+.reference-sections button {
+  min-height: 3rem;
+  padding: 0.65rem 1rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.reference-sections button[aria-current="page"] {
+  color: var(--navy);
+  background: var(--surface);
+  border-bottom-color: var(--accent);
+}
+
 .reference-library__controls {
   display: flex;
   align-items: end;
@@ -2246,7 +2272,8 @@ button.button {
   font-size: 0.7rem;
 }
 
-.reference-card > footer a {
+.reference-card > footer a,
+.reference-card > footer button {
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
@@ -2255,13 +2282,63 @@ button.button {
   padding: 0.55rem 0.75rem;
   color: #ffffff;
   background: var(--brand);
+  border: 0;
+  cursor: pointer;
+  font: inherit;
   font-weight: 750;
   text-decoration: none;
 }
 
-.reference-card > footer a:hover {
+.reference-card > footer a:hover,
+.reference-card > footer button:hover {
   color: #ffffff;
   background: var(--brand-hover);
+}
+
+.reference-viewer {
+  scroll-margin-top: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow);
+}
+
+.reference-viewer > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.reference-viewer > header h2,
+.reference-viewer > header p {
+  margin: 0;
+}
+
+.reference-viewer > header h2 {
+  margin-top: 0.2rem;
+  font-size: clamp(1.35rem, 3vw, 2rem);
+}
+
+.reference-viewer > header button {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.8rem;
+  color: var(--brand);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.reference-viewer iframe {
+  display: block;
+  width: 100%;
+  height: min(78vh, 62rem);
+  min-height: 34rem;
+  background: #535659;
+  border: 0;
 }
 
 .reference-library__empty {
@@ -2329,6 +2406,16 @@ button.button {
 
   .reference-card {
     min-height: 15rem;
+  }
+
+  .reference-viewer > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .reference-viewer iframe {
+    height: 72vh;
+    min-height: 28rem;
   }
 }
 
@@ -2978,10 +3065,44 @@ button.button {
 }
 
 .editor-option > input[type="radio"] {
+  display: grid;
   width: 1.35rem;
   height: 1.35rem;
+  margin: 0;
+  place-content: center;
   flex: 0 0 auto;
-  accent-color: var(--brand);
+  appearance: none;
+  background: var(--surface);
+  border: 2px solid var(--border-strong);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.editor-option > input[type="radio"]::before {
+  width: 0.7rem;
+  height: 0.7rem;
+  background: var(--brand);
+  border-radius: 50%;
+  content: "";
+  transform: scale(0);
+  transition: transform 100ms ease-out;
+}
+
+.editor-option > input[type="radio"]:checked {
+  border-color: var(--brand);
+}
+
+.editor-option > input[type="radio"]:checked::before {
+  transform: scale(1);
+}
+
+.editor-option > input[type="radio"]:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.editor-option > input[type="radio"]:disabled {
+  cursor: not-allowed;
 }
 
 .editor-option__copy {
@@ -3241,6 +3362,11 @@ button.button {
 /* Rules assistant */
 .assistant-page__header {
   max-width: 780px;
+}
+
+.assistant-page--embedded .assistant-page__header h2 {
+  margin-block: 0.3rem 0.55rem;
+  font-size: clamp(2rem, 4vw, 3.25rem);
 }
 
 .assistant-layout {

@@ -1,6 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
+import type { AuthGateway } from "../application/auth/auth-contract";
+import type { RulesAssistantGateway } from "../application/assistant/rules-assistant-contract";
 import { useDocumentTitle } from "../app/useDocumentTitle";
+import { RulesAssistantPanel } from "./RulesAssistantRoute";
 
 type ReferenceKind = "rules" | "orbat";
 type ReferenceFilter = "all" | ReferenceKind;
@@ -24,8 +28,8 @@ const rules: readonly ReferenceEntry[] = [
     title: "Правила 4.00",
     summary: "Полные правила движения, действий, стрельбы, повреждений и сценариев.",
     meta: "PDF · English · Warcradle",
-    href: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW-Rule-Book-4.00_Full_W.pdf",
-    action: "Открыть правила",
+    href: "/reference-pdf/rules-4-00",
+    action: "Читать внутри",
   },
   {
     id: "glossary-4-03a",
@@ -34,8 +38,8 @@ const rules: readonly ReferenceEntry[] = [
     title: "Rules Glossary 4.03a",
     summary: "Актуальные свойства, системы и качества из профилей кораблей.",
     meta: "PDF · English · обновлено 22.07.2026",
-    href: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.03a_W.pdf",
-    action: "Открыть глоссарий",
+    href: "/reference-pdf/glossary-4-03a",
+    action: "Читать внутри",
   },
   {
     id: "quick-reference",
@@ -44,8 +48,8 @@ const rules: readonly ReferenceEntry[] = [
     title: "Quick Reference",
     summary: "Краткие таблицы раунда, атак, повреждений, дистанций и состояний.",
     meta: "PDF · 12 страниц · English",
-    href: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/Quick-Reference-Guide_W.pdf",
-    action: "Открыть памятку",
+    href: "/reference-pdf/quick-reference",
+    action: "Читать внутри",
   },
 ];
 
@@ -78,10 +82,20 @@ const filters: readonly [ReferenceFilter, string][] = [
   ["orbat", "ORBATS"],
 ];
 
-export function ReferenceLibraryRoute() {
+export function ReferenceLibraryRoute({
+  authGateway,
+  assistantGateway,
+}: {
+  authGateway: AuthGateway;
+  assistantGateway: RulesAssistantGateway;
+}) {
   useDocumentTitle("Правила и ORBATs");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const assistantOpen = searchParams.get("view") === "assistant";
   const [filter, setFilter] = useState<ReferenceFilter>("all");
   const [search, setSearch] = useState("");
+  const [selectedDocument, setSelectedDocument] = useState<ReferenceEntry | null>(null);
+  const viewerRef = useRef<HTMLElement>(null);
   const normalizedSearch = search.trim().toLocaleLowerCase("ru");
   const visibleEntries = useMemo(
     () =>
@@ -97,6 +111,20 @@ export function ReferenceLibraryRoute() {
     [filter, normalizedSearch],
   );
 
+  useEffect(() => {
+    if (selectedDocument)
+      viewerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [selectedDocument]);
+
+  function showLibrary() {
+    setSearchParams({}, { replace: true });
+  }
+
+  function showAssistant() {
+    setSelectedDocument(null);
+    setSearchParams({ view: "assistant" }, { replace: true });
+  }
+
   return (
     <div className="reference-library section-stack">
       <header className="reference-library__hero">
@@ -104,8 +132,8 @@ export function ReferenceLibraryRoute() {
           <p className="eyebrow">Адмиралтейская библиотека</p>
           <h1>Правила и ORBATs</h1>
           <p className="page-lead">
-            Официальные документы Dystopian Wars 4.0 — от базовых правил до актуального состава
-            каждой фракции.
+            Официальные документы Dystopian Wars 4.0 и Старпом, который поможет найти нужное
+            правило.
           </p>
         </div>
         <div className="reference-library__index" aria-label="Состав библиотеки">
@@ -118,77 +146,120 @@ export function ReferenceLibraryRoute() {
         </div>
       </header>
 
-      <section className="reference-library__controls" aria-label="Поиск и фильтры">
-        <div className="reference-library__filters" role="group" aria-label="Тип материала">
-          {filters.map(([value, label]) => (
-            <button
-              aria-pressed={filter === value}
-              key={value}
-              onClick={() => setFilter(value)}
-              type="button"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <label className="reference-library__search">
-          <span>Поиск по библиотеке</span>
-          <input
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Например, Empire или Glossary"
-            type="search"
-            value={search}
-          />
-        </label>
-      </section>
+      <nav className="reference-sections" aria-label="Раздел правил">
+        <button
+          aria-current={!assistantOpen ? "page" : undefined}
+          onClick={showLibrary}
+          type="button"
+        >
+          Документы
+        </button>
+        <button
+          aria-current={assistantOpen ? "page" : undefined}
+          onClick={showAssistant}
+          type="button"
+        >
+          Спросить Старпома
+        </button>
+      </nav>
 
-      <p aria-live="polite" className="reference-library__result">
-        Найдено материалов: {visibleEntries.length}
-      </p>
-
-      {visibleEntries.length ? (
-        <section className="reference-library__grid" aria-label="Материалы">
-          {visibleEntries.map((entry, index) => (
-            <article className="reference-card" data-kind={entry.kind} key={entry.id}>
-              <header>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <p>{entry.eyebrow}</p>
-              </header>
-              <div>
-                <h2>{entry.title}</h2>
-                <p>{entry.summary}</p>
-              </div>
-              <footer>
-                <small>{entry.meta}</small>
-                <a href={entry.href} rel="noreferrer" target="_blank">
-                  {entry.action} <span aria-hidden="true">↗</span>
-                </a>
-              </footer>
-            </article>
-          ))}
-        </section>
+      {assistantOpen ? (
+        <RulesAssistantPanel authGateway={authGateway} assistantGateway={assistantGateway} />
       ) : (
-        <section className="reference-library__empty">
-          <p className="eyebrow">Сигнал не найден</p>
-          <h2>Нет подходящих материалов</h2>
-          <p>Измените запрос или выберите другой раздел библиотеки.</p>
-          <button
-            className="button button--secondary"
-            onClick={() => {
-              setFilter("all");
-              setSearch("");
-            }}
-            type="button"
-          >
-            Сбросить фильтры
-          </button>
-        </section>
-      )}
+        <>
+          <section className="reference-library__controls" aria-label="Поиск и фильтры">
+            <div className="reference-library__filters" role="group" aria-label="Тип материала">
+              {filters.map(([value, label]) => (
+                <button
+                  aria-pressed={filter === value}
+                  key={value}
+                  onClick={() => setFilter(value)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label className="reference-library__search">
+              <span>Поиск по библиотеке</span>
+              <input
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Например, Empire или Glossary"
+                type="search"
+                value={search}
+              />
+            </label>
+          </section>
 
-      <p className="reference-library__source">
-        Ссылки ведут на официальный сайт Dystopian Wars, поэтому всегда открывают опубликованную
-        Warcradle версию документа.
-      </p>
+          <p aria-live="polite" className="reference-library__result">
+            Найдено материалов: {visibleEntries.length}
+          </p>
+
+          {visibleEntries.length ? (
+            <section className="reference-library__grid" aria-label="Материалы">
+              {visibleEntries.map((entry, index) => (
+                <article className="reference-card" data-kind={entry.kind} key={entry.id}>
+                  <header>
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <p>{entry.eyebrow}</p>
+                  </header>
+                  <div>
+                    <h2>{entry.title}</h2>
+                    <p>{entry.summary}</p>
+                  </div>
+                  <footer>
+                    <small>{entry.meta}</small>
+                    {entry.kind === "rules" ? (
+                      <button onClick={() => setSelectedDocument(entry)} type="button">
+                        {entry.action} <span aria-hidden="true">↓</span>
+                      </button>
+                    ) : (
+                      <a href={entry.href} rel="noreferrer" target="_blank">
+                        {entry.action} <span aria-hidden="true">↗</span>
+                      </a>
+                    )}
+                  </footer>
+                </article>
+              ))}
+            </section>
+          ) : (
+            <section className="reference-library__empty">
+              <p className="eyebrow">Сигнал не найден</p>
+              <h2>Нет подходящих материалов</h2>
+              <p>Измените запрос или выберите другой раздел библиотеки.</p>
+              <button
+                className="button button--secondary"
+                onClick={() => {
+                  setFilter("all");
+                  setSearch("");
+                }}
+                type="button"
+              >
+                Сбросить фильтры
+              </button>
+            </section>
+          )}
+
+          {selectedDocument ? (
+            <section className="reference-viewer" ref={viewerRef}>
+              <header>
+                <div>
+                  <p className="eyebrow">Встроенный просмотр</p>
+                  <h2>{selectedDocument.title}</h2>
+                </div>
+                <button onClick={() => setSelectedDocument(null)} type="button">
+                  Закрыть
+                </button>
+              </header>
+              <iframe src={`${selectedDocument.href}#view=FitH`} title={selectedDocument.title} />
+            </section>
+          ) : null}
+
+          <p className="reference-library__source">
+            PDF открываются внутри билдера; документы загружаются с официального сайта Warcradle.
+          </p>
+        </>
+      )}
     </div>
   );
 }

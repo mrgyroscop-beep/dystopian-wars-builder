@@ -7,7 +7,6 @@ import type {
   AssistantResponse,
   RulesAssistantGateway,
 } from "../application/assistant/rules-assistant-contract";
-import { useDocumentTitle } from "../app/useDocumentTitle";
 
 const suggestions = [
   "Как работает правило All-Around?",
@@ -19,14 +18,13 @@ interface ChatEntry extends AssistantMessage {
   sources?: AssistantResponse["sources"];
 }
 
-export function RulesAssistantRoute({
+export function RulesAssistantPanel({
   authGateway,
   assistantGateway,
 }: {
   authGateway: AuthGateway;
   assistantGateway: RulesAssistantGateway;
 }) {
-  useDocumentTitle("Старпом");
   const [user, setUser] = useState<AuthUser | null | undefined>(undefined);
   const [question, setQuestion] = useState("");
   const [conversation, setConversation] = useState<ChatEntry[]>([]);
@@ -69,10 +67,10 @@ export function RulesAssistantRoute({
   }
 
   return (
-    <div className="section-stack assistant-page">
-      <header className="page-header assistant-page__header">
+    <div className="section-stack assistant-page assistant-page--embedded">
+      <header className="assistant-page__header">
         <p className="eyebrow">Помощник адмирала</p>
-        <h1>Старпом</h1>
+        <h2>Старпом</h2>
         <p className="page-lead">
           Задайте вопрос по Dystopian Wars 4.0. Ответ строится по опубликованному каталогу правил и
           содержит ссылки на использованные выдержки.

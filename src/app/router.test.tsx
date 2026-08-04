@@ -158,6 +158,12 @@ describe("application routes", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Правила и ORBATs" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Правила" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByText("Найдено материалов: 11")).toBeVisible();
+    await user.click(screen.getAllByRole("button", { name: /Читать внутри/u })[0]!);
+    expect(screen.getByTitle("Правила 4.00")).toHaveAttribute(
+      "src",
+      "/reference-pdf/rules-4-00#view=FitH",
+    );
+    await user.click(screen.getByRole("button", { name: "Закрыть" }));
     await user.click(screen.getByRole("button", { name: "ORBATS" }));
     expect(screen.getByText("Найдено материалов: 8")).toBeVisible();
     await user.type(screen.getByLabelText("Поиск по библиотеке"), "Empire");
@@ -171,8 +177,12 @@ describe("application routes", () => {
   it("asks the user to sign in before opening the rules assistant", async () => {
     renderRoute("/assistant");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Старпом" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Старпом" })).toHaveAttribute("aria-current", "page");
+    expect(await screen.findByRole("heading", { level: 2, name: "Старпом" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Старпом" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Спросить Старпома" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     expect(screen.getByRole("link", { name: "Войти или создать аккаунт" })).toHaveAttribute(
       "href",
       "/settings#account-title",

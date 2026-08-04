@@ -7,6 +7,7 @@ import { assistantRoutes } from "./assistant";
 import { feedbackRoutes, isFeedbackAutomationPath } from "./feedback";
 import { assertSameOrigin, HttpError } from "./http";
 import { rosterRoutes } from "./rosters";
+import { referencePdfRoutes } from "./reference-pdf";
 import {
   applyApiSecurityHeaders,
   createSafeErrorName,
@@ -26,6 +27,7 @@ app.route("/api/auth", authRoutes);
 app.route("/api/assistant", assistantRoutes);
 app.route("/api/feedback", feedbackRoutes);
 app.route("/api/rosters", rosterRoutes);
+app.route("/reference-pdf", referencePdfRoutes);
 
 app.get("/api/health", (context) => {
   const payload = healthResponseSchema.parse({

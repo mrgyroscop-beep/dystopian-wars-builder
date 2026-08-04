@@ -70,6 +70,19 @@ describe("Worker API", () => {
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
   });
 
+  it("does not proxy arbitrary reference document URLs", async () => {
+    const response = await exports.default.fetch("http://example.com/reference-pdf/not-allowed");
+    const payload: unknown = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(payload).toEqual({
+      error: {
+        code: "document_not_found",
+        message: "Document not found.",
+      },
+    });
+  });
+
   it("registers and signs in with email and password", async () => {
     const headers = { "Content-Type": "application/json", Origin: "http://example.com" };
     const registration = await exports.default.fetch("http://example.com/api/auth/register", {

@@ -1,4 +1,4 @@
-import { createBrowserRouter, type RouteObject } from "react-router-dom";
+import { createBrowserRouter, Navigate, type RouteObject } from "react-router-dom";
 
 import type { HealthGateway } from "../application/health/health-contract";
 import type { AuthGateway } from "../application/auth/auth-contract";
@@ -16,7 +16,6 @@ import { NotFoundRoute } from "../routes/NotFoundRoute";
 import { RosterLibraryRoute } from "../routes/RosterLibraryRoute";
 import { RosterWorkspaceRoute } from "../routes/RosterWorkspaceRoute";
 import { ReferenceLibraryRoute } from "../routes/ReferenceLibraryRoute";
-import { RulesAssistantRoute } from "../routes/RulesAssistantRoute";
 import { SettingsRoute } from "../routes/SettingsRoute";
 
 export interface AppDependencies {
@@ -47,12 +46,15 @@ export function createAppRoutes({
       children: [
         { index: true, element: <RosterLibraryRoute dependencies={rosterLibrary} /> },
         { path: "rosters/new", element: <NewRosterRoute {...rosterCreation} /> },
-        { path: "reference", element: <ReferenceLibraryRoute /> },
+        {
+          path: "reference",
+          element: (
+            <ReferenceLibraryRoute authGateway={authGateway} assistantGateway={assistantGateway} />
+          ),
+        },
         {
           path: "assistant",
-          element: (
-            <RulesAssistantRoute authGateway={authGateway} assistantGateway={assistantGateway} />
-          ),
+          element: <Navigate replace to="/reference?view=assistant" />,
         },
         {
           path: "feedback",

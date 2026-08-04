@@ -7,7 +7,6 @@ import { AUTH_SESSION_CHANGED_EVENT } from "../authSessionEvents";
 const navigationItems = [
   { to: "/", label: "Флоты", end: true },
   { to: "/reference", label: "Правила", end: false },
-  { to: "/assistant", label: "Старпом", end: false },
   { to: "/feedback", label: "Обратная связь", end: false },
   { to: "/settings", label: "Настройки", end: false },
 ] as const;
