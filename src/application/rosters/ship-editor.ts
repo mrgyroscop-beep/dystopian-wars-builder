@@ -14,7 +14,12 @@ import {
   type RosterSelectionInstance,
   type RosterSnapshot,
 } from "../../domain/roster";
-import { projectShipProfileRules, type ShipProfileRulesReadModel } from "./profile-rules";
+import {
+  projectShipProfileRules,
+  projectWeaponDefinition,
+  type ShipProfileRulesReadModel,
+  type WeaponProfileReadModel,
+} from "./profile-rules";
 
 export type ShipEditorGroupId = string;
 export type ShipEditorDataState =
@@ -28,6 +33,7 @@ export interface ShipEditorOptionReadModel {
   readonly selectedQuantity: number;
   readonly availability: "available" | "unavailable" | "indeterminate";
   readonly reason: string | null;
+  readonly profile?: WeaponProfileReadModel | null;
 }
 
 export interface ShipEditorGroupReadModel {
@@ -484,6 +490,7 @@ function projectGroup(
             ? null
             : (placement?.overlay.attributes["editor.unavailableReason"] ??
               (availability?.reasonCodes.join(", ") || "Недостаточно данных каталога.")),
+        profile: projectWeaponDefinition(catalog, definition ?? null),
       };
     }),
   };

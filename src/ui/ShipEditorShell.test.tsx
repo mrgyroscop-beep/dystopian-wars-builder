@@ -78,6 +78,10 @@ describe("ShipEditorShell", () => {
       }),
       expect.any(String),
     );
+    await user.click(screen.getByRole("button", { name: "Показать свойства Heavy Battery" }));
+    expect(screen.getByRole("dialog", { name: "Heavy Battery" })).toBeVisible();
+    expect(screen.getByRole("rowheader", { name: "Heavy Battery" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Закрыть профиль" }));
     await user.click(screen.getByRole("button", { name: /PSA: требуется выбор/u }));
     await waitFor(() => expect(document.getElementById("ship-editor-group-unit-0")).toHaveFocus());
     expect(document.body.innerHTML).not.toMatch(/opaque-slot|DEMO-/u);
@@ -273,7 +277,7 @@ function groups(): ShipEditorGroupReadModel[] {
   return [
     group("opaque-slot-psa", "PSA", 1, 1, [
       option("opaque-placement-magma", "Magma Cast Generator", "Generator"),
-      option("opaque-placement-heavy", "Heavy Battery", "Weapon"),
+      option("opaque-placement-heavy", "Heavy Battery", "Weapon", true),
     ]),
     group("opaque-slot-fps-1", "FPS 1", 1, 1, [option("p-fury", "Fury", "Generator")]),
     group("opaque-slot-fps-2", "FPS 2", 1, 1, [option("p-flak", "Flak", "Weapon")]),
@@ -304,7 +308,7 @@ function group(
   };
 }
 
-function option(id: string, label: string, kind: string) {
+function option(id: string, label: string, kind: string, withProfile = false) {
   return {
     id,
     label,
@@ -313,5 +317,17 @@ function option(id: string, label: string, kind: string) {
     selectedQuantity: 0,
     availability: "available" as const,
     reason: null,
+    profile: withProfile
+      ? {
+          id: `${id}-profile`,
+          weapon: label,
+          arc: "FPS",
+          close: "4",
+          standard: "6",
+          extreme: "—",
+          qualities: "All-Around",
+          provenance: null,
+        }
+      : null,
   };
 }

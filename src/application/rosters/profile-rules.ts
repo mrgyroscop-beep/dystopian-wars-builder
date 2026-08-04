@@ -57,6 +57,21 @@ export interface ShipProfileRulesReadModel {
   readonly diagnostics: readonly ProfileDiagnosticReadModel[];
 }
 
+export function projectWeaponDefinition(
+  catalog: DomainCatalog,
+  definition: DomainEntity | null,
+): WeaponProfileReadModel | null {
+  if (!definition) return null;
+  const weapon =
+    definition.kind === "Weapon"
+      ? definition
+      : definition.profileIds
+          .map((id) => catalog.entities[id])
+          .find((candidate) => candidate?.kind === "Weapon");
+  if (!weapon) return null;
+  return projectWeapon({ entity: weapon, instance: null, provenance: null, configured: false }, []);
+}
+
 interface SourceDefinition {
   readonly entity: DomainEntity;
   readonly instance: RosterSelectionInstance | null;

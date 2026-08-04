@@ -15,6 +15,9 @@ import type {
   ShipEditorReadyReadModel,
   ShipEditorReadModel,
 } from "../application/rosters/ship-editor";
+import type { WeaponProfileReadModel } from "../application/rosters/profile-rules";
+import { EyeIcon } from "./EyeIcon";
+import { WeaponProfileDialog } from "./ProfileDialog";
 import { ProfilePanel, RuleSheet, RulesPanel } from "./ProfileRules";
 
 type EditorTab = "configuration" | "profile" | "rules";
@@ -50,6 +53,7 @@ export function ShipEditorShell({
     model.dataState === "ready" ? (model.groups[0]?.id ?? null) : null,
   );
   const [localRuleId, setLocalRuleId] = useState<string | null>(null);
+  const [inspectedWeapon, setInspectedWeapon] = useState<WeaponProfileReadModel | null>(null);
   const ruleReturn = useRef<RuleReturn | null>(null);
   const tabsId = useId();
   const activeRuleId = ruleId === undefined ? localRuleId : ruleId;
@@ -261,6 +265,7 @@ export function ShipEditorShell({
                 model={model}
                 nameToken={`unit-${groupIndex}`}
                 onCommand={onCommand}
+                onInspectWeapon={setInspectedWeapon}
                 onToggle={() =>
                   setOpenGroupId((current) => (current === group.id ? null : group.id))
                 }
@@ -312,6 +317,7 @@ export function ShipEditorShell({
                   model={model}
                   nameToken={`fleet-${groupIndex}`}
                   onCommand={onCommand}
+                  onInspectWeapon={setInspectedWeapon}
                   onToggle={() =>
                     setOpenGroupId((current) => (current === group.id ? null : group.id))
                   }
@@ -367,6 +373,9 @@ export function ShipEditorShell({
           ) : null}
         </section>
       )}
+      {inspectedWeapon ? (
+        <WeaponProfileDialog onClose={() => setInspectedWeapon(null)} profile={inspectedWeapon} />
+      ) : null}
     </article>
   );
 }
@@ -400,6 +409,7 @@ function EditorGroup({
   model,
   nameToken,
   onCommand,
+  onInspectWeapon,
   onToggle,
   open,
 }: {
@@ -409,6 +419,7 @@ function EditorGroup({
   readonly model: ShipEditorReadyReadModel;
   readonly nameToken: string;
   readonly onCommand: (command: ShipEditorCommand, announcement: string) => void;
+  readonly onInspectWeapon: (profile: WeaponProfileReadModel) => void;
   readonly onToggle: () => void;
   readonly open: boolean;
 }) {
@@ -457,33 +468,47 @@ function EditorGroup({
           <p>{group.help}</p>
           {group.options.map((option) =>
             group.control === "exclusive" ? (
-              <label
+              <div
                 className="editor-option"
                 data-availability={option.availability}
                 key={option.id}
               >
-                <input
-                  checked={option.selectedQuantity === 1}
-                  disabled={busy || model.mode === "preview" || option.availability !== "available"}
-                  name={`ship-${nameToken}`}
-                  onChange={() =>
-                    model.instanceId &&
-                    onCommand(
-                      {
-                        type: "replace-exclusive",
-                        instanceId: model.instanceId,
-                        groupId: group.id,
-                        optionId: option.id,
-                      },
-                      `${group.label}: выбрано ${option.label}.`,
-                    )
-                  }
-                  type="radio"
-                />
-                <OptionCopy option={option} />
-              </label>
+                <label className="editor-option__choice">
+                  <input
+                    checked={option.selectedQuantity === 1}
+                    disabled={
+                      busy || model.mode === "preview" || option.availability !== "available"
+                    }
+                    name={`ship-${nameToken}`}
+                    onChange={() =>
+                      model.instanceId &&
+                      onCommand(
+                        {
+                          type: "replace-exclusive",
+                          instanceId: model.instanceId,
+                          groupId: group.id,
+                          optionId: option.id,
+                        },
+                        `${group.label}: выбрано ${option.label}.`,
+                      )
+                    }
+                    type="radio"
+                  />
+                  <OptionCopy option={option} />
+                </label>
+                {option.profile ? (
+                  <button
+                    aria-label={`Показать свойства ${option.label}`}
+                    className="option-inspect"
+                    onClick={() => option.profile && onInspectWeapon(option.profile)}
+                    type="button"
+                  >
+                    <EyeIcon />
+                  </button>
+                ) : null}
+              </div>
             ) : (
-              <label
+              <div
                 className="editor-option editor-option--quantity"
                 data-availability={option.availability}
                 key={option.id}
@@ -510,7 +535,17 @@ function EditorGroup({
                   type="number"
                   value={option.selectedQuantity}
                 />
-              </label>
+                {option.profile ? (
+                  <button
+                    aria-label={`Показать свойства ${option.label}`}
+                    className="option-inspect"
+                    onClick={() => option.profile && onInspectWeapon(option.profile)}
+                    type="button"
+                  >
+                    <EyeIcon />
+                  </button>
+                ) : null}
+              </div>
             ),
           )}
         </div>
