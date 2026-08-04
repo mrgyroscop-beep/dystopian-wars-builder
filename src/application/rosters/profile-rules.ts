@@ -14,6 +14,7 @@ export interface ProfileValueReadModel {
   readonly id: string;
   readonly label: string;
   readonly value: SafePresentation;
+  readonly rules?: readonly RuleReadModel[];
   readonly provenance: ProfileSlotRole | null;
 }
 
@@ -131,6 +132,7 @@ export function projectShipProfileRules(
         id: `${source.entity.id}:field:${field.order}`,
         label: field.label.plainText || "Свойство",
         value: field.value,
+        rules: projectTextRules(field.value.plainText, catalog),
         provenance: source.provenance,
       })),
   );
@@ -140,6 +142,7 @@ export function projectShipProfileRules(
       id: source.entity.id,
       label: source.entity.label.plainText || "Система",
       value: source.entity.description ?? presentation("Установлено"),
+      rules: projectTextRules(source.entity.label.plainText, catalog),
       provenance: source.provenance,
     }));
   const modelDefinition = catalog.entities[model.definitionId];
@@ -308,7 +311,7 @@ function projectWeapon(
     standard: value("Standard"),
     extreme: value("Extreme"),
     qualities: value("Qualities"),
-    qualityRules: projectQualityRules(value("Qualities"), catalog),
+    qualityRules: projectTextRules(value("Qualities"), catalog),
     provenance: source.provenance,
   };
   const missing = ["Arc", "Close", "Standard", "Extreme", "Qualities"].filter(
@@ -322,14 +325,17 @@ function projectWeapon(
   return row;
 }
 
-function projectQualityRules(qualities: string, catalog: DomainCatalog): RuleReadModel[] {
+function projectTextRules(text: string, catalog: DomainCatalog): RuleReadModel[] {
   const matches = Object.values(catalog.entities)
     .filter((entity) => entity.kind === "Rule")
     .flatMap((entity) => {
       const label = entity.label.plainText.trim();
       if (label.length < 2) return [];
-      const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(label)}(?=$|[^a-z0-9])`, "iu");
-      const match = pattern.exec(qualities);
+      const pattern = new RegExp(
+        `(^|[^a-z0-9])${flexibleLabelPattern(label)}(?=$|[^a-z0-9])`,
+        "iu",
+      );
+      const match = pattern.exec(text);
       return match ? [{ entity, index: match.index + match[1]!.length }] : [];
     })
     .sort(
@@ -347,6 +353,14 @@ function projectQualityRules(qualities: string, catalog: DomainCatalog): RuleRea
       diagnostic: available ? null : "Описание правила отсутствует.",
     };
   });
+}
+
+function flexibleLabelPattern(value: string): string {
+  return value
+    .trim()
+    .split(/[\s\-–—]+/gu)
+    .map(escapeRegExp)
+    .join("[\\s\\-–—]+");
 }
 
 function escapeRegExp(value: string): string {

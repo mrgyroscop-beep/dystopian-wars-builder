@@ -9,7 +9,11 @@ import {
 } from "react";
 
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
-import type { RuleReadModel, WeaponProfileReadModel } from "../application/rosters/profile-rules";
+import type {
+  ProfileValueReadModel,
+  RuleReadModel,
+  WeaponProfileReadModel,
+} from "../application/rosters/profile-rules";
 import { orbatTemplateFor } from "../app/orbatTemplates";
 import { SafeStructuredText } from "./ProfileRules";
 
@@ -35,18 +39,18 @@ export function ShipCardProfile({
 }) {
   const [activeRule, setActiveRule] = useState<{
     readonly display: string;
+    readonly kind: string;
     readonly rule: RuleReadModel;
     readonly trigger: HTMLButtonElement;
   } | null>(null);
   const template = orbatTemplateFor(faction);
-  const properties = profileValue(model, ["properties", "property"]);
-  const baseSystems = profileValue(model, ["systems", "system"]);
+  const properties = profileRow(model, ["properties", "property"]);
+  const baseSystems = profileRow(model, ["systems", "system"]);
   const configuredSystems =
     model.profileRules.sections
       .find((section) => section.id === "systems")
-      ?.rows.map((row) => row.label)
-      .filter(isUsefulValue) ?? [];
-  const systems = uniqueText([baseSystems, ...configuredSystems]).join(", ") || "—";
+      ?.rows.filter((row) => isUsefulValue(row.label)) ?? [];
+  const systems = linkedTextEntries(baseSystems, configuredSystems);
   const weapons = uniqueWeapons(model.profileRules.weapons);
   const hardpointOptions = uniqueWeapons(
     model.groups.flatMap((group) =>
@@ -106,11 +110,32 @@ export function ShipCardProfile({
 
       <div className="ship-card__copy ship-card__copy--properties">
         <span className="visually-hidden">Properties: </span>
-        {properties || "—"}
+        {properties ? (
+          <RuleLinks
+            kind="Property"
+            onOpenRule={openRule}
+            rules={properties.rules ?? []}
+            text={properties.value.plainText.trim()}
+          />
+        ) : (
+          "—"
+        )}
       </div>
       <div className="ship-card__copy ship-card__copy--systems">
         <span className="visually-hidden">Systems: </span>
-        {systems}
+        {systems.length
+          ? systems.map((system, index) => (
+              <span key={normalizeLabel(system.text)}>
+                {index ? ", " : null}
+                <RuleLinks
+                  kind="System"
+                  onOpenRule={openRule}
+                  rules={system.rules}
+                  text={system.text}
+                />
+              </span>
+            ))
+          : "—"}
       </div>
 
       <div
@@ -125,6 +150,7 @@ export function ShipCardProfile({
       {activeRule ? (
         <RuleDescription
           display={activeRule.display}
+          kind={activeRule.kind}
           onClose={() => setActiveRule(null)}
           rule={activeRule.rule}
           trigger={activeRule.trigger}
@@ -133,8 +159,13 @@ export function ShipCardProfile({
     </article>
   );
 
-  function openRule(rule: RuleReadModel, display: string, event: MouseEvent<HTMLButtonElement>) {
-    setActiveRule({ display, rule, trigger: event.currentTarget });
+  function openRule(
+    rule: RuleReadModel,
+    display: string,
+    kind: string,
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    setActiveRule({ display, kind, rule, trigger: event.currentTarget });
   }
 }
 
@@ -146,6 +177,7 @@ function WeaponTable({
   readonly onOpenRule: (
     rule: RuleReadModel,
     display: string,
+    kind: string,
     event: MouseEvent<HTMLButtonElement>,
   ) => void;
   readonly title: string;
@@ -175,7 +207,12 @@ function WeaponTable({
                 <td>{weapon.standard}</td>
                 <td>{weapon.extreme}</td>
                 <td>
-                  <QualityLinks onOpenRule={onOpenRule} weapon={weapon} />
+                  <RuleLinks
+                    kind="Weapon quality"
+                    onOpenRule={onOpenRule}
+                    rules={weapon.qualityRules ?? []}
+                    text={weapon.qualities}
+                  />
                 </td>
               </tr>
             ))
@@ -190,30 +227,35 @@ function WeaponTable({
   );
 }
 
-function QualityLinks({
+function RuleLinks({
+  kind,
   onOpenRule,
-  weapon,
+  rules,
+  text,
 }: {
+  readonly kind: string;
   readonly onOpenRule: (
     rule: RuleReadModel,
     display: string,
+    kind: string,
     event: MouseEvent<HTMLButtonElement>,
   ) => void;
-  readonly weapon: WeaponProfileReadModel;
+  readonly rules: readonly RuleReadModel[];
+  readonly text: string;
 }) {
-  const matches = qualityMatches(weapon.qualities, weapon.qualityRules ?? []);
-  if (!matches.length) return weapon.qualities;
+  const matches = textMatches(text, rules);
+  if (!matches.length) return text;
 
   const fragments: React.ReactNode[] = [];
   let offset = 0;
   for (const match of matches) {
-    if (match.start > offset) fragments.push(weapon.qualities.slice(offset, match.start));
+    if (match.start > offset) fragments.push(text.slice(offset, match.start));
     fragments.push(
       <button
         aria-label={`Показать описание ${match.text}`}
         className="ship-card__trait"
         key={`${match.rule.id}:${match.start}`}
-        onClick={(event) => onOpenRule(match.rule, match.text, event)}
+        onClick={(event) => onOpenRule(match.rule, match.text, kind, event)}
         type="button"
       >
         {match.text}
@@ -221,17 +263,19 @@ function QualityLinks({
     );
     offset = match.end;
   }
-  if (offset < weapon.qualities.length) fragments.push(weapon.qualities.slice(offset));
+  if (offset < text.length) fragments.push(text.slice(offset));
   return fragments;
 }
 
 function RuleDescription({
   display,
+  kind,
   onClose,
   rule,
   trigger,
 }: {
   readonly display: string;
+  readonly kind: string;
   readonly onClose: () => void;
   readonly rule: RuleReadModel;
   readonly trigger: HTMLButtonElement;
@@ -274,7 +318,7 @@ function RuleDescription({
       >
         <header>
           <div>
-            <p>Weapon quality</p>
+            <p>{kind}</p>
             <h4 id={titleId}>{display}</h4>
           </div>
           <button
@@ -299,20 +343,20 @@ function RuleDescription({
   );
 }
 
-interface QualityMatch {
+interface TextMatch {
   readonly end: number;
   readonly rule: RuleReadModel;
   readonly start: number;
   readonly text: string;
 }
 
-function qualityMatches(qualities: string, rules: readonly RuleReadModel[]): QualityMatch[] {
+function textMatches(text: string, rules: readonly RuleReadModel[]): TextMatch[] {
   const candidates = rules.flatMap((rule) => {
     const pattern = new RegExp(
-      `(^|[^a-z0-9])(${escapeRegExp(rule.label)}(?:\\s*\\([^)]*\\))?)`,
+      `(^|[^a-z0-9])(${flexibleLabelPattern(rule.label)}(?:\\s*\\([^)]*\\))?)`,
       "iu",
     );
-    const match = pattern.exec(qualities);
+    const match = pattern.exec(text);
     if (!match?.[2]) return [];
     const start = match.index + match[1]!.length;
     return [{ start, end: start + match[2].length, text: match[2], rule }];
@@ -328,11 +372,41 @@ function qualityMatches(qualities: string, rules: readonly RuleReadModel[]): Qua
 }
 
 function profileValue(model: ShipEditorReadyReadModel, aliases: readonly string[]): string {
+  const row = profileRow(model, aliases);
+  return row?.value.plainText.trim() ?? "";
+}
+
+function profileRow(
+  model: ShipEditorReadyReadModel,
+  aliases: readonly string[],
+): ProfileValueReadModel | null {
   const normalizedAliases = aliases.map(normalizeLabel);
   const row = model.profileRules.sections
     .flatMap((section) => section.rows)
     .find((candidate) => normalizedAliases.includes(normalizeLabel(candidate.label)));
-  return row && isUsefulValue(row.value.plainText) ? row.value.plainText.trim() : "";
+  return row && isUsefulValue(row.value.plainText) ? row : null;
+}
+
+interface LinkedTextEntry {
+  readonly rules: readonly RuleReadModel[];
+  readonly text: string;
+}
+
+function linkedTextEntries(
+  base: ProfileValueReadModel | null,
+  configured: readonly ProfileValueReadModel[],
+): LinkedTextEntry[] {
+  const entries: LinkedTextEntry[] = [];
+  if (base) {
+    entries.push({ rules: base.rules ?? [], text: base.value.plainText.trim() });
+  }
+  for (const row of configured) {
+    entries.push({ rules: row.rules ?? [], text: row.label.trim() });
+  }
+
+  const result = new Map<string, LinkedTextEntry>();
+  for (const entry of entries) result.set(normalizeLabel(entry.text), entry);
+  return [...result.values()];
 }
 
 function groupLimit(model: ShipEditorReadyReadModel, aliases: readonly string[]): string {
@@ -389,6 +463,14 @@ function normalizeLabel(value: string): string {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+function flexibleLabelPattern(value: string): string {
+  return value
+    .trim()
+    .split(/[\s\-–—]+/gu)
+    .map(escapeRegExp)
+    .join("[\\s\\-–—]+");
 }
 
 function shortRole(value: string | undefined): string {

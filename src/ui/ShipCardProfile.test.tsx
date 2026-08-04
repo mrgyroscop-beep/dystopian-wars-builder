@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
-import type { WeaponProfileReadModel } from "../application/rosters/profile-rules";
+import type { RuleReadModel, WeaponProfileReadModel } from "../application/rosters/profile-rules";
 import { ShipCardProfile } from "./ShipCardProfile";
 
 afterEach(cleanup);
@@ -29,6 +29,9 @@ describe("ShipCardProfile", () => {
 
     const hazard = within(options).getByRole("button", { name: "Показать описание Hazard (1)" });
     expect(
+      within(options).getByRole("button", { name: "Показать описание All-Around" }),
+    ).toBeVisible();
+    expect(
       within(options).getByRole("button", { name: "Показать описание Solex (2)" }),
     ).toBeVisible();
     await user.click(hazard);
@@ -39,14 +42,40 @@ describe("ShipCardProfile", () => {
     await user.keyboard("{Tab}{Escape}");
     expect(screen.queryByRole("dialog", { name: "Hazard (1)" })).not.toBeInTheDocument();
     expect(hazard).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Показать описание Stoic" }));
+    expect(screen.getByRole("dialog", { name: "Stoic" })).toHaveTextContent(
+      "This model ignores Disorder.",
+    );
+    expect(screen.getByRole("dialog", { name: "Stoic" })).toHaveTextContent("Property");
+    await user.keyboard("{Escape}");
+
+    await user.click(
+      screen.getByRole("button", { name: "Показать описание Heavy Shield Generator" }),
+    );
+    expect(screen.getByRole("dialog", { name: "Heavy Shield Generator" })).toHaveTextContent(
+      "This model has a shield generator.",
+    );
+    expect(screen.getByRole("dialog", { name: "Heavy Shield Generator" })).toHaveTextContent(
+      "System",
+    );
   });
 });
 
 function model(): ShipEditorReadyReadModel {
   const mainWeapon = weapon("odachi", "Odachi Gyorai Salvo", "F", "10", "10", "10", "Torpedo");
   const optionWeapon = {
-    ...weapon("mortar", "Heavy Corrosive Mortar", "FPS", "—", "4", "6", "Hazard (1), Solex (2)"),
+    ...weapon(
+      "mortar",
+      "Heavy Corrosive Mortar",
+      "FPS",
+      "—",
+      "4",
+      "6",
+      "All-Around, Hazard (1), Solex (2)",
+    ),
     qualityRules: [
+      rule("all-around", "All Around", "Contributes regardless of the targeting arc."),
       rule("hazard", "Hazard", "Roll X Critical Damage Dice."),
       rule("solex", "Solex", "Convert up to X Standard Counters."),
     ],
@@ -143,8 +172,17 @@ function model(): ShipEditorReadyReadModel {
             field("broadside", "Broadside", "4"),
             field("repair", "Repair", "5"),
             field("crew", "Crew", "11"),
-            field("properties", "Properties", "Deceptive Deployment, Stoic"),
-            field("systems", "Systems", "Heavy Shield Generator"),
+            field("properties", "Properties", "Deceptive Deployment, Stoic", [
+              rule("deceptive-deployment", "Deceptive Deployment", "Deploy this model later."),
+              rule("stoic", "Stoic", "This model ignores Disorder."),
+            ]),
+            field("systems", "Systems", "Heavy Shield Generator", [
+              rule(
+                "heavy-shield-generator",
+                "Heavy Shield Generator",
+                "This model has a shield generator.",
+              ),
+            ]),
           ],
         },
         { id: "systems", label: "Systems", rows: [] },
@@ -157,7 +195,7 @@ function model(): ShipEditorReadyReadModel {
   };
 }
 
-function field(id: string, label: string, value: string) {
+function field(id: string, label: string, value: string, rules?: readonly RuleReadModel[]) {
   return {
     id,
     label,
@@ -167,6 +205,7 @@ function field(id: string, label: string, value: string) {
       contentUnavailable: false,
       diagnostics: [],
     },
+    ...(rules ? { rules } : {}),
     provenance: null,
   };
 }
