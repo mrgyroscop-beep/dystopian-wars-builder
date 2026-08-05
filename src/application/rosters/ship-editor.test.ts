@@ -345,6 +345,112 @@ describe("catalog-driven ship editor application boundary", () => {
     expect(unknown.validity).toBe("indeterminate");
   });
 
+  it("hides technical attachment options but keeps an already selected one visible", () => {
+    const fixture = setup();
+    const snapshot = materialize(fixture);
+    const initial = project(snapshot, fixture);
+    const attachments = group(initial, "Attachments");
+    const repairCrane = option(initial, "Attachments", "Repair Crane");
+    const sourcePlacement = fixture.catalog.placements[repairCrane.id]!;
+    const hiddenCatalog: DomainCatalog = {
+      ...fixture.catalog,
+      placements: {
+        ...fixture.catalog.placements,
+        [repairCrane.id]: {
+          ...sourcePlacement,
+          overlay: {
+            ...sourcePlacement.overlay,
+            attributes: { ...sourcePlacement.overlay.attributes, hidden: "true" },
+            modifierIds: [],
+          },
+        },
+      },
+    };
+    const tailored = { ...fixture, catalog: hiddenCatalog };
+
+    expect(project(snapshot, tailored).groups.map((candidate) => candidate.label)).not.toContain(
+      "Attachments",
+    );
+
+    const selected = applyShipEditorCommand(
+      snapshot,
+      fixture.catalog,
+      {
+        type: "set-choice-quantity",
+        instanceId: fixture.unit.id,
+        groupId: attachments.id,
+        optionId: repairCrane.id,
+        quantity: 1,
+      },
+      fixture.createId,
+    );
+    const selectedModel = project(selected, tailored);
+    expect(option(selectedModel, "Attachments", "Repair Crane")).toMatchObject({
+      selectedQuantity: 1,
+      availability: "unavailable",
+      reason: "Опция недоступна в текущем составе.",
+    });
+    expect(option(selectedModel, "Attachments", "Repair Crane").reason).not.toContain(
+      "OPTION_HIDDEN",
+    );
+  });
+
+  it("shows the structural Model cost for a Unit attachment", () => {
+    const fixture = setup();
+    const snapshot = materialize(fixture);
+    const initial = project(snapshot, fixture);
+    const repairCrane = option(initial, "Attachments", "Repair Crane");
+    const repairDefinition = entityByLabel(fixture.catalog, "Repair Crane");
+    const unitTemplate = entityByLabel(fixture.catalog, "Akita Demonstrator");
+    const modelTemplate = entityByLabel(fixture.catalog, "Akita");
+    const modelPlacementTemplate = Object.values(fixture.catalog.placements).find(
+      (candidate) =>
+        candidate.ownerId === unitTemplate.id && candidate.definitionId === modelTemplate.id,
+    )!;
+    const attachmentUnitId = entityId(sourceNodeId("test", "selectionEntry", "attachment-unit"));
+    const attachmentModelId = entityId(sourceNodeId("test", "selectionEntry", "attachment-model"));
+    const attachmentModelPlacementId = placementId(
+      attachmentUnitId,
+      sourceNodeId("test", "selectionEntry", "attachment-model-link"),
+      0,
+      "ownership",
+    );
+    const sourcePlacement = fixture.catalog.placements[repairCrane.id]!;
+    const catalog: DomainCatalog = {
+      ...fixture.catalog,
+      entities: {
+        ...fixture.catalog.entities,
+        [attachmentUnitId]: {
+          ...unitTemplate,
+          id: attachmentUnitId,
+          label: toSafePresentation("Supply Ship Attachment"),
+          costIds: [],
+          slotIds: [],
+        },
+        [attachmentModelId]: {
+          ...modelTemplate,
+          id: attachmentModelId,
+          label: toSafePresentation("Supply Ship Model"),
+          costIds: repairDefinition.costIds,
+          slotIds: [],
+        },
+      },
+      placements: {
+        ...fixture.catalog.placements,
+        [repairCrane.id]: { ...sourcePlacement, definitionId: attachmentUnitId },
+        [attachmentModelPlacementId]: {
+          ...modelPlacementTemplate,
+          id: attachmentModelPlacementId,
+          ownerId: attachmentUnitId,
+          definitionId: attachmentModelId,
+        },
+      },
+    };
+    const model = project(snapshot, { ...fixture, catalog });
+
+    expect(option(model, "Attachments", "Supply Ship Attachment").costLabel).toBe("+5 Points");
+  });
+
   it("projects a complete 4/4 base loadout and keeps every choice replaceable", () => {
     const fixture = setup();
     let snapshot = materialize(fixture);

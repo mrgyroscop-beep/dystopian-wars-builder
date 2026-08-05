@@ -536,6 +536,78 @@ describe("roster evaluator", () => {
     expect(unknown.slots[0]).toMatchObject({ visibility: "indeterminate" });
   });
 
+  it("evaluates hidden option placements and conditional unhide modifiers", () => {
+    const shipId = id("attachment-host");
+    const optionId = id("hidden-attachment");
+    const slotIdValue = sid("attachments");
+    const unhideModifierId = id("unhide-attachment");
+    const choicePlacement = placement(
+      "hidden-attachment-placement",
+      shipId,
+      optionId,
+      { attributes: { hidden: "true" } },
+      slotIdValue,
+    );
+    const slot: Slot = {
+      contractVersion: 1,
+      id: slotIdValue,
+      ownerId: shipId,
+      kind: "Attachment",
+      label: presentation("Attachments"),
+      placementIds: [choicePlacement.id],
+      optionPlacementIds: [choicePlacement.id],
+      cardinality: {
+        contractVersion: 1,
+        minimum: amount("0"),
+        maximum: amount("1"),
+        effective: "deferred-to-kan-32",
+      },
+      costIds: [],
+      constraintIds: [],
+      conditionIds: [],
+      modifierIds: [],
+      hidden: false,
+      helper: false,
+      semantics: { contractVersion: 1, selection: "option", evaluation: "deferred-to-kan-32" },
+      provenance: provenance(shipId),
+    };
+    const unhideModifier = expressionEntity("Modifier", unhideModifierId, {
+      operator: "set",
+      field: "hidden",
+      value: "false",
+    });
+    const catalog = makeCatalog(
+      [
+        baseEntity("Unit", shipId, { slotIds: [slotIdValue] }),
+        baseEntity("Attachment", optionId),
+        unhideModifier,
+      ],
+      [choicePlacement],
+      [slot],
+    );
+    const root = rosterInstanceId("attachment-host-instance");
+    const snapshot = roster(catalog, [instance(root, shipId, { forceInstanceId: root })]);
+
+    expect(evaluateRoster(catalog, snapshot).availability[0]).toMatchObject({
+      state: "unavailable",
+      reasonCodes: ["OPTION_HIDDEN"],
+    });
+
+    const visibleCatalog: DomainCatalog = {
+      ...catalog,
+      placements: {
+        [choicePlacement.id]: {
+          ...choicePlacement,
+          overlay: { ...choicePlacement.overlay, modifierIds: [unhideModifierId] },
+        },
+      },
+    };
+    expect(evaluateRoster(visibleCatalog, snapshot).availability[0]).toMatchObject({
+      state: "available",
+      reasonCodes: [],
+    });
+  });
+
   it("fails closed and stays deterministic for an unevaluable expression", () => {
     const unitId = id("unit");
     const constraintId = id("unsupported");

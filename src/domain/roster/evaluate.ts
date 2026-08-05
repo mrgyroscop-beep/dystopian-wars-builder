@@ -640,6 +640,36 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     return { state: "known", hidden };
   }
 
+  function effectivePlacementVisibility(
+    placement: Placement,
+    target: DomainEntity | undefined,
+    instance: RosterSelectionInstance,
+  ):
+    | { readonly state: "known"; readonly hidden: boolean }
+    | { readonly state: "unknown"; readonly code: string } {
+    let hidden =
+      placement.overlay.attributes.hidden === "true" || target?.attributes.hidden === "true";
+    const modifierIds = [
+      ...new Set([...placement.overlay.modifierIds, ...(target?.modifierIds ?? [])]),
+    ];
+    for (const modifierId of modifierIds) {
+      const modifier = catalog.entities[modifierId];
+      if (!modifier || modifier.kind !== "Modifier")
+        return { state: "unknown", code: "INVALID_OPTION_MODIFIER" };
+      if (modifier.expression.field !== "hidden") continue;
+      if (!modifier.expression.evaluable)
+        return { state: "unknown", code: "UNEVALUABLE_OPTION_HIDDEN_MODIFIER" };
+      const active = evaluateConditions(modifier.conditionIds, instance, new Set());
+      if (active.state === "unknown") return active;
+      if (active.state === "false") continue;
+      const value = modifier.expression.value;
+      if (value !== "true" && value !== "false")
+        return { state: "unknown", code: "INVALID_OPTION_HIDDEN_MODIFIER_VALUE" };
+      hidden = value === "true";
+    }
+    return { state: "known", hidden };
+  }
+
   function slotsFor(instance: RosterSelectionInstance): Slot[] {
     const ids = new Set<SlotId>();
     const entity = catalog.entities[instance.definitionId];
@@ -730,6 +760,11 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
         reasons.add("HELPER_SLOT");
       }
       const target = placement.definitionId ? catalog.entities[placement.definitionId] : undefined;
+      const optionVisibility = effectivePlacementVisibility(placement, target, owner);
+      if (optionVisibility.state === "known" && optionVisibility.hidden) {
+        state = "unavailable";
+        reasons.add("OPTION_HIDDEN");
+      }
       const conditionIds = [
         ...new Set([...placement.overlay.conditionIds, ...(target?.conditionIds ?? [])]),
       ].sort();

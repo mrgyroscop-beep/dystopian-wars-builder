@@ -368,7 +368,11 @@ export function projectShipEditor(
     ...standaloneOptions.map(({ slot, placement }) =>
       projectStandaloneGroup(projected.snapshot, catalog, projected.unit, slot, placement),
     ),
-  ];
+  ].filter(
+    (group) =>
+      group.options.length > 0 &&
+      (group.maximum > 0 || group.options.some((option) => option.selectedQuantity > 0)),
+  );
   const fleetGroups = fleetOwner
     ? fleetSlots.map((slot) =>
         projectGroup(projected.snapshot, catalog, evaluation, fleetOwner, slot, "fleet"),
@@ -526,7 +530,7 @@ function projectGroup(
     control: bounds.minimum === 1 && bounds.maximum === 1 ? "exclusive" : "quantity",
     minimum: bounds.minimum,
     maximum: bounds.maximum,
-    options: directSlotOptionPlacements(catalog, slot).map((placement) => {
+    options: directSlotOptionPlacements(catalog, slot).flatMap((placement) => {
       const placementId = placement.id;
       const definition = placement?.definitionId ? catalog.entities[placement.definitionId] : null;
       const selected = Object.values(snapshot.instances)
@@ -548,20 +552,29 @@ function projectGroup(
       const availabilityState = replaceableAtCapacity
         ? "available"
         : (availability?.state ?? "indeterminate");
-      return {
-        id: placementId,
-        label: definition?.label.plainText ?? "Неизвестная опция",
-        kind: definition?.kind ?? "Unknown",
-        costLabel: optionCostLabel(catalog, definition ?? null, placement),
-        selectedQuantity: selected,
-        availability: availabilityState,
-        reason:
-          availabilityState === "available"
-            ? null
-            : (placement?.overlay.attributes["editor.unavailableReason"] ??
-              (availability?.reasonCodes.join(", ") || "Недостаточно данных каталога.")),
-        profile: projectWeaponDefinition(catalog, definition ?? null),
-      };
+      const hiddenByCatalog =
+        placement.overlay.attributes.hidden === "true" && availabilityState === "unavailable";
+      if (
+        selected === 0 &&
+        (hiddenByCatalog || availability?.reasonCodes.includes("OPTION_HIDDEN"))
+      )
+        return [];
+      return [
+        {
+          id: placementId,
+          label: definition?.label.plainText ?? "Неизвестная опция",
+          kind: definition?.kind ?? "Unknown",
+          costLabel: optionCostLabel(catalog, definition ?? null, placement),
+          selectedQuantity: selected,
+          availability: availabilityState,
+          reason:
+            availabilityState === "available"
+              ? null
+              : (placement?.overlay.attributes["editor.unavailableReason"] ??
+                availabilityReason(availability?.reasonCodes ?? [])),
+          profile: projectWeaponDefinition(catalog, definition ?? null),
+        },
+      ];
     }),
   };
 }
@@ -1012,7 +1025,17 @@ function optionCostLabel(
   definition: DomainEntity | null,
   placement: Placement | undefined,
 ): string {
-  const ids = [...(definition?.costIds ?? []), ...(placement?.overlay.costIds ?? [])];
+  const structuralModelPlacement =
+    definition?.kind === "Unit" ? editorModelPlacement(catalog, definition.id) : null;
+  const structuralModel = structuralModelPlacement?.definitionId
+    ? catalog.entities[structuralModelPlacement.definitionId]
+    : null;
+  const ids = [
+    ...(definition?.costIds ?? []),
+    ...(placement?.overlay.costIds ?? []),
+    ...(structuralModel?.costIds ?? []),
+    ...(structuralModelPlacement?.overlay.costIds ?? []),
+  ];
   const points = ids.reduce((sum, id) => {
     const candidate = catalog.entities[id];
     if (
@@ -1024,6 +1047,27 @@ function optionCostLabel(
     return sum + Number(candidate.amount.value);
   }, 0);
   return points === 0 ? "Бесплатно" : `${signed(points)} Points`;
+}
+
+function availabilityReason(reasonCodes: readonly string[]): string {
+  const messages = reasonCodes.map((code) => {
+    switch (code) {
+      case "SLOT_MAX_REACHED":
+        return "Достигнут лимит этой группы.";
+      case "PLACEMENT_CONSTRAINT":
+        return "Не подходит для выбранного корабля или Battlefleet.";
+      case "CONDITION_NOT_MET":
+        return "Не выполнены условия этой опции.";
+      case "SLOT_HIDDEN":
+      case "OPTION_HIDDEN":
+        return "Опция недоступна в текущем составе.";
+      case "HELPER_SLOT":
+        return "Это служебная настройка каталога.";
+      default:
+        return "Каталог не позволяет выбрать эту опцию.";
+    }
+  });
+  return [...new Set(messages)].join(" ") || "Недостаточно данных каталога.";
 }
 
 function unavailable(
