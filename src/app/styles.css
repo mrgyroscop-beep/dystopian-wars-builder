@@ -3637,6 +3637,7 @@ button.button {
 }
 
 .ship-card__tables[data-has-options="true"] {
+  height: 27.5%;
   grid-template-rows: minmax(0, 1fr) minmax(0, 0.78fr);
   gap: 0.15rem;
   background: var(--ship-card-accent);

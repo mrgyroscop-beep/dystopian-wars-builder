@@ -152,6 +152,13 @@ export function ShipCardProfile({
       <div
         className="ship-card__tables"
         data-has-options={hardpointOptions.length ? "true" : "false"}
+        style={
+          hardpointOptions.length
+            ? {
+                gridTemplateRows: `${weapons.length + 2}fr ${hardpointOptions.length + 2}fr`,
+              }
+            : undefined
+        }
       >
         <WeaponTable onOpenRule={openRule} title="Weapons" weapons={weapons} />
         {hardpointOptions.length ? (

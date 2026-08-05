@@ -23,6 +23,9 @@ describe("ShipCardProfile", () => {
     const main = screen.getByRole("heading", { name: "Weapons" }).closest("section")!;
     expect(within(main).getByRole("row", { name: /Odachi Gyorai Salvo/u })).toBeInTheDocument();
     const options = screen.getByRole("heading", { name: "Hardpoint options" }).closest("section")!;
+    expect(document.querySelector(".ship-card__tables")).toHaveStyle({
+      gridTemplateRows: "3fr 4fr",
+    });
     expect(
       within(options).getByRole("row", { name: /Heavy Corrosive Mortar/u }),
     ).toBeInTheDocument();
