@@ -356,7 +356,11 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
     );
     slots.push({
       ...slot,
-      semantics: { ...slot.semantics, profileRole: profileRoles.get(id) ?? null },
+      semantics: {
+        ...slot.semantics,
+        profileRole: profileRoles.get(id) ?? null,
+        hardpointWeight: kind === "Hardpoint" ? "heavy" : null,
+      },
     });
   }
   for (const [id, ownerId] of [

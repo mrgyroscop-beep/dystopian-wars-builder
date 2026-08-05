@@ -26,6 +26,9 @@ describe("ShipCardProfile", () => {
     expect(
       within(options).getByRole("row", { name: /Heavy Corrosive Mortar/u }),
     ).toBeInTheDocument();
+    expect(within(options).getByRole("img", { name: "Тяжёлый орудийный слот" })).toBeVisible();
+    expect(within(options).getByRole("img", { name: "Лёгкий орудийный слот" })).toBeVisible();
+    expect(within(main).queryByRole("img", { name: /орудийный слот/u })).not.toBeInTheDocument();
 
     const hazard = within(options).getByRole("button", { name: "Показать описание Hazard (1)" });
     expect(
@@ -131,6 +134,27 @@ function model(): ShipEditorReadyReadModel {
         minimum: 0,
         maximum: 1,
         options: [],
+      },
+      {
+        id: "light-hardpoint",
+        label: "Light Hardpoint",
+        help: "Hardpoint",
+        scope: "unit",
+        control: "exclusive",
+        minimum: 0,
+        maximum: 1,
+        options: [
+          {
+            id: "seismic-option",
+            label: "Seismic Mortar",
+            kind: "Weapon",
+            costLabel: "Бесплатно",
+            selectedQuantity: 0,
+            availability: "available",
+            reason: null,
+            profile: weapon("seismic", "Seismic Mortar", "FPS", "—", "3", "1", "Mayhem"),
+          },
+        ],
       },
       {
         id: "escorts",

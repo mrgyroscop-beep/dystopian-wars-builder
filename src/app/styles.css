@@ -3704,6 +3704,52 @@ button.button {
   font-weight: 500;
 }
 
+.ship-card__weapon-label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.22em;
+}
+
+.ship-card__slot-marker {
+  display: grid;
+  width: 1.45em;
+  height: 1.5em;
+  flex: 0 0 1.45em;
+  place-items: center;
+}
+
+.ship-card__hardpoint-marker {
+  display: block;
+  width: 1.32em;
+  height: 1.58em;
+  overflow: visible;
+  color: color-mix(in srgb, var(--ship-card-accent) 82%, #231f1b);
+  fill: currentcolor;
+}
+
+.ship-card__hardpoint-marker--light {
+  width: 1.08em;
+}
+
+.ship-card__hardpoint-marker-inset {
+  fill: rgb(246 242 233 / 96%);
+}
+
+.ship-card__hardpoint-marker text {
+  fill: currentcolor;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  font-weight: 900;
+  text-anchor: middle;
+}
+
+.ship-card__weapon-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .ship-card__table-section th:first-child {
   width: 28%;
 }

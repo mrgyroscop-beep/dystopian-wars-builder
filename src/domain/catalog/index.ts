@@ -1,5 +1,6 @@
 export * from "./canonical";
 export * from "./battlefleet";
+export * from "./hardpoint-weight";
 export * from "./identifiers";
 export * from "./normalize";
 export * from "./presentation";

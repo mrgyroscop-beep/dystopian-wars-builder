@@ -464,6 +464,47 @@ describe("normalized catalog contract", () => {
     ).toEqual(["Heavy Hardpoint: PSA", "Heavy Hardpoint: FPS"]);
   });
 
+  it("preserves heavy and light hardpoint semantics independently from profile role", () => {
+    const hardpoint = (id: string, name: string) =>
+      node("selectionEntryGroup", { id, name }, [
+        node("selectionEntries", {}, [
+          node("selectionEntry", { id: `${id}-option`, name: "Choice", type: "upgrade" }, [
+            node("profiles", {}, [
+              node("profile", {
+                id: `${id}-weapon`,
+                typeId: "9882-7112-4aa5-ffc1",
+                typeName: "Weapons",
+                name: "Weapon",
+              }),
+            ]),
+          ]),
+        ]),
+      ]);
+    const catalog = normalize(
+      root([
+        node("selectionEntries", {}, [
+          node("selectionEntry", { id: "ship", name: "Ship", type: "model" }, [
+            node("selectionEntryGroups", {}, [
+              hardpoint("heavy", "Heavy Hardpoint: FPS"),
+              hardpoint("light", "Light Hardpoint: PSA"),
+              hardpoint("generic", "Hardpoint: FPS"),
+            ]),
+          ]),
+        ]),
+      ]),
+    );
+    const weights = Object.values(catalog.slots)
+      .filter((slot) => slot.kind === "Hardpoint")
+      .sort((left, right) => left.label.plainText.localeCompare(right.label.plainText))
+      .map((slot) => [slot.label.plainText, slot.semantics.hardpointWeight]);
+
+    expect(weights).toEqual([
+      ["Hardpoint: FPS", null],
+      ["Heavy Hardpoint: FPS", "heavy"],
+      ["Light Hardpoint: PSA", "light"],
+    ]);
+  });
+
   it("produces bounded content-addressed chunks and reconstructs exactly", async () => {
     const catalog = normalize(
       root([

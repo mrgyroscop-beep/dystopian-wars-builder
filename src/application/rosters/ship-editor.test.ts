@@ -563,8 +563,13 @@ describe("catalog-driven ship editor application boundary", () => {
           weapon: "Heavy Battery",
           qualities: "Torrent",
           provenance: "PSA",
+          hardpointWeight: "heavy",
         }),
-        expect.objectContaining({ weapon: "Torpedo Battery", provenance: "FPS 1" }),
+        expect.objectContaining({
+          weapon: "Torpedo Battery",
+          provenance: "FPS 1",
+          hardpointWeight: "heavy",
+        }),
       ]),
     );
   });

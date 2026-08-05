@@ -122,6 +122,22 @@ describe("pinned real domain model", () => {
     }
   });
 
+  it("preserves heavy and light hardpoint weights from every real ORBAT", () => {
+    const hardpoints = Object.values(first.slots).filter((slot) => slot.kind === "Hardpoint");
+    const heavy = hardpoints.filter((slot) => slot.semantics.hardpointWeight === "heavy");
+    const light = hardpoints.filter((slot) => slot.semantics.hardpointWeight === "light");
+
+    expect(heavy.length).toBeGreaterThan(0);
+    expect(light.length).toBeGreaterThan(0);
+    expect(
+      hardpoints.filter(
+        (slot) =>
+          /(?:^|\s)(?:heavy|light)(?:\s|$)/iu.test(slot.label.plainText) &&
+          !slot.semantics.hardpointWeight,
+      ),
+    ).toEqual([]);
+  });
+
   it("derives the Empire/Akita walkthrough without effective evaluation", () => {
     const entities = Object.values(first.entities).filter(
       (entity) => entity.provenance.documentPath === "Empire.cat",

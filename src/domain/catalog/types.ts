@@ -1,3 +1,5 @@
+import type { HardpointWeight } from "./hardpoint-weight";
+
 export type Brand<Value, Name extends string> = Value & { readonly __brand: Name };
 
 export type EntityId = Brand<string, "EntityId">;
@@ -351,6 +353,7 @@ export interface Slot {
     readonly selection: "option";
     readonly evaluation: "deferred-to-kan-32";
     readonly profileRole?: "psa" | "fps-1" | "fps-2" | "fps-3" | null;
+    readonly hardpointWeight?: HardpointWeight | null;
   };
   readonly provenance: Provenance;
 }

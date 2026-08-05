@@ -6,6 +6,7 @@ import {
   sourceNodeId,
   upstreamIdFromKey,
 } from "./identifiers";
+import { hardpointWeightFromLabel } from "./hardpoint-weight";
 import { presentationFromNode, toSafePresentation } from "./presentation";
 import {
   DOMAIN_SCHEMA_VERSION,
@@ -280,6 +281,8 @@ export function normalizeCatalog(
           profileRole: node.attributes.id
             ? (vocabulary.profileSlotRoles?.[node.attributes.id] ?? null)
             : null,
+          hardpointWeight:
+            context.kind === "Hardpoint" ? hardpointWeightFromLabel(entity.label.plainText) : null,
         },
         provenance: entity.provenance,
       });

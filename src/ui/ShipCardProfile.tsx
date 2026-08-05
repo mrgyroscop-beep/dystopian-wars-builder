@@ -15,6 +15,7 @@ import type {
   WeaponProfileReadModel,
 } from "../application/rosters/profile-rules";
 import { orbatTemplateFor } from "../app/orbatTemplates";
+import { hardpointWeightFromLabel, type HardpointWeight } from "../domain/catalog";
 import { SafeStructuredText } from "./ProfileRules";
 
 const statFields = [
@@ -54,7 +55,17 @@ export function ShipCardProfile({
   const weapons = uniqueWeapons(model.profileRules.weapons);
   const hardpointOptions = uniqueWeapons(
     model.groups.flatMap((group) =>
-      group.options.flatMap((option) => (option.profile ? [option.profile] : [])),
+      group.options.flatMap((option) =>
+        option.profile
+          ? [
+              {
+                ...option.profile,
+                hardpointWeight:
+                  option.profile.hardpointWeight ?? hardpointWeightFromLabel(group.label),
+              },
+            ]
+          : [],
+      ),
     ),
   );
   const rowCount = weapons.length + hardpointOptions.length;
@@ -201,7 +212,16 @@ function WeaponTable({
           {weapons.length ? (
             weapons.map((weapon) => (
               <tr key={weaponKey(weapon)}>
-                <th scope="row">{weapon.weapon}</th>
+                <th scope="row">
+                  <span className="ship-card__weapon-label">
+                    <span aria-hidden={!weapon.hardpointWeight} className="ship-card__slot-marker">
+                      {weapon.hardpointWeight ? (
+                        <HardpointMarker weight={weapon.hardpointWeight} />
+                      ) : null}
+                    </span>
+                    <span className="ship-card__weapon-text">{weapon.weapon}</span>
+                  </span>
+                </th>
                 <td>{weapon.arc}</td>
                 <td>{weapon.close}</td>
                 <td>{weapon.standard}</td>
@@ -224,6 +244,42 @@ function WeaponTable({
         </tbody>
       </table>
     </section>
+  );
+}
+
+function HardpointMarker({ weight }: { readonly weight: HardpointWeight }) {
+  const heavy = weight === "heavy";
+  const label = heavy ? "Тяжёлый орудийный слот" : "Лёгкий орудийный слот";
+  return (
+    <svg
+      aria-label={label}
+      className={`ship-card__hardpoint-marker ship-card__hardpoint-marker--${weight}`}
+      role="img"
+      viewBox="0 0 40 48"
+    >
+      <path
+        d={heavy ? "M12 16V11C12 4 28 4 28 11v5" : "M15 16V11C15 5 25 5 25 11v5"}
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth={heavy ? 5 : 3.5}
+      />
+      <path d={heavy ? "M7 15h26l3 5v23H4V20z" : "M11 15h18l3 5v23H8V20z"} />
+      <path
+        className="ship-card__hardpoint-marker-inset"
+        d={heavy ? "M8 20h24v19H8z" : "M12 20h16v19H12z"}
+      />
+      <path
+        d={heavy ? "M10 23h20M10 36h20" : "M14 23h12"}
+        fill="none"
+        opacity="0.58"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <text aria-hidden="true" x="20" y="34">
+        {heavy ? "H" : "L"}
+      </text>
+    </svg>
   );
 }
 
@@ -434,6 +490,7 @@ function weaponKey(weapon: WeaponProfileReadModel): string {
     weapon.standard,
     weapon.extreme,
     weapon.qualities,
+    weapon.hardpointWeight ?? "",
   ]
     .map(normalizeLabel)
     .join("|");

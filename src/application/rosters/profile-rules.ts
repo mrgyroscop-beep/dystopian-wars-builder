@@ -1,6 +1,7 @@
 import type {
   DomainCatalog,
   DomainEntity,
+  HardpointWeight,
   RichTextBlock,
   RichTextInline,
   SafePresentation,
@@ -34,6 +35,7 @@ export interface WeaponProfileReadModel {
   readonly qualities: string;
   readonly qualityRules?: readonly RuleReadModel[];
   readonly provenance: ProfileSlotRole | null;
+  readonly hardpointWeight?: HardpointWeight | null;
 }
 
 export interface RuleReadModel {
@@ -72,7 +74,13 @@ export function projectWeaponDefinition(
           .find((candidate) => candidate?.kind === "Weapon");
   if (!weapon) return null;
   return projectWeapon(
-    { entity: weapon, instance: null, provenance: null, configured: false },
+    {
+      entity: weapon,
+      instance: null,
+      provenance: null,
+      hardpointWeight: null,
+      configured: false,
+    },
     [],
     catalog,
   );
@@ -82,6 +90,7 @@ interface SourceDefinition {
   readonly entity: DomainEntity;
   readonly instance: RosterSelectionInstance | null;
   readonly provenance: ProfileSlotRole | null;
+  readonly hardpointWeight: HardpointWeight | null;
   readonly configured: boolean;
 }
 
@@ -108,6 +117,7 @@ export function projectShipProfileRules(
     ...source,
     configured: true,
     provenance: profileProvenance(catalog, source.instance, diagnostics),
+    hardpointWeight: profileHardpointWeight(catalog, source.instance),
   }));
   const effectiveSources = [...baseSources, ...configuredSources];
   const versionState =
@@ -184,7 +194,8 @@ function definitions(
 ): SourceDefinition[] {
   return instances.flatMap((instance) => {
     const entity = catalog.entities[instance.definitionId];
-    if (entity) return [{ entity, instance, provenance: null, configured: false }];
+    if (entity)
+      return [{ entity, instance, provenance: null, hardpointWeight: null, configured: false }];
     diagnostics.push({
       code: "PROFILE_DEFINITION_MISSING",
       message: `Определение ${instance.definitionId} отсутствует в каталоге.`,
@@ -276,6 +287,14 @@ function profileProvenance(
   return null;
 }
 
+function profileHardpointWeight(
+  catalog: DomainCatalog,
+  instance: RosterSelectionInstance | null,
+): HardpointWeight | null {
+  if (!instance?.slotId) return null;
+  return catalog.slots[instance.slotId]?.semantics.hardpointWeight ?? null;
+}
+
 function roleLabel(role: NonNullable<Slot["semantics"]["profileRole"]>): ProfileSlotRole {
   const labels: Record<NonNullable<Slot["semantics"]["profileRole"]>, ProfileSlotRole> = {
     psa: "PSA",
@@ -313,6 +332,7 @@ function projectWeapon(
     qualities: value("Qualities"),
     qualityRules: projectTextRules(value("Qualities"), catalog),
     provenance: source.provenance,
+    hardpointWeight: source.hardpointWeight,
   };
   const missing = ["Arc", "Close", "Standard", "Extreme", "Qualities"].filter(
     (field) => value(field) === "—",
