@@ -43,7 +43,10 @@ const lock = await readSourceLock(path.join(import.meta.dirname, "source-lock.js
 if (publication.sourceRepository !== lock.repository)
   throw new Error("Catalog publication authorization does not match the source lock");
 
-const provenance = await verifyLockedProvenance(lock);
+const githubToken = process.env.GITHUB_TOKEN;
+const provenance = await verifyLockedProvenance(lock, {
+  ...(githubToken ? { githubToken } : {}),
+});
 const sources = await fetchLockedSources(lock, path.join(repositoryRoot, ".cache/catalog"));
 const imported = await buildDataset(lock, sources, provenance);
 const graphJson = imported.files.get("catalog.json");

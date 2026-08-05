@@ -14,7 +14,7 @@ export async function verifyLockedProvenance(lock, options = {}) {
     `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/git/commits/${lock.commit}`,
     API_ORIGIN,
   );
-  const commit = await fetchJson(commitUrl, fetchImpl);
+  const commit = await fetchJson(commitUrl, fetchImpl, options.githubToken);
   if (
     commit.sha !== lock.commit ||
     commit.tree?.sha !== lock.tree ||
@@ -38,7 +38,7 @@ export async function verifyLockedProvenance(lock, options = {}) {
     `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/git/trees/${lock.tree}?recursive=1`,
     API_ORIGIN,
   );
-  const tree = await fetchJson(treeUrl, fetchImpl);
+  const tree = await fetchJson(treeUrl, fetchImpl, options.githubToken);
   if (tree.sha !== lock.tree || tree.truncated === true || !Array.isArray(tree.tree)) {
     throw new CatalogImportError(
       "PROVENANCE_TREE_MISMATCH",
@@ -115,7 +115,7 @@ export async function readCachedProvenance(lock, cacheRoot) {
   }
 }
 
-async function fetchJson(url, fetchImpl) {
+async function fetchJson(url, fetchImpl, githubToken) {
   if (
     url.origin !== API_ORIGIN ||
     !url.pathname.startsWith("/repos/Nord0rk/Dystopian-Wars-4.0/git/")
@@ -136,6 +136,7 @@ async function fetchJson(url, fetchImpl) {
       headers: {
         accept: "application/vnd.github+json",
         "user-agent": "dystopian-wars-builder-catalog-import",
+        ...(githubToken ? { authorization: `Bearer ${githubToken}` } : {}),
       },
     });
     if (!response.ok)

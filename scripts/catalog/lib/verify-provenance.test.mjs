@@ -15,6 +15,17 @@ describe("immutable GitHub provenance", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
+  it("uses an explicit GitHub token for CI provenance requests", async () => {
+    const fetchImpl = mockGitHub();
+
+    await verifyLockedProvenance(lock, { fetchImpl, githubToken: "ci-read-token" });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    for (const [, request] of fetchImpl.mock.calls) {
+      expect(request.headers.authorization).toBe("Bearer ci-read-token");
+    }
+  });
+
   it("rejects a substituted commit tree", async () => {
     await expect(
       verifyLockedProvenance(lock, {

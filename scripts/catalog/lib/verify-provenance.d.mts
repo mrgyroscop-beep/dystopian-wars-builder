@@ -12,4 +12,12 @@ export interface LockedProvenance {
   }[];
 }
 
-export function verifyLockedProvenance(lock: SourceLock): Promise<LockedProvenance>;
+export interface VerifyLockedProvenanceOptions {
+  readonly fetchImpl?: typeof fetch;
+  readonly githubToken?: string;
+}
+
+export function verifyLockedProvenance(
+  lock: SourceLock,
+  options?: VerifyLockedProvenanceOptions,
+): Promise<LockedProvenance>;
