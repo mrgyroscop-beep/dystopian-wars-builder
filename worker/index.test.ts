@@ -182,6 +182,12 @@ describe("Worker API", () => {
       title: "Torpedo",
       page: 32,
     });
+    expect(retrieveSources("Аблятив армор")[0]).toMatchObject({
+      title: "Ablative Armour",
+    });
+    expect(retrieveSources("Эскорт")[0]).toMatchObject({ title: "Escort" });
+    expect(retrieveSources("Torpdeo")[0]).toMatchObject({ title: "Torpedo" });
+    expect(retrieveSources("фывапролдж")).toEqual([]);
   });
 
   it("limits the rules assistant to five questions per minute", async () => {
@@ -200,8 +206,19 @@ describe("Worker API", () => {
       .bind("Rate Tester")
       .first<{ id: string }>();
     if (!user) throw new Error("Registered test user was not stored.");
+
+    const unknownRule = await exports.default.fetch("http://example.com/api/assistant/ask", {
+      method: "POST",
+      headers: { ...headers, Cookie: sessionCookie },
+      body: JSON.stringify({ question: "фывапролдж", history: [] }),
+    });
+    expect(unknownRule.status).toBe(200);
+    const unknownPayload = await unknownRule.json<{ answer: string; sources: unknown[] }>();
+    expect(unknownPayload.answer).toContain("Не нашёл правило");
+    expect(unknownPayload.sources).toEqual([]);
+
     await env.DB.prepare(
-      "INSERT INTO rate_limits (bucket, window_started_at, request_count) VALUES (?, ?, 5)",
+      "INSERT INTO rate_limits (bucket, window_started_at, request_count) VALUES (?, ?, 5) ON CONFLICT(bucket) DO UPDATE SET window_started_at = excluded.window_started_at, request_count = excluded.request_count",
     )
       .bind(`assistant:${user.id}`, Math.floor(Date.now() / 1000))
       .run();

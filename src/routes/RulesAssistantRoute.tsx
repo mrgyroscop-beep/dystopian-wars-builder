@@ -66,6 +66,12 @@ export function RulesAssistantPanel({
     }
   }
 
+  function clearChat() {
+    setConversation([]);
+    setQuestion("");
+    setError("");
+  }
+
   return (
     <div className="section-stack assistant-page assistant-page--embedded">
       <header className="assistant-page__header">
@@ -91,6 +97,16 @@ export function RulesAssistantPanel({
       {user ? (
         <div className="assistant-layout">
           <section className="panel assistant-chat" aria-label="Разговор со Старпомом">
+            <header className="assistant-chat__toolbar">
+              <strong>Диалог со Старпомом</strong>
+              <button
+                disabled={busy || (conversation.length === 0 && !question && !error)}
+                onClick={clearChat}
+                type="button"
+              >
+                Очистить чат
+              </button>
+            </header>
             <div className="assistant-chat__log" aria-live="polite">
               {conversation.length === 0 ? (
                 <div className="assistant-empty">

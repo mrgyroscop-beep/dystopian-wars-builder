@@ -4069,7 +4069,38 @@ button.button {
 .assistant-chat {
   min-height: 560px;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.assistant-chat__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: -0.1rem 0 0.75rem;
+  padding: 0 0.25rem 0.75rem;
+  border-bottom: 1px solid var(--color-border, #9aa5a3);
+}
+
+.assistant-chat__toolbar button {
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  padding: 0.25rem 0;
+  color: var(--color-muted, #536363);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.assistant-chat__toolbar button:hover:not(:disabled),
+.assistant-chat__toolbar button:focus-visible {
+  color: var(--color-ink, #14282f);
+}
+
+.assistant-chat__toolbar button:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .assistant-chat__log {
