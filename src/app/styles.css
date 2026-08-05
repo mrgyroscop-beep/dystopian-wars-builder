@@ -2414,13 +2414,22 @@ button.button {
   font-weight: 800;
 }
 
+.reference-viewer__frame {
+  height: min(78vh, 62rem);
+  min-height: 34rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
 .reference-viewer iframe {
   display: block;
   width: 100%;
-  height: min(78vh, 62rem);
-  min-height: 34rem;
+  height: 100%;
   background: #535659;
   border: 0;
+  touch-action: pan-y pinch-zoom;
 }
 
 .reference-library__empty {
@@ -2499,8 +2508,8 @@ button.button {
     flex-direction: column;
   }
 
-  .reference-viewer iframe {
-    height: 72vh;
+  .reference-viewer__frame {
+    height: 72dvh;
     min-height: 28rem;
   }
 }

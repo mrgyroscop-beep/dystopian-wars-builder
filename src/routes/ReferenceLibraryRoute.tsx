@@ -263,7 +263,9 @@ export function ReferenceLibraryRoute({
                   Закрыть
                 </button>
               </header>
-              <iframe src={`${selectedDocument.href}#view=FitH`} title={selectedDocument.title} />
+              <div className="reference-viewer__frame">
+                <iframe src={`${selectedDocument.href}#view=FitH`} title={selectedDocument.title} />
+              </div>
             </section>
           ) : null}
 
