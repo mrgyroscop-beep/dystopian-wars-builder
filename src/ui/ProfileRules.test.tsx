@@ -80,6 +80,62 @@ describe("profile and rules components", () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
+  it("opens weapon profiles from configured systems", async () => {
+    const user = userEvent.setup();
+    const onInspectWeapon = vi.fn();
+    const profile = {
+      id: "weapon-scything-tail",
+      weapon: "Scything Tail",
+      arc: "FPSA",
+      close: "—",
+      standard: "—",
+      extreme: "—",
+      qualities: "Assault, Piercing (1)",
+      provenance: null,
+    };
+    const source = model();
+    render(
+      <ProfilePanel
+        model={{
+          ...source,
+          sections: source.sections.map((section) =>
+            section.id === "systems"
+              ? {
+                  ...section,
+                  rows: [
+                    {
+                      id: "system-scything-tail",
+                      label: "Scything Tail",
+                      value: {
+                        plainText: "Установлено",
+                        blocks: [
+                          {
+                            type: "paragraph" as const,
+                            children: [{ type: "text" as const, value: "Установлено" }],
+                          },
+                        ],
+                        contentUnavailable: false,
+                        diagnostics: [],
+                      },
+                      provenance: null,
+                    },
+                  ],
+                }
+              : section,
+          ),
+          weapons: [profile],
+        }}
+        onInspectWeapon={onInspectWeapon}
+      />,
+    );
+
+    const trigger = screen.getAllByRole("button", {
+      name: "Показать свойства Scything Tail",
+    })[0]!;
+    await user.click(trigger);
+    expect(onInspectWeapon).toHaveBeenCalledWith(profile);
+  });
+
   it("opens a weapon quality description and returns focus to its link", async () => {
     const user = userEvent.setup();
     const torrentRule = model().rules[0]!;

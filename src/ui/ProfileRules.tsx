@@ -7,6 +7,7 @@ import type {
   ShipProfileRulesReadModel,
   WeaponProfileReadModel,
 } from "../application/rosters/profile-rules";
+import { EyeIcon } from "./EyeIcon";
 
 export function SafeStructuredText({
   value,
@@ -30,7 +31,13 @@ export function SafeStructuredText({
   );
 }
 
-export function ProfilePanel({ model }: { readonly model: ShipProfileRulesReadModel }) {
+export function ProfilePanel({
+  model,
+  onInspectWeapon,
+}: {
+  readonly model: ShipProfileRulesReadModel;
+  readonly onInspectWeapon?: (profile: WeaponProfileReadModel) => void;
+}) {
   return (
     <div className="profile-panel">
       <header className="profile-panel__heading">
@@ -43,7 +50,12 @@ export function ProfilePanel({ model }: { readonly model: ShipProfileRulesReadMo
         <span className="catalog-version">Каталог {model.sourceCatalogVersion}</span>
       </header>
       {model.sections.map((section) => (
-        <ProfileSection key={section.id} section={section} />
+        <ProfileSection
+          key={section.id}
+          section={section}
+          weapons={model.weapons}
+          {...(onInspectWeapon ? { onInspectWeapon } : {})}
+        />
       ))}
       <WeaponProfiles weapons={model.weapons} />
       {model.diagnostics.length > 0 ? (
@@ -134,6 +146,26 @@ export function WeaponProfiles({
         ))}
       </div>
     </section>
+  );
+}
+
+function WeaponInspectButton({
+  onInspect,
+  profile,
+}: {
+  readonly onInspect: (profile: WeaponProfileReadModel) => void;
+  readonly profile: WeaponProfileReadModel;
+}) {
+  return (
+    <button
+      aria-label={`Показать свойства ${profile.weapon}`}
+      className="profile-inspect-link"
+      onClick={() => onInspect(profile)}
+      type="button"
+    >
+      <span>{profile.weapon}</span>
+      <EyeIcon />
+    </button>
   );
 }
 
@@ -300,7 +332,15 @@ export function GlossaryDialog({
   );
 }
 
-function ProfileSection({ section }: { readonly section: ProfileSectionReadModel }) {
+function ProfileSection({
+  onInspectWeapon,
+  section,
+  weapons,
+}: {
+  readonly onInspectWeapon?: (profile: WeaponProfileReadModel) => void;
+  readonly section: ProfileSectionReadModel;
+  readonly weapons: readonly WeaponProfileReadModel[];
+}) {
   return (
     <section className="profile-section" aria-labelledby={`profile-section-${section.id}`}>
       <h4 id={`profile-section-${section.id}`}>{section.label}</h4>
@@ -308,7 +348,18 @@ function ProfileSection({ section }: { readonly section: ProfileSectionReadModel
         <dl>
           {section.rows.map((row) => (
             <div key={row.id}>
-              <dt>{row.label}</dt>
+              <dt>
+                {section.id === "systems" &&
+                onInspectWeapon &&
+                weaponForLabel(weapons, row.label) ? (
+                  <WeaponInspectButton
+                    onInspect={onInspectWeapon}
+                    profile={weaponForLabel(weapons, row.label)!}
+                  />
+                ) : (
+                  row.label
+                )}
+              </dt>
               <dd>
                 {row.value.plainText || "—"}
                 {row.provenance ? <small>{row.provenance}</small> : null}
@@ -321,6 +372,22 @@ function ProfileSection({ section }: { readonly section: ProfileSectionReadModel
       )}
     </section>
   );
+}
+
+function weaponForLabel(
+  weapons: readonly WeaponProfileReadModel[],
+  label: string,
+): WeaponProfileReadModel | null {
+  const normalized = normalizeProfileLabel(label);
+  return weapons.find((weapon) => normalizeProfileLabel(weapon.weapon) === normalized) ?? null;
+}
+
+function normalizeProfileLabel(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase("en")
+    .replace(/[^a-zа-я0-9]+/giu, " ")
+    .trim();
 }
 
 function StructuredBlock({

@@ -354,7 +354,7 @@ export function ShipEditorShell({
           id={`${tabsId}-profile`}
           role="tabpanel"
         >
-          <ProfilePanel model={model.profileRules} />
+          <ProfilePanel model={model.profileRules} onInspectWeapon={setInspectedWeapon} />
         </section>
       ) : (
         <section
