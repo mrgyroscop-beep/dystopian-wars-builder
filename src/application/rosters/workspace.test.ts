@@ -126,6 +126,7 @@ describe("roster workspace application boundary", () => {
     const fixture = harness(["instance-1", "model-1", "instance-2", "model-2"]);
     const session = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
     const initialSnapshot = structuredClone(fixture.saved.get("scaffold-demo")!.roster);
+    const catalog = session.model.catalog;
 
     const execution = await session.executeDetailed({
       type: "add",
@@ -138,14 +139,17 @@ describe("roster workspace application boundary", () => {
       victoryPoints: "9",
       persistence: "saved-local",
     });
+    expect(added.catalog).toBe(catalog);
     expect(initialSnapshot).not.toEqual(fixture.saved.get("scaffold-demo")!.roster);
     const flagship = added.elements.find((element) => element.definitionId === "demo-flagship")!;
     expect(flagship.instances[0]).toMatchObject({
       id: "instance-1",
       definitionId: "demo-ship-001",
     });
+    expect(flagship.instances[0]!.loadout).toContain("Fore Battery");
 
     const duplicated = await session.execute({ type: "duplicate", instanceId: "instance-1" });
+    expect(duplicated.catalog).toBe(catalog);
     expect(duplicated.summary.points).toBe("700");
     expect(duplicated.summary.victoryPoints).toBe("18");
     expect(duplicated.problems).not.toContainEqual(
@@ -156,6 +160,7 @@ describe("roster workspace application boundary", () => {
     ).toContain("instance-2");
 
     const afterDelete = await session.execute({ type: "delete", instanceId: "instance-1" });
+    expect(afterDelete.catalog).toBe(catalog);
     expect(afterDelete.summary.points).toBe("350");
     expect(
       afterDelete.elements.flatMap((element) => element.instances).map((item) => item.id),
@@ -353,6 +358,7 @@ describe("roster workspace application boundary", () => {
     await session.execute({ type: "add", definitionId: "demo-ship-002" });
 
     expect(session.model.summary.points).toBe("405");
+    const previousCatalog = session.model.catalog;
     expect(session.model.roster.battlefleets).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -372,6 +378,7 @@ describe("roster workspace application boundary", () => {
       preservedShipCount: 1,
       removedShipCount: 1,
     });
+    expect(execution.model.catalog).not.toBe(previousCatalog);
     expect(execution.model.roster).toMatchObject({
       battlefleetId: "demo-empire-line-squadron",
       battlefleet: "Line Squadron",

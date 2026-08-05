@@ -24,6 +24,7 @@ import {
   type ShipEditorCommand,
   type ShipEditorReadModel,
 } from "./ship-editor";
+import { projectShipProfileRules } from "./profile-rules";
 
 export const fleetCategories = [
   "Flagship",
@@ -69,6 +70,7 @@ export interface RosterInstanceReadModel {
   readonly name: string;
   readonly points: string;
   readonly victoryPoints: string;
+  readonly loadout: readonly string[];
 }
 
 export interface FleetElementReadModel {
@@ -250,7 +252,7 @@ class WorkspaceSession implements RosterWorkspaceSession {
   async prepare(): Promise<void> {
     const prepared = ensureRosterStructure(this.current, this.catalog);
     if (prepared === this.current) return;
-    await this.persist(prepared);
+    await this.persist(prepared, true);
   }
 
   async execute(command: RosterWorkspaceCommand): Promise<RosterWorkspaceReadModel> {
@@ -275,7 +277,7 @@ class WorkspaceSession implements RosterWorkspaceSession {
       );
       const candidate = { ...changed.roster, updatedAt: this.dependencies.now() };
       return {
-        model: await this.persist(candidate),
+        model: await this.persist(candidate, true),
         createdInstanceId: null,
         battlefleetChange: {
           preservedShipCount: changed.preservedShipCount,
@@ -283,7 +285,13 @@ class WorkspaceSession implements RosterWorkspaceSession {
         },
       };
     }
-    const result = applyCommand(this.current, this.catalog, command, this.dependencies.createId);
+    const result = applyCommand(
+      this.current,
+      this.catalog,
+      command,
+      this.dependencies.createId,
+      this.currentModel.catalog,
+    );
     const candidate: StoredRoster = {
       ...this.current,
       roster: result.snapshot,
@@ -298,32 +306,56 @@ class WorkspaceSession implements RosterWorkspaceSession {
 
   async retrySave(): Promise<RosterWorkspaceReadModel> {
     this.persistence = "saving";
-    this.currentModel = projectWorkspace(this.current, this.catalog, this.setup, this.persistence);
+    this.currentModel = withPersistence(this.currentModel, this.persistence);
     try {
       await this.dependencies.rosterRepository.save(this.current);
       this.persistence = "saved-local";
     } catch {
       this.persistence = "save-error";
     }
-    this.currentModel = projectWorkspace(this.current, this.catalog, this.setup, this.persistence);
+    this.currentModel = withPersistence(this.currentModel, this.persistence);
     return this.currentModel;
   }
 
-  private async persist(candidate: StoredRoster): Promise<RosterWorkspaceReadModel> {
+  private async persist(
+    candidate: StoredRoster,
+    rebuildCatalog = false,
+  ): Promise<RosterWorkspaceReadModel> {
     // The candidate is evaluated before persistence. A failed save never discards it.
-    projectWorkspace(candidate, this.catalog, this.setup, "unsaved");
+    const projected = projectWorkspace(
+      candidate,
+      this.catalog,
+      this.setup,
+      "unsaved",
+      rebuildCatalog ? undefined : this.currentModel.catalog,
+    );
     this.current = candidate;
     this.persistence = "saving";
-    this.currentModel = projectWorkspace(candidate, this.catalog, this.setup, this.persistence);
+    this.currentModel = withPersistence(projected, this.persistence);
     try {
       await this.dependencies.rosterRepository.save(candidate);
       this.persistence = "saved-local";
     } catch {
       this.persistence = "save-error";
     }
-    this.currentModel = projectWorkspace(candidate, this.catalog, this.setup, this.persistence);
+    this.currentModel = withPersistence(projected, this.persistence);
     return this.currentModel;
   }
+}
+
+function withPersistence(
+  model: RosterWorkspaceReadModel,
+  persistence: PersistenceState,
+): RosterWorkspaceReadModel {
+  if (model.summary.persistence === persistence) return model;
+  return {
+    ...model,
+    summary: {
+      ...model.summary,
+      persistence,
+      persistenceLabel: persistenceLabel(persistence),
+    },
+  };
 }
 
 function ensureRosterStructure(stored: StoredRoster, catalog: DomainCatalog): StoredRoster {
@@ -543,6 +575,7 @@ function applyCommand(
   catalog: DomainCatalog,
   command: RosterWorkspaceCommand,
   createId: () => string,
+  catalogItems: readonly CatalogItemReadModel[],
 ): { readonly snapshot: RosterSnapshot; readonly createdInstanceId: RosterInstanceId | null } {
   const snapshot = stored.roster;
   if (command.type === "change-battlefleet")
@@ -562,8 +595,7 @@ function applyCommand(
   const instances = { ...snapshot.instances };
   let addedId: RosterInstanceId | null = null;
   if (command.type === "add") {
-    const projected = projectCatalog(catalog, stored);
-    const item = projected.find((candidate) => candidate.id === command.definitionId);
+    const item = catalogItems.find((candidate) => candidate.id === command.definitionId);
     if (!item || item.availability.state !== "available")
       throw new WorkspaceCommandError(
         "UNAVAILABLE",
@@ -654,6 +686,7 @@ function projectWorkspace(
   catalog: DomainCatalog,
   setup: RosterSetupCatalog,
   persistence: PersistenceState,
+  cachedCatalogItems?: readonly CatalogItemReadModel[],
 ): RosterWorkspaceReadModel {
   const evaluation = evaluateRoster(catalog, stored.roster);
   const elements = projectElements(stored, catalog, evaluation);
@@ -662,7 +695,7 @@ function projectWorkspace(
   const victoryPoints = totalFor(evaluation, "victory-points");
   if (Number(points) > stored.limits.points)
     problems.push(limitProblem("POINTS_LIMIT_EXCEEDED", "Points", points, stored.limits.points));
-  const catalogItems = projectCatalog(catalog, stored);
+  const catalogItems = cachedCatalogItems ?? projectCatalog(catalog, stored);
   const availability = catalogItems.some((item) => item.availability.state === "available")
     ? catalogItems.some((item) => item.availability.state !== "available")
       ? "degraded"
@@ -833,6 +866,7 @@ function projectElements(
           name: catalog.entities[instance.definitionId]?.label.plainText || "Неизвестный корабль",
           points: contributionFor(stored.roster, evaluation, instance.id, "points"),
           victoryPoints: contributionFor(stored.roster, evaluation, instance.id, "victory-points"),
+          loadout: projectSelectedLoadout(stored.roster, catalog, instance),
         }))
         .sort(
           (left, right) =>
@@ -850,6 +884,25 @@ function projectElements(
       };
     })
     .sort((left, right) => left.label.localeCompare(right.label, "ru"));
+}
+
+function projectSelectedLoadout(
+  snapshot: RosterSnapshot,
+  catalog: DomainCatalog,
+  unit: RosterSelectionInstance,
+): readonly string[] {
+  const model = Object.values(snapshot.instances).find(
+    (candidate) =>
+      candidate.parentInstanceId === unit.id &&
+      catalog.entities[candidate.definitionId]?.kind === "Model",
+  );
+  if (!model) return [];
+  const quantities = new Map<string, number>();
+  for (const weapon of projectShipProfileRules(snapshot, catalog, unit, model).weapons)
+    quantities.set(weapon.weapon, (quantities.get(weapon.weapon) ?? 0) + 1);
+  return [...quantities].map(([weapon, quantity]) =>
+    quantity > 1 ? `${weapon} ×${quantity}` : weapon,
+  );
 }
 
 function projectProblems(

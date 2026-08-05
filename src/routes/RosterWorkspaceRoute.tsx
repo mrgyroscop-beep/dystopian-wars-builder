@@ -76,6 +76,7 @@ export function RosterWorkspaceRoute({
   const [commandError, setCommandError] = useState<string | null>(null);
   const [issueReturnId, setIssueReturnId] = useState<string | null>(null);
   const [profilePreview, setProfilePreview] = useState<ProfilePreview | null>(null);
+  const commandInFlight = useRef(false);
   const title = state.kind === "ready" ? state.model.roster.name : "Состав флота";
   const direct = directEditorLink(location.search);
   const directMode = direct?.mode ?? null;
@@ -144,11 +145,19 @@ export function RosterWorkspaceRoute({
     command: Parameters<RosterWorkspaceSession["execute"]>[0],
     success: string,
     focusId?: string,
+    afterSuccess?: (result: RosterWorkspaceExecution) => void,
   ): Promise<RosterWorkspaceExecution | null> {
-    setBusy(true);
+    if (commandInFlight.current) return null;
+    commandInFlight.current = true;
+    let busyShown = false;
+    const busyTimer = window.setTimeout(() => {
+      busyShown = true;
+      setBusy(true);
+    }, 100);
     setCommandError(null);
     try {
       const result = await session.executeDetailed(command);
+      afterSuccess?.(result);
       setState({ kind: "ready", session, model: result.model });
       const refreshedEditor =
         "groupId" in command || command.type === "set-model-quantity"
@@ -172,7 +181,9 @@ export function RosterWorkspaceRoute({
       );
       return null;
     } finally {
-      setBusy(false);
+      window.clearTimeout(busyTimer);
+      commandInFlight.current = false;
+      if (busyShown) setBusy(false);
     }
   }
 
@@ -199,23 +210,24 @@ export function RosterWorkspaceRoute({
 
   async function addSelected() {
     if (!selected) return;
-    const result = await execute(
+    await execute(
       {
         type: "add",
         definitionId: selected.id,
         ...(selectedTarget ? { targetElementInstanceId: selectedTarget } : {}),
       },
       `${selected.name} добавлен в состав.`,
-    );
-    if (result?.createdInstanceId && session.editor(result.createdInstanceId, selected.id)) {
-      const instance = result.model.elements
-        .flatMap((element) => element.instances)
-        .find((candidate) => candidate.id === result.createdInstanceId);
-      if (instance) {
+      undefined,
+      (result) => {
+        if (!result.createdInstanceId) return;
+        const instance = result.model.elements
+          .flatMap((element) => element.instances)
+          .find((candidate) => candidate.id === result.createdInstanceId);
+        if (!instance) return;
         setEditorInstanceId(instance.id);
         requestAnimationFrame(() => document.getElementById("ship-editor-title")?.focus());
-      }
-    }
+      },
+    );
   }
 
   async function dropShip(definitionId: string, targetElementInstanceId: string) {
@@ -453,7 +465,6 @@ export function RosterWorkspaceRoute({
             setActiveView("context");
             requestAnimationFrame(() => document.getElementById("ship-editor-title")?.focus());
           }}
-          editorFor={(instance) => session.editor(instance.id, instance.definitionId)}
           onInspect={(instance) =>
             openShipProfile(instance.name, session.editor(instance.id, instance.definitionId))
           }
@@ -704,7 +715,6 @@ function CatalogPane({
 function CompositionPane({
   busy,
   draggedItem,
-  editorFor,
   model,
   onDelete,
   onDuplicate,
@@ -717,7 +727,6 @@ function CompositionPane({
 }: {
   readonly busy: boolean;
   readonly draggedItem: CatalogItemReadModel | null;
-  readonly editorFor: (instance: RosterInstanceReadModel) => ShipEditorReadModel | null;
   readonly model: RosterWorkspaceReadModel;
   readonly onDelete: (instanceId: string, name: string, elementId: string) => void;
   readonly onDuplicate: (instanceId: string, name: string) => void;
@@ -784,8 +793,7 @@ function CompositionPane({
               {element.instances.length ? (
                 <ul className="roster-instance-list">
                   {element.instances.map((instance) => {
-                    const editor = editorFor(instance);
-                    const loadout = selectedLoadout(editor);
+                    const loadout = instance.loadout;
                     return (
                       <li
                         aria-current={selectedInstanceId === instance.id ? "true" : undefined}
@@ -851,16 +859,6 @@ function CompositionPane({
         })}
       </div>
     </section>
-  );
-}
-
-function selectedLoadout(editor: ShipEditorReadModel | null): string[] {
-  if (editor?.dataState !== "ready") return [];
-  const quantities = new Map<string, number>();
-  for (const weapon of editor.profileRules.weapons)
-    quantities.set(weapon.weapon, (quantities.get(weapon.weapon) ?? 0) + 1);
-  return [...quantities].map(([weapon, quantity]) =>
-    quantity > 1 ? `${weapon} ×${quantity}` : weapon,
   );
 }
 
