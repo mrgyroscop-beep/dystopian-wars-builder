@@ -110,7 +110,6 @@ export interface RosterWorkspaceReadModel {
     readonly points: string;
     readonly pointsLimit: number;
     readonly victoryPoints: string;
-    readonly victoryPointsLimit: number;
     readonly validity: ValidityState;
     readonly validityLabel: string;
     readonly errorCount: number;
@@ -663,10 +662,6 @@ function projectWorkspace(
   const victoryPoints = totalFor(evaluation, "victory-points");
   if (Number(points) > stored.limits.points)
     problems.push(limitProblem("POINTS_LIMIT_EXCEEDED", "Points", points, stored.limits.points));
-  if (Number(victoryPoints) > stored.limits.victoryPoints)
-    problems.push(
-      limitProblem("VP_LIMIT_EXCEEDED", "VP", victoryPoints, stored.limits.victoryPoints),
-    );
   const catalogItems = projectCatalog(catalog, stored);
   const availability = catalogItems.some((item) => item.availability.state === "available")
     ? catalogItems.some((item) => item.availability.state !== "available")
@@ -707,7 +702,6 @@ function projectWorkspace(
       points,
       pointsLimit: stored.limits.points,
       victoryPoints,
-      victoryPointsLimit: stored.limits.victoryPoints,
       validity,
       validityLabel:
         validity === "valid"

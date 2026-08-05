@@ -299,7 +299,7 @@ export function RosterWorkspaceRoute({
       void navigate({ pathname: location.pathname, search: "" }, { replace: true });
     const { preservedShipCount, removedShipCount } = result.battlefleetChange;
     setAnnouncement(
-      `Battlefleet изменён на ${option.label}. Сохранено кораблей: ${preservedShipCount}. Удалено несовместимых: ${removedShipCount}. Points ${result.model.summary.points}, VP ${result.model.summary.victoryPoints}.`,
+      `Battlefleet изменён на ${option.label}. Сохранено кораблей: ${preservedShipCount}. Удалено несовместимых: ${removedShipCount}. Points ${result.model.summary.points}, VPR ${result.model.summary.victoryPoints}.`,
     );
   }
 
@@ -529,10 +529,8 @@ function WorkspaceSummary({
         </dd>
       </div>
       <div className="summary-item">
-        <dt>VP</dt>
-        <dd>
-          {model.summary.victoryPoints} / {model.summary.victoryPointsLimit}
-        </dd>
+        <dt>VPR</dt>
+        <dd>{model.summary.victoryPoints}</dd>
       </div>
       <div className="summary-item" data-axis="validity" data-state={model.summary.validity}>
         <dt>Состав</dt>
@@ -669,7 +667,7 @@ function CatalogPane({
                 </span>
                 <span className="catalog-row__cost">
                   <b>{item.points} P</b>
-                  <small>{item.victoryPoints} VP</small>
+                  <small>{item.victoryPoints} VPR</small>
                 </span>
                 <span className="catalog-row__state">
                   <span aria-hidden="true">
@@ -808,7 +806,7 @@ function CompositionPane({
                             </button>
                           </span>
                           <small>
-                            {instance.points} Points · {instance.victoryPoints} VP
+                            {instance.points} Points · {instance.victoryPoints} VPR
                           </small>
                           <small className="instance-loadout">
                             {loadout.length ? loadout.join(" · ") : "Оружие не указано"}
@@ -943,7 +941,7 @@ function ContextPane({
               <dd>{selected.points}</dd>
             </div>
             <div>
-              <dt>VP</dt>
+              <dt>VPR</dt>
               <dd>{selected.victoryPoints}</dd>
             </div>
             <div>

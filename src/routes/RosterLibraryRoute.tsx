@@ -203,9 +203,7 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
                 <p>
                   {roster.faction.label} · {roster.battlefleet.label}
                 </p>
-                <p>
-                  {roster.limits.points} Points · {roster.limits.victoryPoints} VP
-                </p>
+                <p>{roster.limits.points} Points</p>
                 <p className="muted">Сохранено на устройстве · {formatDate(roster.updatedAt)}</p>
               </div>
               <div className="roster-card__actions">

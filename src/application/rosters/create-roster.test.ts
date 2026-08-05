@@ -87,7 +87,6 @@ describe("roster creation", () => {
         factionId: "empire",
         battlefleetId: "patrol",
         pointsLimit: "1000",
-        victoryPointsLimit: "10",
       },
       {
         setupGateway: { contractVersion: 1, load: () => Promise.resolve(setup) },
@@ -100,7 +99,7 @@ describe("roster creation", () => {
     expect(roster).toMatchObject({
       id: "roster-1",
       name: "Northern Squadron",
-      limits: { points: 1000, victoryPoints: 10 },
+      limits: { points: 1000 },
       roster: { catalogContentVersion: "catalog-1", rootInstanceIds: [], instances: {} },
     });
     expect(save).toHaveBeenCalledWith(roster);
@@ -114,7 +113,6 @@ describe("roster creation", () => {
           factionId: "empire",
           battlefleetId: "foreign",
           pointsLimit: "1000",
-          victoryPointsLimit: "10",
         },
         {
           setupGateway: { contractVersion: 1, load: () => Promise.resolve(setup) },

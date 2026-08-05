@@ -72,7 +72,7 @@ export const storedRosterSchema = z.object({
   battlefleet: z.object({ id: z.string().min(1), label: z.string().min(1) }),
   limits: z.object({
     points: z.number().int().min(1).max(100_000),
-    victoryPoints: z.number().int().min(0).max(10_000),
+    victoryPoints: z.number().int().min(0).max(10_000).optional(),
   }),
   requiredElements: z.array(
     z.object({
@@ -92,7 +92,7 @@ export interface StoredRoster {
   readonly name: string;
   readonly faction: { readonly id: string; readonly label: string };
   readonly battlefleet: { readonly id: string; readonly label: string };
-  readonly limits: { readonly points: number; readonly victoryPoints: number };
+  readonly limits: { readonly points: number; readonly victoryPoints?: number };
   readonly requiredElements: readonly RequiredFleetElement[];
   readonly roster: RosterSnapshot;
   readonly createdAt: string;
@@ -110,7 +110,6 @@ export interface CreateRosterInput {
   readonly factionId: string;
   readonly battlefleetId: string;
   readonly pointsLimit: string;
-  readonly victoryPointsLimit: string;
 }
 
 export type CreateRosterField = keyof CreateRosterInput;
@@ -159,10 +158,7 @@ export async function createRoster(
     name: input.name.trim(),
     faction: { id: faction.id, label: faction.label },
     battlefleet: { id: battlefleet.id, label: battlefleet.label },
-    limits: {
-      points: Number(input.pointsLimit),
-      victoryPoints: Number(input.victoryPointsLimit),
-    },
+    limits: { points: Number(input.pointsLimit) },
     requiredElements: battlefleet.requiredElements.map((element) => ({ ...element })),
     roster: rosterSnapshot,
     createdAt: timestamp,
@@ -190,8 +186,6 @@ export function validateCreateRosterInput(
 
   if (!isIntegerInRange(input.pointsLimit, 1, 100_000))
     errors.pointsLimit = "Укажите лимит Points от 1 до 100 000.";
-  if (!isIntegerInRange(input.victoryPointsLimit, 0, 10_000))
-    errors.victoryPointsLimit = "Укажите лимит VP от 0 до 10 000.";
   return errors;
 }
 

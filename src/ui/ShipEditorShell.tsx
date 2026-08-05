@@ -165,7 +165,7 @@ export function ShipEditorShell({
             </dd>
           </div>
           <div>
-            <dt>VP</dt>
+            <dt>VPR</dt>
             <dd>
               <strong>{model.victoryPoints}</strong>
               <small>фиксировано</small>

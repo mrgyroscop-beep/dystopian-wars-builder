@@ -147,6 +147,10 @@ describe("roster workspace application boundary", () => {
 
     const duplicated = await session.execute({ type: "duplicate", instanceId: "instance-1" });
     expect(duplicated.summary.points).toBe("700");
+    expect(duplicated.summary.victoryPoints).toBe("18");
+    expect(duplicated.problems).not.toContainEqual(
+      expect.objectContaining({ code: "VP_LIMIT_EXCEEDED" }),
+    );
     expect(
       duplicated.elements.flatMap((element) => element.instances).map((item) => item.id),
     ).toContain("instance-2");

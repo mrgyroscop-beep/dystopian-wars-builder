@@ -22,7 +22,6 @@ const initialInput: CreateRosterInput = {
   factionId: "",
   battlefleetId: "",
   pointsLimit: "1000",
-  victoryPointsLimit: "10",
 };
 
 export function NewRosterRoute(dependencies: CreateRosterDependencies) {
@@ -206,21 +205,6 @@ export function NewRosterRoute(dependencies: CreateRosterDependencies) {
               />
               <FieldError id={`${formId}-points-error`} message={errors.pointsLimit} />
             </Field>
-
-            <Field label="Лимит VP" error={errors.victoryPointsLimit}>
-              <input
-                aria-describedby={errors.victoryPointsLimit ? `${formId}-vp-error` : undefined}
-                aria-invalid={Boolean(errors.victoryPointsLimit)}
-                inputMode="numeric"
-                min="0"
-                name="victoryPointsLimit"
-                onChange={(event) => update("victoryPointsLimit", event.target.value)}
-                step="1"
-                type="number"
-                value={input.victoryPointsLimit}
-              />
-              <FieldError id={`${formId}-vp-error`} message={errors.victoryPointsLimit} />
-            </Field>
           </div>
 
           {saveError ? (
@@ -254,9 +238,6 @@ export function NewRosterRoute(dependencies: CreateRosterDependencies) {
           <div className="brief-limits" aria-label="Выбранные лимиты">
             <span>
               <strong>{input.pointsLimit || "—"}</strong> Points
-            </span>
-            <span>
-              <strong>{input.victoryPointsLimit || "—"}</strong> VP
             </span>
           </div>
 
