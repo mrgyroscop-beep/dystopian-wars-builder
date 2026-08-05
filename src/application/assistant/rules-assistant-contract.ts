@@ -17,6 +17,7 @@ export const assistantSourceSchema = z.object({
   title: z.string(),
   excerpt: z.string(),
   factions: z.array(z.string()),
+  page: z.number().int().positive().nullable(),
   url: z.string().url(),
 });
 

@@ -3,6 +3,7 @@ import { applyD1Migrations, type D1Migration } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { healthResponseSchema } from "../src/application/health/health-contract";
+import { retrieveSources } from "./assistant";
 import { sha256 } from "./http";
 import { resolveReferenceDocument } from "./reference-pdf";
 
@@ -169,6 +170,51 @@ describe("Worker API", () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({
       error: { code: "authentication_required" },
+    });
+  });
+
+  it("finds glossary rules by punctuation and Russian translations with PDF pages", () => {
+    expect(retrieveSources("Как работает All-Around?")[0]).toMatchObject({
+      title: "All Around",
+      page: 26,
+    });
+    expect(retrieveSources("Когда можно использовать торпеду?")[0]).toMatchObject({
+      title: "Torpedo",
+      page: 32,
+    });
+  });
+
+  it("limits the rules assistant to five questions per minute", async () => {
+    const headers = { "Content-Type": "application/json", Origin: "http://example.com" };
+    const registration = await exports.default.fetch("http://example.com/api/auth/register", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        displayName: "Rate Tester",
+        email: "rate-tester@example.com",
+        password: "correct-horse-battery-staple",
+      }),
+    });
+    const sessionCookie = registration.headers.get("set-cookie")?.split(";", 1)[0] ?? "";
+    const user = await env.DB.prepare("SELECT id FROM users WHERE display_name = ?")
+      .bind("Rate Tester")
+      .first<{ id: string }>();
+    if (!user) throw new Error("Registered test user was not stored.");
+    await env.DB.prepare(
+      "INSERT INTO rate_limits (bucket, window_started_at, request_count) VALUES (?, ?, 5)",
+    )
+      .bind(`assistant:${user.id}`, Math.floor(Date.now() / 1000))
+      .run();
+
+    const response = await exports.default.fetch("http://example.com/api/assistant/ask", {
+      method: "POST",
+      headers: { ...headers, Cookie: sessionCookie },
+      body: JSON.stringify({ question: "Как работает торпеда?", history: [] }),
+    });
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toEqual({
+      error: { code: "rate_limited", message: "Лимит — 5 вопросов в минуту. Попробуйте позже." },
     });
   });
 

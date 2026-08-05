@@ -147,7 +147,7 @@ export function RulesAssistantPanel({
                 </p>
               ) : null}
               <small>
-                До 20 вопросов в час. Ответ помощника стоит сверить с официальным документом.
+                До 5 вопросов в минуту. Ответ помощника стоит сверить с официальным документом.
               </small>
             </form>
           </section>
@@ -161,6 +161,7 @@ export function RulesAssistantPanel({
                   <li key={source.id}>
                     <a href={source.url} rel="noreferrer" target="_blank">
                       [{source.id}] {source.title}
+                      {source.page ? ` · стр. ${source.page}` : ""}
                     </a>
                     {source.factions.length ? <small>{source.factions.join(" · ")}</small> : null}
                     <p>{source.excerpt}</p>
