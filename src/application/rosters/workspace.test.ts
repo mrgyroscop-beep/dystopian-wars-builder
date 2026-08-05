@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createDemonstrationFleetCatalog,
   createDemonstrationFleetCatalogGateway,
   createDemonstrationWorkspaceRoster,
 } from "../../infrastructure/catalog/demonstration-fleet-catalog";
+import type { PlacementId } from "../../domain/catalog";
 import { createDemonstrationRosterSetupGateway } from "../../infrastructure/catalog/demonstration-roster-setup";
 import type { RosterRepository, StoredRoster } from "./create-roster";
 import {
@@ -44,6 +46,80 @@ describe("roster workspace application boundary", () => {
     expect(Object.keys(savedAfterFirstOpen.roster.instances)).toHaveLength(3);
     expect(second!.model.elements).toEqual(first!.model.elements);
     expect(fixture.saveCalls).toHaveLength(firstSaveCount);
+  });
+
+  it("uses direct slot options and repairs previously saved nested profile selections", async () => {
+    const fixture = harness(["unit-1", "model-1"]);
+    const baseCatalog = createDemonstrationFleetCatalog();
+    const slot = baseCatalog.slots["demo-akita-slot-psa"]!;
+    const directPlacement = baseCatalog.placements[slot.optionPlacementIds[0]!]!;
+    const profile = baseCatalog.entities["demo-akita-fore-battery-profile"]!;
+    const nestedPlacementId = "demo-nested-weapon-profile" as PlacementId;
+    const catalog = {
+      ...baseCatalog,
+      placements: {
+        ...baseCatalog.placements,
+        [nestedPlacementId]: {
+          ...directPlacement,
+          id: nestedPlacementId,
+          ownerId: directPlacement.definitionId!,
+          definitionId: profile.id,
+          order: -1,
+        },
+      },
+      slots: {
+        ...baseCatalog.slots,
+        [slot.id]: {
+          ...slot,
+          placementIds: [nestedPlacementId, ...slot.placementIds],
+          optionPlacementIds: [nestedPlacementId, ...slot.optionPlacementIds],
+        },
+      },
+    };
+    const dependencies: RosterWorkspaceDependencies = {
+      ...fixture.dependencies,
+      catalogGateway: {
+        contractVersion: 1,
+        load: () => Promise.resolve(catalog),
+      },
+    };
+    const session = (await openRosterWorkspace("scaffold-demo", dependencies))!;
+    await session.execute({ type: "add", definitionId: "demo-ship-001" });
+
+    const stored = fixture.saved.get("scaffold-demo")!;
+    const directSelection = Object.values(stored.roster.instances).find(
+      (instance) => instance.slotId === slot.id,
+    )!;
+    expect(directSelection.placementId).not.toBe(nestedPlacementId);
+    fixture.saved.set("scaffold-demo", {
+      ...stored,
+      roster: {
+        ...stored.roster,
+        instances: {
+          ...stored.roster.instances,
+          [directSelection.id]: {
+            ...directSelection,
+            definitionId: profile.id,
+            placementId: nestedPlacementId,
+          },
+        },
+      },
+    });
+
+    const reopened = (await openRosterWorkspace("scaffold-demo", dependencies))!;
+    const repaired = fixture.saved.get("scaffold-demo")!.roster.instances[directSelection.id]!;
+    expect(repaired).toMatchObject({
+      definitionId: directPlacement.definitionId,
+      placementId: directPlacement.id,
+    });
+    expect(
+      reopened.model.problems.some((problem) => problem.code === "PLACEMENT_OWNER_MISMATCH"),
+    ).toBe(false);
+    const editor = reopened.editor("unit-1", "demo-ship-001");
+    if (editor?.dataState !== "ready") throw new Error("Expected ready editor");
+    expect(editor.groups.find((group) => group.id === slot.id)!.options).not.toContainEqual(
+      expect.objectContaining({ id: nestedPlacementId }),
+    );
   });
 
   it("adds, duplicates, deletes, evaluates and restores an exact locally saved snapshot", async () => {

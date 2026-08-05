@@ -564,6 +564,51 @@ describe("roster evaluator", () => {
     );
   });
 
+  it("treats a missing catalogue selection reference as not selected", () => {
+    const pointsType = id("points-type");
+    const shipId = id("ship");
+    const conditionId = id("missing-ship-condition");
+    const modifierId = id("conditional-increment");
+    const missingCondition = {
+      ...expressionEntity("Condition", conditionId, {
+        operator: "atLeast",
+        field: "selections",
+        scope: "force",
+        value: "1",
+        evaluable: false,
+        unevaluableReasons: ["UNRESOLVED_ENTITY_REFERENCE"],
+      }),
+      attributes: { childId: "removed-upstream-ship" },
+    } as Extract<DomainEntity, { kind: "Condition" }>;
+    const modifier = expressionEntity("Modifier", modifierId, {
+      operator: "increment",
+      field: "points",
+      value: "5",
+      conditionIds: [conditionId],
+    });
+    const points = cost("ship-points", "10", "points", pointsType, "base", {
+      modifierIds: [modifierId],
+    });
+    const catalog = makeCatalog([
+      baseEntity("CostType", pointsType),
+      baseEntity("Model", shipId, { costIds: [points.id] }),
+      points,
+      missingCondition,
+      modifier,
+    ]);
+    const root = rosterInstanceId("root");
+    const result = evaluateRoster(
+      catalog,
+      roster(catalog, [instance(root, shipId, { forceInstanceId: root })]),
+    );
+
+    expect(result.status).toBe("valid");
+    expect(result.totals).toContainEqual(expect.objectContaining({ value: "10", complete: true }));
+    expect(result.problems).not.toContainEqual(
+      expect.objectContaining({ code: "UNEVALUABLE_CONDITION" }),
+    );
+  });
+
   it("does not coerce unknown cost values to zero", () => {
     const unitId = id("unit");
     const unknownCost = cost("unknown", "?", "points", id("points-type"), "base");

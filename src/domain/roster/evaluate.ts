@@ -811,7 +811,12 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     const entity = catalog.entities[conditionId];
     if (!entity || (entity.kind !== "Condition" && entity.kind !== "ConditionGroup"))
       return { state: "unknown", code: "INVALID_CONDITION_REFERENCE" };
-    if (!entity.expression.evaluable) return { state: "unknown", code: "UNEVALUABLE_CONDITION" };
+    if (!entity.expression.evaluable) {
+      const absentReference =
+        entity.kind === "Condition" ? evaluateAbsentReferenceCondition(entity) : null;
+      if (absentReference) return absentReference;
+      return { state: "unknown", code: "UNEVALUABLE_CONDITION" };
+    }
     const nextStack = new Set(stack).add(conditionId);
     if (entity.kind === "ConditionGroup") {
       const childrenIds = [...entity.conditionIds].sort();
@@ -861,6 +866,39 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
         return compared !== 0 ? { state: "true" } : { state: "false" };
       default:
         return { state: "unknown", code: "UNSUPPORTED_CONDITION_OPERATOR" };
+    }
+  }
+
+  function evaluateAbsentReferenceCondition(
+    entity: Extract<DomainEntity, { kind: "Condition" }>,
+  ): Truth | null {
+    const { expression } = entity;
+    if (
+      expression.unevaluableReasons.length === 0 ||
+      expression.unevaluableReasons.some((reason) => reason !== "UNRESOLVED_ENTITY_REFERENCE") ||
+      !["selections", "limit::selection"].includes(expression.field ?? "")
+    )
+      return null;
+    const upstreamId = entity.attributes["childId"];
+    if (!upstreamId || upstreamEntities.has(upstreamId)) return null;
+    if (expression.operator === "instanceOf") return { state: "false" };
+    if (expression.operator === "notInstanceOf") return { state: "true" };
+    const expected = expression.value ? parseDecimal(expression.value) : null;
+    if (!expected) return null;
+    const compared = compareDecimal(zeroDecimal(), expected);
+    switch (expression.operator) {
+      case "atLeast":
+        return compared >= 0 ? { state: "true" } : { state: "false" };
+      case "atMost":
+        return compared <= 0 ? { state: "true" } : { state: "false" };
+      case "lessThan":
+        return compared < 0 ? { state: "true" } : { state: "false" };
+      case "equalTo":
+        return compared === 0 ? { state: "true" } : { state: "false" };
+      case "notEqualTo":
+        return compared !== 0 ? { state: "true" } : { state: "false" };
+      default:
+        return null;
     }
   }
 

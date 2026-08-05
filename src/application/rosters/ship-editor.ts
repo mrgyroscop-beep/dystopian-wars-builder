@@ -189,7 +189,9 @@ export function applyShipEditorCommand(
   const placement = catalog.placements[command.optionId];
   if (
     !placement ||
-    !context.slot.optionPlacementIds.includes(placement.id) ||
+    !directSlotOptionPlacements(catalog, context.slot).some(
+      (candidate) => candidate.id === placement.id,
+    ) ||
     !placement.definitionId
   )
     throw new ShipEditorCommandError("UNKNOWN_OPTION", "Опция конфигурации не найдена.");
@@ -480,8 +482,8 @@ function projectGroup(
     control: bounds.minimum === 1 && bounds.maximum === 1 ? "exclusive" : "quantity",
     minimum: bounds.minimum,
     maximum: bounds.maximum,
-    options: slot.optionPlacementIds.map((placementId) => {
-      const placement = catalog.placements[placementId];
+    options: directSlotOptionPlacements(catalog, slot).map((placement) => {
+      const placementId = placement.id;
       const definition = placement?.definitionId ? catalog.entities[placement.definitionId] : null;
       const selected = Object.values(snapshot.instances)
         .filter(
@@ -667,9 +669,7 @@ function materializeMinimumOptions(
       blocked.add(`${target.ownerInstanceId}:${target.slotId}`);
       continue;
     }
-    const placement = slot.optionPlacementIds
-      .map((id) => catalog.placements[id])
-      .filter((candidate): candidate is Placement => Boolean(candidate?.definitionId))
+    const placement = directSlotOptionPlacements(catalog, slot)
       .filter((candidate) =>
         evaluation.availability.some(
           (availability) =>
@@ -708,6 +708,18 @@ function materializeMinimumOptions(
     };
   }
   return current;
+}
+
+export function directSlotOptionPlacements(catalog: DomainCatalog, slot: Slot): Placement[] {
+  return slot.optionPlacementIds
+    .map((id) => catalog.placements[id])
+    .filter((placement): placement is Placement =>
+      Boolean(
+        placement?.definitionId &&
+        placement.slotId === slot.id &&
+        placement.ownerId === slot.ownerId,
+      ),
+    );
 }
 
 function baseOptionInstanceId(

@@ -17,6 +17,7 @@ import type {
 } from "./create-roster";
 import {
   applyShipEditorCommand,
+  directSlotOptionPlacements,
   isShipEditorDefinition,
   materializeShipStructure,
   projectShipEditor,
@@ -333,6 +334,22 @@ function ensureRosterStructure(stored: StoredRoster, catalog: DomainCatalog): St
 
   const instances = { ...snapshot.instances };
   let changed = false;
+  for (const [id, instance] of Object.entries(instances)) {
+    if (!instance.placementId || !instance.slotId) continue;
+    const placement = catalog.placements[instance.placementId];
+    const slot = catalog.slots[instance.slotId];
+    if (!placement || !slot || placement.ownerId === slot.ownerId) continue;
+    const replacement = directSlotOptionPlacements(catalog, slot).find(
+      (candidate) => candidate.definitionId === placement.ownerId,
+    );
+    if (!replacement?.definitionId) continue;
+    instances[id] = {
+      ...instance,
+      definitionId: replacement.definitionId,
+      placementId: replacement.id,
+    };
+    changed = true;
+  }
   let root = Object.values(instances).find(
     (instance) => instance.definitionId === battlefleet.id && instance.parentInstanceId === null,
   );
