@@ -159,9 +159,9 @@ describe("application routes", () => {
     expect(screen.getByRole("link", { name: "Правила" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByText("Найдено материалов: 11")).toBeVisible();
     await user.click(screen.getAllByRole("button", { name: /Читать внутри/u })[0]!);
-    expect(screen.getByTitle("Правила 4.00")).toHaveAttribute(
-      "src",
-      "/reference-pdf/rules-4-00#view=FitH",
+    expect(screen.getByRole("region", { name: "Правила 4.00" })).toHaveAttribute(
+      "data-source",
+      "/reference-pdf/rules-4-00",
     );
     await user.click(screen.getByRole("button", { name: "Закрыть" }));
     await user.click(screen.getByRole("button", { name: "ORBATS" }));
@@ -173,9 +173,9 @@ describe("application routes", () => {
       "https://www.dystopianwars.com/factions/empire",
     );
     await user.click(screen.getByRole("button", { name: /Открыть ORBAT/u }));
-    expect(screen.getByTitle("Empire")).toHaveAttribute(
-      "src",
-      "/reference-pdf/orbat-empire#view=FitH",
+    expect(screen.getByRole("region", { name: "Empire" })).toHaveAttribute(
+      "data-source",
+      "/reference-pdf/orbat-empire",
     );
   });
 

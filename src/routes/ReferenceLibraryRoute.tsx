@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import type { AuthGateway } from "../application/auth/auth-contract";
 import type { RulesAssistantGateway } from "../application/assistant/rules-assistant-contract";
 import { useDocumentTitle } from "../app/useDocumentTitle";
+import { PdfDocumentViewer } from "../ui/PdfDocumentViewer";
 import { RulesAssistantPanel } from "./RulesAssistantRoute";
 
 type ReferenceKind = "rules" | "orbat";
@@ -263,9 +264,11 @@ export function ReferenceLibraryRoute({
                   Закрыть
                 </button>
               </header>
-              <div className="reference-viewer__frame">
-                <iframe src={`${selectedDocument.href}#view=FitH`} title={selectedDocument.title} />
-              </div>
+              <PdfDocumentViewer
+                key={selectedDocument.id}
+                source={selectedDocument.href}
+                title={selectedDocument.title}
+              />
             </section>
           ) : null}
 

@@ -2414,22 +2414,128 @@ button.button {
   font-weight: 800;
 }
 
-.reference-viewer__frame {
+.reference-pdf {
+  background: #26383d;
+  border-top: 1px solid var(--line);
+}
+
+.reference-pdf__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3.25rem;
+  padding: 0.65rem 1.5rem;
+  color: #f5f2e9;
+  background: #18323b;
+}
+
+.reference-pdf__toolbar span {
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.reference-pdf__toolbar small {
+  color: #c9d5d4;
+}
+
+.reference-pdf__viewport {
+  position: relative;
+}
+
+.reference-pdf__scroll {
   height: min(78vh, 62rem);
   min-height: 34rem;
-  overflow: auto;
+  padding: 1rem 1.35rem 1rem 1rem;
+  overflow-x: hidden;
+  overflow-y: scroll;
   overscroll-behavior: contain;
+  scrollbar-color: #bf5a3f #17272c;
+  scrollbar-gutter: stable;
   touch-action: pan-y pinch-zoom;
   -webkit-overflow-scrolling: touch;
 }
 
-.reference-viewer iframe {
+.reference-pdf__scroll:focus-visible {
+  outline: 3px solid #f0a074;
+  outline-offset: -3px;
+}
+
+.reference-pdf__page {
+  position: relative;
+  width: min(100%, 68rem);
+  margin: 0 auto 1rem;
+  overflow: hidden;
+  background: #f8f6ef;
+  box-shadow: 0 0.3rem 1.2rem rgb(0 0 0 / 28%);
+}
+
+.reference-pdf__page:last-child {
+  margin-bottom: 0;
+}
+
+.reference-pdf__page canvas {
   display: block;
+  max-width: 100%;
+}
+
+.reference-pdf__page > p {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: min(28rem, 80%);
+  margin: 0;
+  padding: 1rem;
+  color: var(--danger);
+  background: var(--paper);
+  border: 1px solid currentColor;
+  transform: translate(-50%, -50%);
+}
+
+.reference-pdf__page-number {
+  position: absolute;
+  right: 0.45rem;
+  bottom: 0.45rem;
+  display: grid;
+  min-width: 1.8rem;
+  min-height: 1.8rem;
+  place-items: center;
+  padding: 0.2rem;
+  color: #f5f2e9;
+  font-size: 0.75rem;
+  font-weight: 900;
+  background: rgb(23 39 44 / 82%);
+  border-radius: 999px;
+}
+
+.reference-pdf__scroll-track {
+  position: absolute;
+  z-index: 2;
+  top: 0.5rem;
+  right: 0.25rem;
+  bottom: 0.5rem;
+  width: 0.38rem;
+  pointer-events: none;
+  background: rgb(245 242 233 / 28%);
+  border-radius: 999px;
+}
+
+.reference-pdf__scroll-track > span {
+  position: absolute;
+  top: var(--pdf-scroll-progress);
   width: 100%;
-  height: 100%;
-  background: #535659;
-  border: 0;
-  touch-action: pan-y pinch-zoom;
+  height: var(--pdf-scroll-size);
+  background: #e8734d;
+  border-radius: inherit;
+  box-shadow: 0 0 0 1px rgb(23 39 44 / 50%);
+}
+
+.reference-pdf__message {
+  display: grid;
+  min-height: 20rem;
+  place-items: center;
+  padding: 2rem;
+  color: #fff5f1;
+  font-weight: 800;
+  text-align: center;
 }
 
 .reference-library__empty {
@@ -2508,9 +2614,25 @@ button.button {
     flex-direction: column;
   }
 
-  .reference-viewer__frame {
+  .reference-pdf__scroll {
     height: 72dvh;
     min-height: 28rem;
+    padding: 0.6rem 0.9rem 0.6rem 0.55rem;
+  }
+
+  .reference-pdf__toolbar {
+    align-items: flex-start;
+    min-height: auto;
+    padding: 0.65rem 0.85rem;
+  }
+
+  .reference-pdf__toolbar small {
+    max-width: 10rem;
+    text-align: right;
+  }
+
+  .reference-pdf__page {
+    margin-bottom: 0.6rem;
   }
 }
 
