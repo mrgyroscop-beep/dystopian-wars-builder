@@ -422,6 +422,47 @@ describe("pinned real domain model", () => {
     ).toBe(true);
   });
 
+  it("does not count empty Battlefleet sections as ships for implicit category limits", () => {
+    const setup = projectRosterSetup(first);
+    const battlefleets = setup.factions.flatMap((faction) => faction.battlefleets);
+
+    for (const [battlefleetIndex, battlefleet] of battlefleets.entries()) {
+      const rootId = rosterInstanceId(`real:empty:${battlefleetIndex}:root`);
+      const instances: Record<string, RosterSelectionInstance> = {
+        [rootId]: realInstance(rootId, battlefleet.id, null, rootId),
+      };
+      for (const [elementIndex, element] of battlefleet.requiredElements.entries()) {
+        const elementPlacement = Object.values(first.placements).find(
+          (placement) =>
+            placement.ownerId === battlefleet.id && placement.definitionId === element.id,
+        );
+        expect(elementPlacement, `${battlefleet.label}: ${element.label}`).toBeDefined();
+        const elementInstanceId = rosterInstanceId(
+          `real:empty:${battlefleetIndex}:element:${elementIndex}`,
+        );
+        instances[elementInstanceId] = realInstance(
+          elementInstanceId,
+          element.id,
+          rootId,
+          rootId,
+          elementPlacement!.id,
+        );
+      }
+
+      const evaluation = evaluateRoster(first, {
+        contractVersion: 1,
+        id: `real-empty-${battlefleetIndex}`,
+        catalogContentVersion: first.contentVersion,
+        rootInstanceIds: [rootId],
+        instances,
+      });
+      expect(
+        evaluation.problems.filter((problem) => problem.code === "CONSTRAINT_MAX_EXCEEDED"),
+        battlefleet.label,
+      ).toEqual([]);
+    }
+  });
+
   it("projects playable ships into every Marina Pontificia element without false sibling limits", () => {
     const setup = projectRosterSetup(first);
     const alliance = setup.factions.find((faction) => faction.label === "Alliance")!;

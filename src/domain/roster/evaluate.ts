@@ -413,7 +413,14 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     const ids = [
       ...new Set([...entity.constraintIds, ...(incoming?.overlay.constraintIds ?? [])]),
     ].sort();
-    for (const constraintId of ids) evaluateConstraint(constraintId, instance, null, false);
+    for (const constraintId of ids) {
+      const implicitTarget = entity.constraintIds.includes(constraintId)
+        ? implicitTargetForEntity(entity)
+        : incoming
+          ? implicitTargetForPlacement(incoming)
+          : entity.id;
+      evaluateConstraint(constraintId, instance, null, false, implicitTarget);
+    }
     evaluateErrorModifiers(
       [...new Set([...entity.modifierIds, ...(incoming?.overlay.modifierIds ?? [])])].sort(),
       instance,
@@ -455,6 +462,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     instance: RosterSelectionInstance,
     slotIdValue: SlotId | null,
     availabilityCheck: boolean,
+    implicitTargetId: EntityId | null = null,
   ): Truth {
     const constraint = catalog.entities[constraintId];
     if (!constraint || constraint.kind !== "Constraint") {
@@ -504,7 +512,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       indeterminateExpression(bound.code, instance, constraint.id, slotIdValue);
       return { state: "unknown", code: bound.code };
     }
-    const actual = metricForExpression(expression, instance);
+    const actual = metricForExpression(expression, instance, implicitTargetId);
     if (actual.state === "unknown") {
       indeterminateExpression(actual.code, instance, constraint.id, slotIdValue);
       return { state: "unknown", code: actual.code };
@@ -796,7 +804,13 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
         }
       }
       for (const constraintId of [...placement.overlay.constraintIds].sort()) {
-        const result = evaluateConstraint(constraintId, owner, slot.id, true);
+        const result = evaluateConstraint(
+          constraintId,
+          owner,
+          slot.id,
+          true,
+          implicitTargetForPlacement(placement),
+        );
         if (result.state === "false") {
           state = "unavailable";
           reasons.add("PLACEMENT_CONSTRAINT");
@@ -940,6 +954,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
   function metricForExpression(
     expression: EvaluatorExpression,
     instance: RosterSelectionInstance,
+    implicitTargetId: EntityId | null = null,
   ): Numeric {
     if (!expression.evaluable) return { state: "unknown", code: "UNEVALUABLE_EXPRESSION" };
     const population = scopePopulation(expression.scope, instance);
@@ -957,7 +972,9 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
         ? expression.references
         : fieldTarget.entityId
           ? [fieldTarget.entityId]
-          : [];
+          : expression.field === "selections" && implicitTargetId
+            ? [implicitTargetId]
+            : [];
     if (expression.field === "forces") {
       const forceIds = new Set(
         populationInstances.flatMap((candidate) => {
@@ -1111,6 +1128,23 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     if (entity?.categoryIds.includes(targetId)) return true;
     const placement = instance.placementId ? catalog.placements[instance.placementId] : undefined;
     return placement?.overlay.categoryIds.includes(targetId) ?? false;
+  }
+
+  function implicitTargetForEntity(entity: DomainEntity): EntityId {
+    return resolveImplicitTarget(entity.attributes["targetId"], entity.id) ?? entity.id;
+  }
+
+  function implicitTargetForPlacement(placement: Placement): EntityId | null {
+    return resolveImplicitTarget(placement.overlay.attributes["targetId"], placement.definitionId);
+  }
+
+  function resolveImplicitTarget(
+    token: string | undefined,
+    fallback: EntityId | null,
+  ): EntityId | null {
+    if (!token) return fallback;
+    const resolved = resolveEntityToken(token);
+    return resolved.state === "known" && resolved.entityId ? resolved.entityId : fallback;
   }
 
   function resolveEntityToken(token: string | null):

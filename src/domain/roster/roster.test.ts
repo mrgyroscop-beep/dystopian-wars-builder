@@ -777,6 +777,143 @@ describe("roster evaluator", () => {
       }),
     );
   });
+
+  it("uses the implicit CategoryLink target for force-wide selection limits", () => {
+    const battlefleetId = id("battlefleet");
+    const airborneElementId = id("airborne-element");
+    const supportElementId = id("support-element");
+    const airborneCategoryId = id("airborne-category");
+    const airborneShipId = id("airborne-ship");
+    const supportShipId = id("support-ship");
+    const maximumId = id("airborne-maximum");
+    const maximum = expressionEntity("Constraint", maximumId, {
+      operator: "max",
+      field: "selections",
+      scope: "force",
+      value: "2",
+      flags: { includeChildSelections: "true" },
+    });
+    const catalog = makeCatalog([
+      baseEntity("Battlefleet", battlefleetId),
+      baseEntity("BattlefleetElement", airborneElementId, {
+        attributes: { targetId: airborneCategoryId },
+        constraintIds: [maximumId],
+      }),
+      baseEntity("BattlefleetElement", supportElementId),
+      baseEntity("Category", airborneCategoryId),
+      baseEntity("Unit", airborneShipId, { categoryIds: [airborneCategoryId] }),
+      baseEntity("Unit", supportShipId),
+      maximum,
+    ]);
+    const force = rosterInstanceId("force");
+    const airborne = rosterInstanceId("airborne");
+    const support = rosterInstanceId("support");
+    const scaffold = [
+      instance(force, battlefleetId, { forceInstanceId: force }),
+      instance(airborne, airborneElementId, {
+        parentInstanceId: force,
+        forceInstanceId: force,
+      }),
+      instance(support, supportElementId, {
+        parentInstanceId: force,
+        forceInstanceId: force,
+      }),
+    ];
+
+    const empty = evaluateRoster(catalog, roster(catalog, scaffold));
+    expect(empty.problems.filter((problem) => problem.code === "CONSTRAINT_MAX_EXCEEDED")).toEqual(
+      [],
+    );
+
+    const unrelatedShips = evaluateRoster(
+      catalog,
+      roster(catalog, [
+        ...scaffold,
+        instance(rosterInstanceId("support-ships"), supportShipId, {
+          parentInstanceId: support,
+          forceInstanceId: force,
+          quantity: 7,
+        }),
+      ]),
+    );
+    expect(
+      unrelatedShips.problems.filter((problem) => problem.code === "CONSTRAINT_MAX_EXCEEDED"),
+    ).toEqual([]);
+
+    const exceeded = evaluateRoster(
+      catalog,
+      roster(catalog, [
+        ...scaffold,
+        instance(rosterInstanceId("airborne-ships"), airborneShipId, {
+          parentInstanceId: airborne,
+          forceInstanceId: force,
+          quantity: 3,
+        }),
+      ]),
+    );
+    expect(exceeded.problems).toContainEqual(
+      expect.objectContaining({
+        code: "CONSTRAINT_MAX_EXCEEDED",
+        sourceEntityId: maximumId,
+        actual: "3",
+        expected: "max 2",
+      }),
+    );
+  });
+
+  it("uses the constrained selection itself as the implicit target", () => {
+    const battlefleetId = id("implicit-target-battlefleet");
+    const limitedShipId = id("implicit-target-limited-ship");
+    const unrelatedShipId = id("implicit-target-unrelated-ship");
+    const maximumId = id("implicit-target-maximum");
+    const maximum = expressionEntity("Constraint", maximumId, {
+      operator: "max",
+      field: "selections",
+      scope: "parent",
+      value: "1",
+      flags: { includeChildSelections: "true" },
+    });
+    const catalog = makeCatalog([
+      baseEntity("Battlefleet", battlefleetId),
+      baseEntity("Unit", limitedShipId, { constraintIds: [maximumId] }),
+      baseEntity("Unit", unrelatedShipId),
+      maximum,
+    ]);
+    const force = rosterInstanceId("implicit-target-force");
+    const limited = rosterInstanceId("implicit-target-limited");
+    const unrelated = rosterInstanceId("implicit-target-unrelated");
+    const result = evaluateRoster(
+      catalog,
+      roster(catalog, [
+        instance(force, battlefleetId, { forceInstanceId: force }),
+        instance(limited, limitedShipId, {
+          parentInstanceId: force,
+          forceInstanceId: force,
+          quantity: 2,
+        }),
+        instance(unrelated, unrelatedShipId, {
+          parentInstanceId: force,
+          forceInstanceId: force,
+          quantity: 7,
+        }),
+      ]),
+    );
+
+    expect(result.problems).toContainEqual(
+      expect.objectContaining({
+        code: "CONSTRAINT_MAX_EXCEEDED",
+        sourceEntityId: maximumId,
+        actual: "2",
+        expected: "max 1",
+      }),
+    );
+    expect(result.problems).not.toContainEqual(
+      expect.objectContaining({
+        sourceEntityId: maximumId,
+        actual: "9",
+      }),
+    );
+  });
 });
 
 function makeCatalog(
