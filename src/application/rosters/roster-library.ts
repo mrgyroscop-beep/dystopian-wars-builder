@@ -5,6 +5,7 @@ import { storedRosterSchema, type RosterRepository, type StoredRoster } from "./
 
 export interface RosterLibraryRepository extends RosterRepository {
   list(): Promise<readonly StoredRoster[]>;
+  remove(id: string): Promise<void>;
 }
 
 export interface RosterLibraryDependencies {
@@ -20,6 +21,13 @@ const exportDocumentSchema = z
     roster: storedRosterSchema,
   })
   .strict();
+
+export async function deleteRoster(
+  roster: StoredRoster,
+  dependencies: Pick<RosterLibraryDependencies, "rosterRepository">,
+): Promise<void> {
+  await dependencies.rosterRepository.remove(roster.id);
+}
 
 export async function renameRoster(
   roster: StoredRoster,

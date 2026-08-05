@@ -20,6 +20,10 @@ export function createBrowserRosterRepository(storage: Storage): RosterLibraryRe
         return Promise.resolve(null);
       }
     },
+    remove(id) {
+      storage.removeItem(`${keyPrefix}${id}`);
+      return Promise.resolve();
+    },
     list() {
       const rosters: StoredRoster[] = [];
       for (let index = 0; index < storage.length; index += 1) {

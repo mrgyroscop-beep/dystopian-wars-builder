@@ -6,6 +6,7 @@ import type { RosterSyncGateway, RosterSyncResult } from "../../application/rost
 
 const metaKey = "dwb.sync.v1.meta";
 const queueKey = "dwb.sync.v1.queue";
+const deletionQueueKey = "dwb.sync.v1.deletions";
 const localRosterKeyPrefix = "dwb.roster.v1.";
 const syncItemSchema = z.object({
   version: z.number().int().positive(),
@@ -21,6 +22,12 @@ const metaSchema = z.record(
   }),
 );
 const queueSchema = z.array(z.string().regex(/^[A-Za-z0-9_-]{1,80}$/u));
+const deletionQueueSchema = z.array(
+  z.object({
+    id: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/u),
+    expectedVersion: z.number().int().positive(),
+  }),
+);
 
 export function createSynchronizingRosterRepository(
   local: RosterLibraryRepository,
@@ -37,9 +44,45 @@ export function createSynchronizingRosterRepository(
     timer = window.setTimeout(() => void synchronize(), 700);
   }
 
+  async function remove(id: string): Promise<void> {
+    await local.remove(id);
+    removeQueued(storage, id);
+    const meta = readMeta(storage);
+    const expectedVersion = meta[id]?.version;
+    if (expectedVersion) {
+      const deletions = readDeletionQueue(storage).filter((item) => item.id !== id);
+      writeDeletionQueue(storage, [...deletions, { id, expectedVersion }]);
+    }
+  }
+
   async function synchronize(): Promise<RosterSyncResult> {
     const stats = { uploaded: 0, downloaded: 0, conflicts: 0, authenticated: true };
     const meta = readMeta(storage);
+    for (const deletion of readDeletionQueue(storage)) {
+      const response = await fetcher(`/api/rosters/${encodeURIComponent(deletion.id)}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedVersion: deletion.expectedVersion }),
+      }).catch(() => null);
+      if (!response) return stats;
+      if (response.status === 401) return { ...stats, authenticated: false };
+      if (response.status === 409) {
+        const payload = conflictSchema.parse(await response.json());
+        if (payload.current) {
+          replaceDeletion(storage, deletion.id, payload.current.version);
+          return stats;
+        }
+        removeDeletion(storage, deletion.id);
+        delete meta[deletion.id];
+        writeMeta(storage, meta);
+        continue;
+      }
+      if (!response.ok) return stats;
+      removeDeletion(storage, deletion.id);
+      delete meta[deletion.id];
+      writeMeta(storage, meta);
+    }
     const queued = [...readQueue(storage)];
     for (const id of queued) {
       const roster = await local.read(id);
@@ -111,6 +154,7 @@ export function createSynchronizingRosterRepository(
   return {
     contractVersion: 1,
     save,
+    remove,
     async read(id) {
       const current = await local.read(id);
       if (current) return current;
@@ -159,6 +203,28 @@ function removeQueued(storage: Storage, id: string): void {
     storage,
     readQueue(storage).filter((item) => item !== id),
   );
+}
+
+function readDeletionQueue(storage: Storage): z.infer<typeof deletionQueueSchema> {
+  return readStored(storage, deletionQueueKey, deletionQueueSchema, []);
+}
+
+function writeDeletionQueue(storage: Storage, value: z.infer<typeof deletionQueueSchema>): void {
+  storage.setItem(deletionQueueKey, JSON.stringify(value));
+}
+
+function removeDeletion(storage: Storage, id: string): void {
+  writeDeletionQueue(
+    storage,
+    readDeletionQueue(storage).filter((item) => item.id !== id),
+  );
+}
+
+function replaceDeletion(storage: Storage, id: string, expectedVersion: number): void {
+  writeDeletionQueue(storage, [
+    ...readDeletionQueue(storage).filter((item) => item.id !== id),
+    { id, expectedVersion },
+  ]);
 }
 
 function readStored<T>(storage: Storage, key: string, schema: z.ZodType<T>, fallback: T): T {

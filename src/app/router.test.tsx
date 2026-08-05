@@ -31,6 +31,10 @@ const rosterRepository = {
     return Promise.resolve();
   }),
   read: vi.fn((id: string) => Promise.resolve(storedRosters.get(id) ?? null)),
+  remove: vi.fn((id: string) => {
+    storedRosters.delete(id);
+    return Promise.resolve();
+  }),
 };
 const syncRepository = {
   ...rosterRepository,
@@ -72,7 +76,10 @@ const rosterCreation = {
   now: () => "2026-08-02T10:00:00.000Z",
 };
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  storedRosters.clear();
+});
 const testDependencies = {
   authGateway: {
     contractVersion: 1 as const,
@@ -125,6 +132,24 @@ describe("application routes", () => {
     expect(screen.queryByRole("link", { name: "Создать" })).not.toBeInTheDocument();
     expect(await screen.findByRole("link", { name: "Войти в аккаунт" })).toHaveTextContent("Войти");
     await waitFor(() => expect(document.title).toContain("Флоты"));
+  });
+
+  it("requires confirmation before deleting a saved roster", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    const saved = createDemonstrationWorkspaceRoster("delete-me");
+    storedRosters.set(saved.id, saved);
+    rosterRepository.remove.mockClear();
+    renderRoute("/");
+
+    expect(await screen.findByRole("heading", { name: saved.name })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Удалить" }));
+    expect(rosterRepository.remove).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Удалить флот" }));
+
+    await waitFor(() => expect(rosterRepository.remove).toHaveBeenCalledWith(saved.id));
+    expect(screen.queryByRole("heading", { name: saved.name })).not.toBeInTheDocument();
   });
 
   it("shows the authenticated user name after settings", async () => {

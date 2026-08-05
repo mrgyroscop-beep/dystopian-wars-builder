@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 import type { StoredRoster } from "../application/rosters/create-roster";
 import {
+  deleteRoster,
   duplicateRoster,
   exportRoster,
   importRoster,
@@ -27,6 +28,7 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
   const fixture = import.meta.env.DEV && requestedFixture.success ? requestedFixture.data : null;
   const [state, setState] = useState<LibraryState>({ kind: "loading" });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const [message, setMessage] = useState("");
   const importInput = useRef<HTMLInputElement>(null);
@@ -64,6 +66,17 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
       void navigate(`/rosters/${created.id}`);
     } catch {
       setMessage("Не удалось создать копию.");
+    }
+  }
+
+  async function remove(roster: StoredRoster) {
+    try {
+      await deleteRoster(roster, dependencies);
+      setDeletingId(null);
+      setMessage("Флот удалён.");
+      await refresh();
+    } catch {
+      setMessage("Не удалось удалить флот.");
     }
   }
 
@@ -234,6 +247,32 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
                 >
                   Экспорт
                 </button>
+                {deletingId === roster.id ? (
+                  <>
+                    <button
+                      className="button button--danger"
+                      onClick={() => void remove(roster)}
+                      type="button"
+                    >
+                      Удалить флот
+                    </button>
+                    <button
+                      className="button button--secondary"
+                      onClick={() => setDeletingId(null)}
+                      type="button"
+                    >
+                      Отмена
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="button button--danger"
+                    onClick={() => setDeletingId(roster.id)}
+                    type="button"
+                  >
+                    Удалить
+                  </button>
+                )}
               </div>
             </li>
           ))}
