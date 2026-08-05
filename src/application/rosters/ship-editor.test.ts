@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import type { DomainCatalog, DomainEntity } from "../../domain/catalog";
+import {
+  entityId,
+  placementId,
+  slotId,
+  sourceNodeId,
+  toSafePresentation,
+  type DomainCatalog,
+  type DomainEntity,
+} from "../../domain/catalog";
 import {
   rosterInstanceId,
   type RosterSelectionInstance,
@@ -117,6 +125,106 @@ describe("catalog-driven ship editor application boundary", () => {
         instance.definitionId.includes("discount"),
       ),
     ).toBe(false);
+  });
+
+  it("shows and edits a standalone option linked directly from the Unit", () => {
+    const fixture = setup();
+    const templateOption = entityByLabel(fixture.catalog, "Tanuki Escort");
+    const templateSlot = Object.values(fixture.catalog.slots).find(
+      (candidate) => candidate.label.plainText === "Escorts",
+    )!;
+    const templatePlacement = Object.values(fixture.catalog.placements).find(
+      (candidate) => candidate.definitionId === templateOption.id,
+    )!;
+    const definitionSourceId = sourceNodeId("test", "selectionEntry", "supply-escorts");
+    const definitionId = entityId(definitionSourceId);
+    const optionSlotId = slotId(definitionId);
+    const optionPlacementId = placementId(
+      fixture.unit.definitionId,
+      sourceNodeId("test", "entryLink", "supply-escorts-link"),
+      99,
+      "reference",
+    );
+    const label = toSafePresentation("Supply Escorts");
+    const catalog: DomainCatalog = {
+      ...fixture.catalog,
+      entities: {
+        ...fixture.catalog.entities,
+        [definitionId]: {
+          ...templateOption,
+          id: definitionId,
+          kind: "Escort",
+          label,
+          labels: {
+            ...templateOption.labels,
+            canonicalLabel: label.plainText,
+            fallbackLabel: label.plainText,
+            sourceLabel: label.plainText,
+          },
+          identity: {
+            ...templateOption.identity,
+            canonicalId: definitionId,
+            sourceNodeId: definitionSourceId,
+          },
+          slotIds: [optionSlotId],
+        },
+      },
+      placements: {
+        ...fixture.catalog.placements,
+        [optionPlacementId]: {
+          ...templatePlacement,
+          id: optionPlacementId,
+          ownerId: fixture.unit.definitionId,
+          definitionId,
+          slotId: null,
+          order: 99,
+          linkKind: "reference",
+          overlay: {
+            ...templatePlacement.overlay,
+            cardinality: {
+              contractVersion: 1,
+              effective: "deferred-to-kan-32",
+              minimum: { contractVersion: 1, state: "zero", value: "0" },
+              maximum: { contractVersion: 1, state: "value", value: "2" },
+            },
+          },
+        },
+      },
+      slots: {
+        ...fixture.catalog.slots,
+        [optionSlotId]: {
+          ...templateSlot,
+          id: optionSlotId,
+          ownerId: definitionId,
+          label,
+          placementIds: [],
+          optionPlacementIds: [],
+        },
+      },
+    };
+    const tailored = { ...fixture, catalog };
+    let snapshot = materialize(tailored);
+    let model = project(snapshot, tailored);
+    const standalone = group(model, "Supply Escorts");
+
+    expect(standalone.options).toEqual([
+      expect.objectContaining({ id: optionPlacementId, label: "Supply Escorts" }),
+    ]);
+
+    snapshot = applyShipEditorCommand(
+      snapshot,
+      catalog,
+      {
+        type: "set-choice-quantity",
+        instanceId: fixture.unit.id,
+        groupId: standalone.id,
+        optionId: optionPlacementId,
+        quantity: 2,
+      },
+      fixture.createId,
+    );
+    model = project(snapshot, tailored);
+    expect(option(model, "Supply Escorts", "Supply Escorts").selectedQuantity).toBe(2);
   });
 
   it("supports catalog-declared variable Model quantity", () => {

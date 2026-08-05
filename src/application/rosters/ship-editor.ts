@@ -133,6 +133,17 @@ export class ShipEditorCommandError extends Error {
   }
 }
 
+interface ShipEditorGroupContext {
+  readonly owner: RosterSelectionInstance;
+  readonly slot: Slot;
+  readonly standalonePlacement: Placement | null;
+}
+
+interface StandaloneOptionContext {
+  readonly slot: Slot;
+  readonly placement: Placement;
+}
+
 export function isShipEditorDefinition(catalog: DomainCatalog, definitionId: string): boolean {
   return Boolean(editorModelPlacement(catalog, definitionId));
 }
@@ -189,8 +200,11 @@ export function applyShipEditorCommand(
   const placement = catalog.placements[command.optionId];
   if (
     !placement ||
-    !directSlotOptionPlacements(catalog, context.slot).some(
-      (candidate) => candidate.id === placement.id,
+    !(
+      context.standalonePlacement?.id === placement.id ||
+      directSlotOptionPlacements(catalog, context.slot).some(
+        (candidate) => candidate.id === placement.id,
+      )
     ) ||
     !placement.definitionId
   )
@@ -207,19 +221,25 @@ export function applyShipEditorCommand(
     command.type === "replace-exclusive" &&
     availability?.reasonCodes.length &&
     availability.reasonCodes.every((reason) => reason === "SLOT_MAX_REACHED");
-  if (!existing && availability?.state === "unavailable" && !replacingAtCapacity)
+  if (
+    !context.standalonePlacement &&
+    !existing &&
+    availability?.state === "unavailable" &&
+    !replacingAtCapacity
+  )
     throw new ShipEditorCommandError(
       "UNAVAILABLE",
       placement.overlay.attributes["editor.unavailableReason"] ?? "Опция недоступна.",
     );
-  if (!existing && availability?.state === "indeterminate")
+  if (!context.standalonePlacement && !existing && availability?.state === "indeterminate")
     throw new ShipEditorCommandError(
       "INDETERMINATE",
       "Доступность опции невозможно безопасно определить.",
     );
-  const bounds =
-    evaluatedCardinality(evaluation, context.owner.id, context.slot.id) ??
-    cardinality(context.slot);
+  const bounds = context.standalonePlacement
+    ? optionalPlacementCardinality(context.standalonePlacement)
+    : (evaluatedCardinality(evaluation, context.owner.id, context.slot.id) ??
+      cardinality(context.slot));
   if (!bounds) throw new ShipEditorCommandError("INDETERMINATE", "Границы группы неизвестны.");
   const quantity = command.type === "replace-exclusive" ? 1 : command.quantity;
   if (!Number.isSafeInteger(quantity) || quantity < bounds.minimum || quantity > bounds.maximum)
@@ -232,8 +252,10 @@ export function applyShipEditorCommand(
 
   const instances = { ...snapshot.instances };
   for (const candidate of Object.values(instances)) {
-    if (candidate.parentInstanceId !== context.owner.id || candidate.slotId !== context.slot.id)
-      continue;
+    if (candidate.parentInstanceId !== context.owner.id) continue;
+    if (context.standalonePlacement) {
+      if (candidate.placementId !== placement.id) continue;
+    } else if (candidate.slotId !== context.slot.id) continue;
     if (command.type === "replace-exclusive" || candidate.placementId === placement.id)
       delete instances[candidate.id];
   }
@@ -302,17 +324,31 @@ export function projectShipEditor(
       "Неполная структура",
       "Экземпляр структурной Model отсутствует в составе.",
     );
-  const declaredUnitSlots = slotsForDefinition(catalog, modelInstance.definitionId).filter(
+  const declaredModelSlots = slotsForDefinition(catalog, modelInstance.definitionId).filter(
     (slot) => slot.kind !== "Doctrine",
   );
-  if (declaredUnitSlots.length === 0)
+  const modelSlotIds = new Set(declaredModelSlots.map((slot) => slot.id));
+  const standaloneOptions = standaloneOptionsForDefinition(catalog, projected.unit.definitionId);
+  const standaloneSlotIds = new Set(standaloneOptions.map(({ slot }) => slot.id));
+  const declaredUnitSlots = slotsForDefinition(catalog, projected.unit.definitionId).filter(
+    (slot) =>
+      slot.kind !== "Doctrine" && !modelSlotIds.has(slot.id) && !standaloneSlotIds.has(slot.id),
+  );
+  if (
+    declaredModelSlots.length === 0 &&
+    declaredUnitSlots.length === 0 &&
+    standaloneOptions.length === 0
+  )
     return unavailable(
       "unsupported-data",
       "Настройка недоступна",
-      "Для структурной Model не опубликованы поддерживаемые Slots.",
+      "Для корабля не опубликованы поддерживаемые Slots.",
     );
-  const unitSlots = declaredUnitSlots.filter((slot) =>
+  const modelSlots = declaredModelSlots.filter((slot) =>
     isControllableSlot(evaluation, modelInstance, slot),
+  );
+  const unitSlots = declaredUnitSlots.filter((slot) =>
+    isControllableSlot(evaluation, projected.unit, slot),
   );
   const fleetOwner = projected.unit.forceInstanceId
     ? projected.snapshot.instances[projected.unit.forceInstanceId]
@@ -322,9 +358,17 @@ export function projectShipEditor(
         (slot) => slot.kind === "Doctrine" && isControllableSlot(evaluation, fleetOwner, slot),
       )
     : [];
-  const groups = unitSlots.map((slot) =>
-    projectGroup(projected.snapshot, catalog, evaluation, modelInstance, slot, "unit"),
-  );
+  const groups = [
+    ...modelSlots.map((slot) =>
+      projectGroup(projected.snapshot, catalog, evaluation, modelInstance, slot, "unit"),
+    ),
+    ...unitSlots.map((slot) =>
+      projectGroup(projected.snapshot, catalog, evaluation, projected.unit, slot, "unit"),
+    ),
+    ...standaloneOptions.map(({ slot, placement }) =>
+      projectStandaloneGroup(projected.snapshot, catalog, projected.unit, slot, placement),
+    ),
+  ];
   const fleetGroups = fleetOwner
     ? fleetSlots.map((slot) =>
         projectGroup(projected.snapshot, catalog, evaluation, fleetOwner, slot, "fleet"),
@@ -522,13 +566,51 @@ function projectGroup(
   };
 }
 
+function projectStandaloneGroup(
+  snapshot: RosterSnapshot,
+  catalog: DomainCatalog,
+  owner: RosterSelectionInstance,
+  slot: Slot,
+  placement: Placement,
+): ShipEditorGroupReadModel {
+  const bounds = optionalPlacementCardinality(placement) ?? { minimum: 0, maximum: 0 };
+  const definition = placement.definitionId ? catalog.entities[placement.definitionId] : null;
+  const selected = Object.values(snapshot.instances)
+    .filter(
+      (candidate) =>
+        candidate.parentInstanceId === owner.id && candidate.placementId === placement.id,
+    )
+    .reduce((sum, candidate) => sum + candidate.quantity, 0);
+  return {
+    id: slot.id,
+    label: slot.label.plainText,
+    help: `${slot.kind}: допустимо ${bounds.minimum}–${bounds.maximum}.`,
+    scope: "unit",
+    control: bounds.minimum === 1 && bounds.maximum === 1 ? "exclusive" : "quantity",
+    minimum: bounds.minimum,
+    maximum: bounds.maximum,
+    options: [
+      {
+        id: placement.id,
+        label: definition?.label.plainText ?? slot.label.plainText,
+        kind: definition?.kind ?? "Unknown",
+        costLabel: optionCostLabel(catalog, definition ?? null, placement),
+        selectedQuantity: selected,
+        availability: "available",
+        reason: null,
+        profile: projectWeaponDefinition(catalog, definition ?? null),
+      },
+    ],
+  };
+}
+
 function resolveGroupContext(
   snapshot: RosterSnapshot,
   catalog: DomainCatalog,
   evaluation: RosterEvaluation,
   unit: RosterSelectionInstance,
   groupId: string,
-): { readonly owner: RosterSelectionInstance; readonly slot: Slot } | null {
+): ShipEditorGroupContext | null {
   const slot = catalog.slots[groupId];
   if (!slot) return null;
   const placement = editorModelPlacement(catalog, unit.definitionId);
@@ -543,14 +625,23 @@ function resolveGroupContext(
     slotsForDefinition(catalog, model.definitionId).some((candidate) => candidate.id === slot.id) &&
     isControllableSlot(evaluation, model, slot)
   )
-    return { owner: model, slot };
+    return { owner: model, slot, standalonePlacement: null };
+  const standalone = standaloneOptionsForDefinition(catalog, unit.definitionId).find(
+    (candidate) => candidate.slot.id === slot.id,
+  );
+  if (standalone) return { owner: unit, slot, standalonePlacement: standalone.placement };
+  if (
+    slotsForDefinition(catalog, unit.definitionId).some((candidate) => candidate.id === slot.id) &&
+    isControllableSlot(evaluation, unit, slot)
+  )
+    return { owner: unit, slot, standalonePlacement: null };
   const fleet = unit.forceInstanceId ? snapshot.instances[unit.forceInstanceId] : null;
   if (
     fleet &&
     slotsForDefinition(catalog, fleet.definitionId).some((candidate) => candidate.id === slot.id) &&
     isControllableSlot(evaluation, fleet, slot)
   )
-    return { owner: fleet, slot };
+    return { owner: fleet, slot, standalonePlacement: null };
   return null;
 }
 
@@ -607,6 +698,43 @@ function slotsForDefinition(catalog: DomainCatalog, definitionId: string): Slot[
     for (const id of catalog.entities[placement.definitionId]?.slotIds ?? []) ids.add(id);
   }
   return [...ids].map((id) => catalog.slots[id]).filter((slot): slot is Slot => Boolean(slot));
+}
+
+function standaloneOptionsForDefinition(
+  catalog: DomainCatalog,
+  definitionId: string,
+): StandaloneOptionContext[] {
+  const supportedKinds = new Set(["Weapon", "Option", "Generator", "Attachment", "Escort"]);
+  return Object.values(catalog.placements)
+    .filter(
+      (placement) =>
+        placement.ownerId === definitionId &&
+        placement.slotId === null &&
+        placement.resolved &&
+        !placement.ambiguous &&
+        placement.overlay.attributes.hidden !== "true" &&
+        optionalPlacementCardinality(placement) !== null,
+    )
+    .flatMap((placement) => {
+      const definition = placement.definitionId ? catalog.entities[placement.definitionId] : null;
+      if (!definition || !supportedKinds.has(definition.kind)) return [];
+      const slot = definition.slotIds
+        .map((id) => catalog.slots[id])
+        .find((candidate): candidate is Slot =>
+          Boolean(
+            candidate &&
+            !candidate.hidden &&
+            !candidate.helper &&
+            candidate.optionPlacementIds.length === 0,
+          ),
+        );
+      return slot ? [{ slot, placement }] : [];
+    })
+    .sort(
+      (left, right) =>
+        left.placement.order - right.placement.order ||
+        left.placement.id.localeCompare(right.placement.id),
+    );
 }
 
 function previewSnapshot(
@@ -769,6 +897,18 @@ function placementCardinality(
   const minimum = amountNumber(source.minimum);
   const maximum = amountNumber(source.maximum);
   return minimum === null || maximum === null || minimum < 1 || maximum < minimum
+    ? null
+    : { minimum, maximum };
+}
+
+function optionalPlacementCardinality(
+  placement: Placement,
+): { readonly minimum: number; readonly maximum: number } | null {
+  const source = placement.overlay.cardinality;
+  if (!source) return null;
+  const minimum = source.minimum.state === "missing" ? 0 : amountNumber(source.minimum);
+  const maximum = amountNumber(source.maximum);
+  return minimum === null || maximum === null || minimum < 0 || maximum < minimum
     ? null
     : { minimum, maximum };
 }
