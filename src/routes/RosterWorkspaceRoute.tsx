@@ -822,26 +822,35 @@ function CompositionPane({
                         </span>
                         <span className="instance-actions">
                           <button
+                            aria-label={`Настроить ${instance.name}`}
+                            className="instance-action"
                             disabled={busy}
                             id={`edit-instance-${safeId(instance.id)}`}
                             onClick={() => onEdit(instance)}
+                            title="Настроить"
                             type="button"
                           >
-                            Настроить
+                            <InstanceActionIcon kind="configure" />
                           </button>
                           <button
+                            aria-label={`Копировать ${instance.name}`}
+                            className="instance-action"
                             disabled={busy}
                             onClick={() => onDuplicate(instance.id, instance.name)}
+                            title="Копировать"
                             type="button"
                           >
-                            Копировать
+                            <InstanceActionIcon kind="duplicate" />
                           </button>
                           <button
+                            aria-label={`Удалить ${instance.name}`}
+                            className="instance-action instance-action--delete"
                             disabled={busy}
                             onClick={() => onDelete(instance.id, instance.name, element.id)}
+                            title="Удалить"
                             type="button"
                           >
-                            Удалить
+                            <InstanceActionIcon kind="delete" />
                           </button>
                         </span>
                       </li>
@@ -1093,6 +1102,35 @@ function InvalidRoster() {
 
 function safeId(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/gu, "-");
+}
+
+function InstanceActionIcon({ kind }: { readonly kind: "configure" | "duplicate" | "delete" }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className="instance-action__icon"
+      fill="none"
+      focusable="false"
+      viewBox="0 0 24 24"
+    >
+      {kind === "configure" ? (
+        <>
+          <path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6" />
+          <circle cx="14" cy="7" r="2" />
+          <circle cx="8" cy="17" r="2" />
+        </>
+      ) : kind === "duplicate" ? (
+        <>
+          <rect height="12" rx="1.5" width="12" x="8" y="8" />
+          <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />
+        </>
+      ) : (
+        <>
+          <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
+        </>
+      )}
+    </svg>
+  );
 }
 
 function directEditorLink(search: string): {

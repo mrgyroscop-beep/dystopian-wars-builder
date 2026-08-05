@@ -226,6 +226,24 @@ describe("application routes", () => {
     expect(screen.getByRole("heading", { name: "Состав" })).toBeVisible();
   });
 
+  it("uses compact icon actions with accessible names for roster ships", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/rosters/scaffold-demo");
+
+    const catalogShipName = await screen.findByText("Akita Demonstrator");
+    const catalogShipButton = catalogShipName.closest("button");
+    expect(catalogShipButton).not.toBeNull();
+    await user.click(catalogShipButton!);
+    await user.click(screen.getByRole("button", { name: "Добавить в состав" }));
+
+    expect(
+      await screen.findByRole("button", { name: "Настроить Akita Demonstrator" }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Копировать Akita Demonstrator" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Удалить Akita Demonstrator" })).toBeVisible();
+  });
+
   it("opens a stable-ID rule deep link and focuses its heading", async () => {
     renderRoute(
       "/rosters/scaffold-demo?ship=demo-ship-001&shipMode=preview&rule=synthetic-rule-torrent",
