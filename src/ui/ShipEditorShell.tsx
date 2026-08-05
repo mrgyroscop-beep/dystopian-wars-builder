@@ -286,45 +286,48 @@ export function ShipEditorShell({
             </dl>
           </section>
 
-          <section className="doctrine-navigation" id="fleet-doctrine">
-            <div>
-              <h4>Доктрина флота</h4>
-              <p>Доктрина принадлежит Battlefleet и настраивается на уровне состава.</p>
-            </div>
-            <button
-              aria-controls="fleet-doctrine-editor"
-              aria-expanded={fleetEditorOpen}
-              disabled={model.fleetGroups.length === 0}
-              onClick={() => setFleetEditorOpen((value) => !value)}
-              type="button"
-            >
-              {fleetEditorOpen ? "Закрыть настройки" : "Настроить доктрину"}
-            </button>
-          </section>
+          {model.fleetGroups.length ? (
+            <>
+              <section className="doctrine-navigation" id="fleet-doctrine">
+                <div>
+                  <h4>Доктрина флота</h4>
+                  <p>Доктрина принадлежит Battlefleet и настраивается на уровне состава.</p>
+                </div>
+                <button
+                  aria-controls="fleet-doctrine-editor"
+                  aria-expanded={fleetEditorOpen}
+                  onClick={() => setFleetEditorOpen((value) => !value)}
+                  type="button"
+                >
+                  {fleetEditorOpen ? "Закрыть настройки" : "Настроить доктрину"}
+                </button>
+              </section>
 
-          {fleetEditorOpen ? (
-            <section
-              aria-label="Настройка доктрины флота"
-              className="fleet-doctrine-editor editor-groups"
-              id="fleet-doctrine-editor"
-            >
-              {model.fleetGroups.map((group, groupIndex) => (
-                <EditorGroup
-                  busy={busy}
-                  domId={`ship-editor-group-fleet-${groupIndex}`}
-                  group={group}
-                  key={group.id}
-                  model={model}
-                  nameToken={`fleet-${groupIndex}`}
-                  onCommand={onCommand}
-                  onInspectWeapon={setInspectedWeapon}
-                  onToggle={() =>
-                    setOpenGroupId((current) => (current === group.id ? null : group.id))
-                  }
-                  open={openGroupId === group.id}
-                />
-              ))}
-            </section>
+              {fleetEditorOpen ? (
+                <section
+                  aria-label="Настройка доктрины флота"
+                  className="fleet-doctrine-editor editor-groups"
+                  id="fleet-doctrine-editor"
+                >
+                  {model.fleetGroups.map((group, groupIndex) => (
+                    <EditorGroup
+                      busy={busy}
+                      domId={`ship-editor-group-fleet-${groupIndex}`}
+                      group={group}
+                      key={group.id}
+                      model={model}
+                      nameToken={`fleet-${groupIndex}`}
+                      onCommand={onCommand}
+                      onInspectWeapon={setInspectedWeapon}
+                      onToggle={() =>
+                        setOpenGroupId((current) => (current === group.id ? null : group.id))
+                      }
+                      open={openGroupId === group.id}
+                    />
+                  ))}
+                </section>
+              ) : null}
+            </>
           ) : null}
 
           {model.problems.length ? (

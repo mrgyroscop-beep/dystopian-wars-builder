@@ -143,6 +143,21 @@ describe("ShipEditorShell", () => {
     );
   });
 
+  it("hides doctrine controls when the Battlefleet has no doctrine options", () => {
+    render(
+      <ShipEditorShell
+        busy={false}
+        model={{ ...editorModel("unit-instance"), fleetGroups: [] }}
+        onAdd={vi.fn()}
+        onBack={vi.fn()}
+        onCommand={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("heading", { name: "Доктрина флота" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Настроить доктрину" })).not.toBeInTheDocument();
+  });
+
   it("returns from a rule to the preserved Rules tab and focus origin", async () => {
     const user = userEvent.setup();
     const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
