@@ -668,6 +668,7 @@ h3 {
 .definition-list dd {
   min-width: 0;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .status-line {
@@ -917,6 +918,10 @@ h3 {
 
 .feedback-form {
   max-width: 48rem;
+}
+
+.feedback-form .button-row {
+  margin-top: 1rem;
 }
 
 .field-optional {
@@ -2101,6 +2106,10 @@ button.button {
     position: static;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .workspace-summary--sticky .summary-item {
+    min-height: 0;
+    padding: 0.65rem 0.7rem;
+  }
   .workspace-summary--sticky .summary-item:last-child {
     grid-column: 1 / -1;
   }
@@ -2141,10 +2150,10 @@ button.button {
 
 @media (max-width: 30rem) {
   .workspace-summary--sticky {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .workspace-summary--sticky .summary-item:last-child {
-    grid-column: auto;
+    grid-column: 1 / -1;
   }
   .workspace-view-switcher button {
     padding-inline: 0.35rem;
@@ -2920,6 +2929,20 @@ button.button {
   font-family: Georgia, "Times New Roman", serif;
 }
 
+.context-pane .profile-panel__heading {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.context-pane .profile-panel__heading .catalog-version {
+  max-width: 100%;
+  align-self: flex-start;
+  overflow: hidden;
+  overflow-wrap: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .catalog-version,
 .rules-panel__version,
 .weapon-card > header span,
@@ -3251,7 +3274,9 @@ button.button {
 }
 
 .profile-dialog[data-card="true"] {
-  width: min(90rem, 100%);
+  width: min(90rem, calc(100dvw - 2rem));
+  max-width: calc(100dvw - 2rem);
+  min-width: 0;
   background: #101a1f;
   border-color: rgb(255 255 255 / 32%);
 }
@@ -3796,6 +3821,20 @@ button.button {
 }
 
 @media (max-width: 48rem) {
+  .profile-dialog[data-card="true"] {
+    overflow: hidden;
+  }
+
+  .profile-dialog[data-card="true"] .profile-dialog__content {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .profile-dialog[data-card="true"] .ship-card {
+    width: 100%;
+    min-width: 0;
+  }
+
   .profile-dialog__veil {
     background: rgb(246 242 232 / 52%);
   }
