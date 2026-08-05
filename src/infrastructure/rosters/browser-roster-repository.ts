@@ -2,6 +2,7 @@ import { storedRosterSchema, type StoredRoster } from "../../application/rosters
 import type { RosterLibraryRepository } from "../../application/rosters/roster-library";
 
 const keyPrefix = "dwb.roster.v1.";
+const internalCatalogVersions = new Set(["demonstration-1"]);
 
 export function createBrowserRosterRepository(storage: Storage): RosterLibraryRepository {
   return {
@@ -15,7 +16,9 @@ export function createBrowserRosterRepository(storage: Storage): RosterLibraryRe
       if (!value) return Promise.resolve(null);
       try {
         const parsed = storedRosterSchema.safeParse(JSON.parse(value));
-        return Promise.resolve(parsed.success ? (parsed.data as unknown as StoredRoster) : null);
+        if (!parsed.success) return Promise.resolve(null);
+        const roster = parsed.data as unknown as StoredRoster;
+        return Promise.resolve(isUserRoster(roster) ? roster : null);
       } catch {
         return Promise.resolve(null);
       }
@@ -33,7 +36,9 @@ export function createBrowserRosterRepository(storage: Storage): RosterLibraryRe
         if (!value) continue;
         try {
           const parsed = storedRosterSchema.safeParse(JSON.parse(value));
-          if (parsed.success) rosters.push(parsed.data as unknown as StoredRoster);
+          if (!parsed.success) continue;
+          const roster = parsed.data as unknown as StoredRoster;
+          if (isUserRoster(roster)) rosters.push(roster);
         } catch {
           // An invalid entry is isolated and never hides valid local fleets.
         }
@@ -43,4 +48,8 @@ export function createBrowserRosterRepository(storage: Storage): RosterLibraryRe
       );
     },
   };
+}
+
+function isUserRoster(roster: StoredRoster): boolean {
+  return !internalCatalogVersions.has(roster.roster.catalogContentVersion);
 }

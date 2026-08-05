@@ -6,11 +6,6 @@ import { createHttpHealthGateway } from "../infrastructure/health/http-health-ga
 import { createHttpPasswordAuthGateway } from "../infrastructure/auth/http-password-auth-gateway";
 import { createHttpRulesAssistantGateway } from "../infrastructure/assistant/http-rules-assistant-gateway";
 import { createHttpFeedbackGateway } from "../infrastructure/feedback/http-feedback-gateway";
-import {
-  createDemonstrationFleetCatalogGateway,
-  createDemonstrationWorkspaceRoster,
-} from "../infrastructure/catalog/demonstration-fleet-catalog";
-import { createDemonstrationRosterSetupGateway } from "../infrastructure/catalog/demonstration-roster-setup";
 import { createPublishedCatalogClient } from "../infrastructure/catalog/published-catalog";
 import { createBrowserRosterRepository } from "../infrastructure/rosters/browser-roster-repository";
 import { createSynchronizingRosterRepository } from "../infrastructure/rosters/synchronizing-roster-repository";
@@ -24,8 +19,6 @@ const rosterRepository = createSynchronizingRosterRepository(
 const createId = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const publishedCatalog = createPublishedCatalogClient();
-const demonstrationCatalog = createDemonstrationFleetCatalogGateway();
-const demonstrationSetup = createDemonstrationRosterSetupGateway();
 const router = createAppRouter({
   authGateway: createHttpPasswordAuthGateway(),
   assistantGateway: createHttpRulesAssistantGateway(),
@@ -43,25 +36,11 @@ const router = createAppRouter({
     now,
   },
   rosterWorkspace: {
-    setupGateway: {
-      contractVersion: 1,
-      load: (contentVersion) =>
-        contentVersion === "demonstration-1"
-          ? demonstrationSetup.load(contentVersion)
-          : publishedCatalog.setupGateway.load(contentVersion),
-    },
-    catalogGateway: {
-      contractVersion: 1,
-      load: (contentVersion, factionId) =>
-        contentVersion === "demonstration-1"
-          ? demonstrationCatalog.load(contentVersion)
-          : publishedCatalog.catalogGateway.load(contentVersion, factionId),
-    },
+    setupGateway: publishedCatalog.setupGateway,
+    catalogGateway: publishedCatalog.catalogGateway,
     rosterRepository,
     createId,
     now,
-    fallbackRoster: (id) =>
-      id === "scaffold-demo" ? createDemonstrationWorkspaceRoster(id) : null,
   },
   rosterSync: rosterRepository,
 });
