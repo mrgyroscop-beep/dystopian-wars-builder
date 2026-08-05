@@ -152,6 +152,17 @@ describe("application routes", () => {
     expect(screen.queryByRole("heading", { name: saved.name })).not.toBeInTheDocument();
   });
 
+  it("shows the saved roster faction emblem", async () => {
+    const saved = createDemonstrationWorkspaceRoster("with-faction-emblem");
+    storedRosters.set(saved.id, saved);
+    const { container } = renderRoute("/");
+
+    expect(await screen.findByRole("heading", { name: saved.name })).toBeVisible();
+    expect(container.querySelector(".roster-card__faction-emblem")).toHaveStyle({
+      backgroundImage: 'url("/orbat-templates/empire.webp")',
+    });
+  });
+
   it("shows the authenticated user name after settings", async () => {
     const authGateway = {
       ...testDependencies.authGateway,

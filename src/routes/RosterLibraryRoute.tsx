@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "reac
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 
+import { orbatTemplateFor } from "../app/orbatTemplates";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 import type { StoredRoster } from "../application/rosters/create-roster";
 import {
@@ -180,44 +181,47 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
         <ul className="roster-card-list" aria-label="Сохранённые флоты">
           {state.rosters.map((roster) => (
             <li className="roster-card" key={roster.id}>
-              <div className="roster-card__summary">
-                {editingId === roster.id ? (
-                  <form
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      void saveName(roster);
-                    }}
-                  >
-                    <label htmlFor={`rename-${roster.id}`}>Название флота</label>
-                    <div className="roster-card__rename">
-                      <input
-                        id={`rename-${roster.id}`}
-                        maxLength={80}
-                        onChange={(event) => setDraftName(event.target.value)}
-                        value={draftName}
-                      />
-                      <button className="button" type="submit">
-                        Сохранить
-                      </button>
-                      <button
-                        className="button button--secondary"
-                        onClick={() => setEditingId(null)}
-                        type="button"
-                      >
-                        Отмена
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <h2>
-                    <Link to={`/rosters/${roster.id}`}>{roster.name}</Link>
-                  </h2>
-                )}
-                <p>
-                  {roster.faction.label} · {roster.battlefleet.label}
-                </p>
-                <p>{roster.limits.points} Points</p>
-                <p className="muted">Сохранено на устройстве · {formatDate(roster.updatedAt)}</p>
+              <div className="roster-card__identity">
+                <FactionEmblem faction={roster.faction.label} />
+                <div className="roster-card__summary">
+                  {editingId === roster.id ? (
+                    <form
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void saveName(roster);
+                      }}
+                    >
+                      <label htmlFor={`rename-${roster.id}`}>Название флота</label>
+                      <div className="roster-card__rename">
+                        <input
+                          id={`rename-${roster.id}`}
+                          maxLength={80}
+                          onChange={(event) => setDraftName(event.target.value)}
+                          value={draftName}
+                        />
+                        <button className="button" type="submit">
+                          Сохранить
+                        </button>
+                        <button
+                          className="button button--secondary"
+                          onClick={() => setEditingId(null)}
+                          type="button"
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <h2>
+                      <Link to={`/rosters/${roster.id}`}>{roster.name}</Link>
+                    </h2>
+                  )}
+                  <p>
+                    {roster.faction.label} · {roster.battlefleet.label}
+                  </p>
+                  <p>{roster.limits.points} Points</p>
+                  <p className="muted">Сохранено на устройстве · {formatDate(roster.updatedAt)}</p>
+                </div>
               </div>
               <div className="roster-card__actions">
                 <Link className="button" to={`/rosters/${roster.id}`}>
@@ -279,6 +283,17 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
         </ul>
       )}
     </div>
+  );
+}
+
+function FactionEmblem({ faction }: { faction: string }) {
+  const template = orbatTemplateFor(faction);
+  return (
+    <span
+      aria-hidden="true"
+      className="roster-card__faction-emblem"
+      style={{ backgroundImage: `url(${template.imageUrl})`, borderColor: template.accent }}
+    />
   );
 }
 
