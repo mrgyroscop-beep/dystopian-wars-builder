@@ -560,6 +560,10 @@ h3 {
   line-height: 1.55;
 }
 
+.state-panel .button-row {
+  justify-content: center;
+}
+
 .state-panel[data-state="error"] {
   border-color: var(--error);
 }
