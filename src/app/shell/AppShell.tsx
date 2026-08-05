@@ -53,7 +53,13 @@ export function AppShell({ authGateway }: AppShellProps) {
         <div className="site-header__inner">
           <Link className="brand" to="/" aria-label="Dystopian Wars Builder — на главную">
             <span className="brand__mark" aria-hidden="true">
-              DW
+              <img
+                alt=""
+                decoding="async"
+                height="256"
+                src="/brand/fleet-builder-emblem.webp"
+                width="256"
+              />
             </span>
             <span className="brand__copy">
               <span className="brand__name">Fleet Builder</span>
