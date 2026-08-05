@@ -3673,6 +3673,16 @@ button.button {
   backdrop-filter: blur(2px);
 }
 
+.profile-dialog[data-compact="true"] .ship-card__rule-layer {
+  position: fixed;
+  z-index: 3;
+}
+
+.profile-dialog[data-compact="true"] .ship-card__rule-dialog {
+  width: min(36rem, calc(100% - 2rem));
+  max-height: min(32rem, calc(100vh - 4rem));
+}
+
 .ship-card__rule-dismiss {
   position: absolute;
   inset: 0;
@@ -3693,7 +3703,7 @@ button.button {
   background:
     linear-gradient(rgb(249 246 237 / 94%), rgb(234 226 207 / 96%)),
     repeating-linear-gradient(90deg, transparent 0 3rem, rgb(23 71 78 / 7%) 3.05rem);
-  border: 0.2rem solid var(--ship-card-accent);
+  border: 0.2rem solid var(--ship-card-accent, var(--accent));
   border-radius: 0.35rem;
   box-shadow: 0 1.2rem 3.5rem rgb(0 0 0 / 52%);
 }
@@ -3705,7 +3715,7 @@ button.button {
   gap: 1rem;
   padding: 0.8rem 0.9rem 0.65rem;
   color: #fff;
-  background: color-mix(in srgb, var(--ship-card-accent) 76%, #1a2528);
+  background: color-mix(in srgb, var(--ship-card-accent, var(--accent)) 76%, #1a2528);
 }
 
 .ship-card__rule-dialog > header p,

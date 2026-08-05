@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ShipProfileRulesReadModel } from "../application/rosters/profile-rules";
+import { WeaponProfileDialog } from "./ProfileDialog";
 import { ProfilePanel, RuleSheet, RulesPanel, SafeStructuredText } from "./ProfileRules";
 
 afterEach(() => {
@@ -77,6 +78,40 @@ describe("profile and rules components", () => {
     expect(cards[0]).toHaveTextContent("PSA");
     expect(cards[1]).toHaveTextContent("FPS 1");
     expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it("opens a weapon quality description and returns focus to its link", async () => {
+    const user = userEvent.setup();
+    const torrentRule = model().rules[0]!;
+    render(
+      <WeaponProfileDialog
+        onClose={vi.fn()}
+        profile={{
+          id: "weapon-mortar",
+          weapon: "Heavy Corrosive Mortar",
+          arc: "FPS",
+          close: "—",
+          standard: "4",
+          extreme: "6",
+          qualities: "All-Around, Torrent (1)",
+          qualityRules: [torrentRule],
+          provenance: null,
+        }}
+      />,
+    );
+
+    const trigger = screen.getAllByRole("button", {
+      name: "Показать описание Torrent (1)",
+    })[0]!;
+    await user.click(trigger);
+
+    expect(screen.getByRole("dialog", { name: "Torrent (1)" })).toHaveTextContent(
+      "Первое правило.",
+    );
+    expect(screen.getByRole("button", { name: "Закрыть описание правила" })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Torrent (1)" })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 });
 

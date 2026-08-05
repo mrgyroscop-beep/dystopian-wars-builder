@@ -1,9 +1,17 @@
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
-import type { WeaponProfileReadModel } from "../application/rosters/profile-rules";
+import type { RuleReadModel, WeaponProfileReadModel } from "../application/rosters/profile-rules";
 import { WeaponProfiles } from "./ProfileRules";
-import { ShipCardProfile } from "./ShipCardProfile";
+import { RuleDescription, RuleLinks, ShipCardProfile } from "./ShipCardProfile";
 
 export function ShipProfileDialog({
   faction,
@@ -30,11 +38,44 @@ export function WeaponProfileDialog({
   readonly profile: WeaponProfileReadModel;
   readonly onClose: () => void;
 }) {
+  const [activeRule, setActiveRule] = useState<{
+    readonly display: string;
+    readonly rule: RuleReadModel;
+    readonly trigger: HTMLButtonElement;
+  } | null>(null);
   return (
     <InspectorDialog backgroundUrl={null} name={profile.weapon} onClose={onClose} compact>
-      <WeaponProfiles weapons={[profile]} />
+      <WeaponProfiles
+        renderQualities={(weapon) => (
+          <RuleLinks
+            kind="Weapon quality"
+            onOpenRule={openRule}
+            rules={weapon.qualityRules ?? []}
+            text={weapon.qualities}
+          />
+        )}
+        weapons={[profile]}
+      />
+      {activeRule ? (
+        <RuleDescription
+          display={activeRule.display}
+          kind="Weapon quality"
+          onClose={() => setActiveRule(null)}
+          rule={activeRule.rule}
+          trigger={activeRule.trigger}
+        />
+      ) : null}
     </InspectorDialog>
   );
+
+  function openRule(
+    rule: RuleReadModel,
+    display: string,
+    _kind: string,
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    setActiveRule({ display, rule, trigger: event.currentTarget });
+  }
 }
 
 function InspectorDialog({

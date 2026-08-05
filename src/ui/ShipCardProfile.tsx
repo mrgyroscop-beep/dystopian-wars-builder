@@ -227,7 +227,7 @@ function WeaponTable({
   );
 }
 
-function RuleLinks({
+export function RuleLinks({
   kind,
   onOpenRule,
   rules,
@@ -267,7 +267,7 @@ function RuleLinks({
   return fragments;
 }
 
-function RuleDescription({
+export function RuleDescription({
   display,
   kind,
   onClose,

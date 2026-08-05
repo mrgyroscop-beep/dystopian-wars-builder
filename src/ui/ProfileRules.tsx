@@ -5,6 +5,7 @@ import type {
   ProfileSectionReadModel,
   RuleReadModel,
   ShipProfileRulesReadModel,
+  WeaponProfileReadModel,
 } from "../application/rosters/profile-rules";
 
 export function SafeStructuredText({
@@ -60,8 +61,10 @@ export function ProfilePanel({ model }: { readonly model: ShipProfileRulesReadMo
 }
 
 export function WeaponProfiles({
+  renderQualities,
   weapons,
 }: {
+  readonly renderQualities?: (weapon: WeaponProfileReadModel) => ReactNode;
   readonly weapons: ShipProfileRulesReadModel["weapons"];
 }) {
   const columns = ["Weapon", "Arc", "Close", "Standard", "Extreme", "Qualities"] as const;
@@ -104,7 +107,7 @@ export function WeaponProfiles({
                 <td>{weapon.close}</td>
                 <td>{weapon.standard}</td>
                 <td>{weapon.extreme}</td>
-                <td>{weapon.qualities}</td>
+                <td>{renderQualities ? renderQualities(weapon) : weapon.qualities}</td>
               </tr>
             ))}
           </tbody>
@@ -121,7 +124,9 @@ export function WeaponProfiles({
               {cardFields.map(([label, key]) => (
                 <div key={key}>
                   <dt>{label}</dt>
-                  <dd>{weapon[key]}</dd>
+                  <dd>
+                    {key === "qualities" && renderQualities ? renderQualities(weapon) : weapon[key]}
+                  </dd>
                 </div>
               ))}
             </dl>
