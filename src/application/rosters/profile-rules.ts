@@ -313,12 +313,9 @@ function projectWeapon(
   const fields = new Map(
     [...source.entity.fields]
       .sort((left, right) => left.order - right.order)
-      .map((field) => [
-        field.label.plainText.trim().toLocaleLowerCase("en"),
-        field.value.plainText,
-      ]),
+      .map((field) => [normalizeWeaponFieldLabel(field.label.plainText), field.value.plainText]),
   );
-  const value = (name: string) => fields.get(name.toLocaleLowerCase("en")) ?? "—";
+  const value = (name: string) => fields.get(normalizeWeaponFieldLabel(name)) ?? "—";
   const row = {
     id:
       source.configured && source.instance
@@ -343,6 +340,13 @@ function projectWeapon(
       message: `${row.weapon}: отсутствуют поля ${missing.join(", ")}.`,
     });
   return row;
+}
+
+function normalizeWeaponFieldLabel(value: string): string {
+  return value
+    .replace(/\s*\([^)]*\)\s*$/u, "")
+    .trim()
+    .toLocaleLowerCase("en");
 }
 
 function projectTextRules(text: string, catalog: DomainCatalog): RuleReadModel[] {
