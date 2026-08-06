@@ -4,7 +4,6 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { healthResponseSchema } from "../src/application/health/health-contract";
 import { retrieveSources } from "./assistant";
-import { parseTranslation } from "./glossary";
 import { sha256 } from "./http";
 import { resolveReferenceDocument } from "./reference-pdf";
 
@@ -33,6 +32,7 @@ beforeEach(async () => {
     env.DB.prepare("DELETE FROM password_credentials"),
     env.DB.prepare("DELETE FROM users"),
     env.DB.prepare("DELETE FROM rate_limits"),
+    env.DB.prepare("DELETE FROM rule_translations"),
   ]);
 });
 
@@ -191,19 +191,38 @@ describe("Worker API", () => {
     expect(retrieveSources("фывапролдж")).toEqual([]);
   });
 
-  it("publishes the text glossary and validates structured translations", async () => {
+  it("publishes the text glossary and reads a prepared translation from D1", async () => {
     const response = await exports.default.fetch("http://example.com/api/glossary");
-    const payload = await response.json<{ rules: Array<{ id: string; title: string }> }>();
+    const payload = await response.json<{
+      rules: Array<{ id: string; title: string; text: string }>;
+    }>();
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
     expect(payload.rules.length).toBeGreaterThan(300);
     expect(payload.rules).toContainEqual(expect.objectContaining({ title: "All Around" }));
-    expect(parseTranslation('{"title":"Круговой огонь","text":"Точный перевод."}')).toEqual({
+    const rule = payload.rules.find((candidate) => candidate.title === "All Around");
+    if (!rule) throw new Error("All Around rule is missing from the corpus.");
+    const sourceHash = await sha256(`${rule.title}\n${rule.text}`);
+    await env.DB.prepare(
+      "INSERT INTO rule_translations (rule_id, language, source_title, source_hash, title, text) VALUES (?, ?, ?, ?, ?, ?)",
+    )
+      .bind(rule.id, "ru", rule.title, sourceHash, "Круговой огонь", "Точный перевод.")
+      .run();
+
+    const translated = await exports.default.fetch(
+      `http://example.com/api/glossary/translations/${rule.id}`,
+    );
+
+    expect(translated.status).toBe(200);
+    expect(translated.headers.get("content-language")).toBe("ru");
+    await expect(translated.json()).resolves.toEqual({
+      id: rule.id,
+      language: "ru",
+      sourceTitle: "All Around",
       title: "Круговой огонь",
       text: "Точный перевод.",
     });
-    expect(() => parseTranslation("not-json")).toThrow("Перевод сейчас недоступен.");
   });
 
   it("limits the rules assistant to five questions per minute", async () => {
