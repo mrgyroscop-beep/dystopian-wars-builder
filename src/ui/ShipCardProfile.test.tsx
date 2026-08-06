@@ -9,7 +9,8 @@ import { ShipCardProfile, ShipMobileProfile } from "./ShipCardProfile";
 afterEach(cleanup);
 
 describe("ShipCardProfile", () => {
-  it("renders the mobile profile as readable vertical sections", () => {
+  it("renders readable vertical sections and keeps mobile traits interactive", async () => {
+    const user = userEvent.setup();
     render(<ShipMobileProfile faction="Empire" model={model()} />);
 
     const profile = screen.getByRole("article", {
@@ -20,6 +21,18 @@ describe("ShipCardProfile", () => {
     expect(within(profile).getByRole("heading", { name: "Оружие" })).toBeVisible();
     expect(within(profile).getByText("Odachi Gyorai Salvo")).toBeVisible();
     expect(within(profile).getByRole("heading", { name: "Опции хардпоинтов" })).toBeVisible();
+
+    const stoic = within(profile).getByRole("button", { name: "Показать описание Stoic" });
+    expect(
+      within(profile).getByRole("button", { name: "Показать описание Heavy Shield Generator" }),
+    ).toBeVisible();
+    expect(
+      within(profile).getByRole("button", { name: "Показать описание All-Around" }),
+    ).toBeVisible();
+    await user.click(stoic);
+    expect(screen.getByRole("dialog", { name: "Stoic" })).toHaveTextContent(
+      "This model ignores Disorder.",
+    );
   });
 
   it("aligns stats, renders hardpoint profiles and opens quality descriptions", async () => {
