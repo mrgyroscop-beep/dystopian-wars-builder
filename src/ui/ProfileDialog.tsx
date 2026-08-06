@@ -96,11 +96,12 @@ function InspectorDialog({
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const [cardView, setCardView] = useState<"read" | "fit">("read");
 
   useEffect(() => {
     returnFocus.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialogRef.current?.querySelector<HTMLElement>("button")?.focus();
+    dialogRef.current?.querySelector<HTMLElement>(".profile-dialog__close")?.focus();
     return () => returnFocus.current?.focus();
   }, []);
 
@@ -134,6 +135,7 @@ function InspectorDialog({
         aria-modal="true"
         className="profile-dialog"
         data-card={card ? "true" : undefined}
+        data-card-view={card ? cardView : undefined}
         data-compact={compact ? "true" : undefined}
         onKeyDown={handleKeyDown}
         open
@@ -152,12 +154,45 @@ function InspectorDialog({
           <div>
             <p className="eyebrow">Профиль ORBAT</p>
             <h2 id={titleId}>{name}</h2>
+            {card && cardView === "read" ? (
+              <p className="profile-dialog__mobile-hint">
+                Перетаскивайте карточку, чтобы прочитать детали
+              </p>
+            ) : null}
           </div>
-          <button aria-label="Закрыть профиль" onClick={onClose} type="button">
-            ×
-          </button>
+          <div className="profile-dialog__header-actions">
+            {card ? (
+              <button
+                aria-label={
+                  cardView === "read"
+                    ? "Показать карточку целиком"
+                    : "Увеличить карточку для чтения"
+                }
+                className="profile-dialog__view-toggle"
+                onClick={() => setCardView((current) => (current === "read" ? "fit" : "read"))}
+                type="button"
+              >
+                {cardView === "read" ? "Целиком" : "Читать"}
+              </button>
+            ) : null}
+            <button
+              aria-label="Закрыть профиль"
+              className="profile-dialog__close"
+              onClick={onClose}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
         </header>
-        <div className="profile-dialog__content">{children}</div>
+        <div
+          aria-label={card ? "Карточка корабля" : undefined}
+          className="profile-dialog__content"
+          role={card ? "region" : undefined}
+          tabIndex={card ? 0 : undefined}
+        >
+          {children}
+        </div>
       </dialog>
       <button
         aria-label="Закрыть профиль по фону"

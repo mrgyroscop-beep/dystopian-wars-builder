@@ -3403,6 +3403,18 @@ button.button {
   backdrop-filter: blur(8px);
 }
 
+.profile-dialog__header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profile-dialog__mobile-hint,
+.profile-dialog__view-toggle {
+  display: none;
+}
+
 .profile-dialog__header h2,
 .profile-dialog__header p {
   margin: 0;
@@ -3413,7 +3425,7 @@ button.button {
   font-size: clamp(1.65rem, 4vw, 2.75rem);
 }
 
-.profile-dialog__header button {
+.profile-dialog__close {
   width: 2.75rem;
   min-width: 2.75rem;
   height: 2.75rem;
@@ -3929,16 +3941,138 @@ button.button {
 }
 
 @media (max-width: 48rem) {
+  .profile-dialog-backdrop {
+    padding: 0.35rem;
+  }
+
   .profile-dialog[data-card="true"] {
+    display: grid;
+    width: calc(100dvw - 0.7rem);
+    max-width: calc(100dvw - 0.7rem);
+    height: calc(100dvh - 0.7rem);
+    max-height: calc(100dvh - 0.7rem);
+    grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;
   }
 
-  .profile-dialog[data-card="true"] .profile-dialog__content {
-    min-width: 0;
-    overflow-x: hidden;
+  .profile-dialog[data-card="true"] .profile-dialog__header {
+    gap: 0.5rem;
+    padding: 0.45rem 0.55rem;
   }
 
-  .profile-dialog[data-card="true"] .ship-card {
+  .profile-dialog[data-card="true"] .profile-dialog__header > div:first-child {
+    min-width: 0;
+  }
+
+  .profile-dialog[data-card="true"] .profile-dialog__header .eyebrow {
+    font-size: 0.56rem;
+  }
+
+  .profile-dialog[data-card="true"] .profile-dialog__header h2 {
+    overflow: hidden;
+    font-size: 1rem;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-dialog__mobile-hint {
+    display: block;
+    margin-top: 0.16rem !important;
+    color: rgb(247 240 223 / 72%);
+    font-family: "Segoe UI", "Noto Sans", sans-serif;
+    font-size: 0.62rem;
+    line-height: 1.2;
+  }
+
+  .profile-dialog__view-toggle {
+    display: inline-flex;
+    min-width: auto;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.6rem;
+    color: #f7f0df;
+    background: transparent;
+    border: 1px solid rgb(247 240 223 / 48%);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+
+  .profile-dialog[data-card-view="fit"] .profile-dialog__view-toggle {
+    color: #10262d;
+    background: #f7f0df;
+  }
+
+  .profile-dialog[data-card="true"] .profile-dialog__close {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .profile-dialog[data-card="true"] .profile-dialog__content {
+    min-height: 0;
+    min-width: 0;
+    padding: 0.5rem;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .profile-dialog[data-card="true"][data-card-view="read"] .ship-card {
+    width: 64rem;
+    min-width: 64rem;
+    margin-inline: 0;
+  }
+
+  .profile-dialog[data-card="true"][data-card-view="read"] .ship-card__identity h3 {
+    font-size: 2.4rem;
+  }
+
+  .profile-dialog[data-card="true"][data-card-view="read"] .ship-card__identity p,
+  .profile-dialog[data-card="true"][data-card-view="read"] .ship-card__copy {
+    font-size: 0.82rem;
+  }
+
+  .profile-dialog[data-card="true"][data-card-view="read"] .ship-card__role {
+    font-size: 0.68rem;
+  }
+
+  .profile-dialog[data-card="true"][data-card-view="read"] .ship-card__vpr {
+    font-size: 2.2rem;
+  }
+
+  .profile-dialog[data-card="true"][data-card-view="read"] .ship-card__limits dd,
+  .profile-dialog[data-card="true"][data-card-view="read"] .ship-card__stats dd {
+    font-size: 1rem;
+  }
+
+  .profile-dialog[data-card="true"][data-card-view="read"] .ship-card__table-section h4 {
+    font-size: 0.88rem;
+  }
+
+  .profile-dialog[data-card="true"][data-card-view="read"] .ship-card__table-section table {
+    font-size: 0.72rem;
+  }
+
+  .profile-dialog[data-card="true"][data-card-view="read"]
+    .ship-card[data-density="dense"]
+    .ship-card__table-section
+    table {
+    font-size: 0.66rem;
+  }
+
+  .profile-dialog[data-card="true"][data-card-view="read"]
+    .ship-card[data-density="compact"]
+    .ship-card__table-section
+    table {
+    font-size: 0.6rem;
+  }
+
+  .profile-dialog[data-card="true"][data-card-view="fit"] .ship-card {
     width: 100%;
     min-width: 0;
   }
