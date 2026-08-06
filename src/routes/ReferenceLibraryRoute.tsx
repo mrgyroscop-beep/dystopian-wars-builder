@@ -6,6 +6,7 @@ import type { RulesAssistantGateway } from "../application/assistant/rules-assis
 import { useDocumentTitle } from "../app/useDocumentTitle";
 import { PdfDocumentViewer } from "../ui/PdfDocumentViewer";
 import { RulesAssistantPanel } from "./RulesAssistantRoute";
+import { GlossaryPanel } from "./GlossaryPanel";
 
 type ReferenceKind = "rules" | "orbat";
 type ReferenceFilter = "all" | ReferenceKind;
@@ -94,7 +95,9 @@ export function ReferenceLibraryRoute({
 }) {
   useDocumentTitle("Правила и ORBATs");
   const [searchParams, setSearchParams] = useSearchParams();
-  const assistantOpen = searchParams.get("view") === "assistant";
+  const view = searchParams.get("view");
+  const assistantOpen = view === "assistant";
+  const glossaryOpen = view === "glossary";
   const [filter, setFilter] = useState<ReferenceFilter>("all");
   const [search, setSearch] = useState("");
   const [selectedDocument, setSelectedDocument] = useState<ReferenceEntry | null>(null);
@@ -128,6 +131,11 @@ export function ReferenceLibraryRoute({
     setSearchParams({ view: "assistant" }, { replace: true });
   }
 
+  function showGlossary() {
+    setSelectedDocument(null);
+    setSearchParams({ view: "glossary" }, { replace: true });
+  }
+
   return (
     <div className="reference-library section-stack">
       <header className="reference-library__hero">
@@ -151,11 +159,18 @@ export function ReferenceLibraryRoute({
 
       <nav className="reference-sections" aria-label="Раздел правил">
         <button
-          aria-current={!assistantOpen ? "page" : undefined}
+          aria-current={!assistantOpen && !glossaryOpen ? "page" : undefined}
           onClick={showLibrary}
           type="button"
         >
           Документы
+        </button>
+        <button
+          aria-current={glossaryOpen ? "page" : undefined}
+          onClick={showGlossary}
+          type="button"
+        >
+          Текстовый глоссарий
         </button>
         <button
           aria-current={assistantOpen ? "page" : undefined}
@@ -168,6 +183,8 @@ export function ReferenceLibraryRoute({
 
       {assistantOpen ? (
         <RulesAssistantPanel authGateway={authGateway} assistantGateway={assistantGateway} />
+      ) : glossaryOpen ? (
+        <GlossaryPanel />
       ) : (
         <>
           <section className="reference-library__controls" aria-label="Поиск и фильтры">

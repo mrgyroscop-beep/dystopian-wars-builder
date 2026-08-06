@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import type { AuthGateway, AuthUser } from "../../application/auth/auth-contract";
+import type { GlossaryGateway } from "../../application/glossary/glossary-contract";
+import { GlossaryProvider } from "../../ui/GlossaryContext";
 import { AUTH_SESSION_CHANGED_EVENT } from "../authSessionEvents";
 
 const navigationItems = [
@@ -13,9 +15,18 @@ const navigationItems = [
 
 interface AppShellProps {
   authGateway: AuthGateway;
+  glossaryGateway: GlossaryGateway;
 }
 
-export function AppShell({ authGateway }: AppShellProps) {
+export function AppShell({ authGateway, glossaryGateway }: AppShellProps) {
+  return (
+    <GlossaryProvider gateway={glossaryGateway}>
+      <AppShellContent authGateway={authGateway} />
+    </GlossaryProvider>
+  );
+}
+
+function AppShellContent({ authGateway }: { readonly authGateway: AuthGateway }) {
   const location = useLocation();
   const feedbackSource = safeScreen(location.pathname);
   const [accountUser, setAccountUser] = useState<AuthUser | null>(null);

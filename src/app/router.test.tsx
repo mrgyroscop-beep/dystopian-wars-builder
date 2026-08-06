@@ -78,6 +78,7 @@ const rosterCreation = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.removeItem("dwb-rule-language");
   storedRosters.clear();
 });
 const testDependencies = {
@@ -94,6 +95,37 @@ const testDependencies = {
     ask: () => Promise.reject(new Error("not used")),
   },
   feedbackGateway: { contractVersion: 1 as const, submit: submitFeedback },
+  glossaryGateway: {
+    contractVersion: 1 as const,
+    list: () =>
+      Promise.resolve([
+        {
+          id: "R1",
+          title: "All Around",
+          text: "The weapon can contribute from every arc.",
+          factions: ["Empire"],
+          page: 26,
+        },
+        {
+          id: "R2",
+          title: "Torrent",
+          text: "Resolve several attacks as one torrent.",
+          factions: ["Empire", "Union"],
+          page: 32,
+        },
+      ]),
+    translate: (ruleId: string) =>
+      Promise.resolve({
+        id: ruleId,
+        language: "ru" as const,
+        sourceTitle: ruleId === "R1" ? "All Around" : "Torrent",
+        title: ruleId === "R1" ? "Круговой огонь" : "Шквал",
+        text:
+          ruleId === "R1"
+            ? "Оружие может участвовать в атаке из любой огневой дуги."
+            : "Проведите несколько атак как один шквал.",
+      }),
+  },
   healthGateway: { read: readHealth } satisfies HealthGateway,
   rosterCreation,
   rosterLibrary: {
@@ -230,6 +262,30 @@ describe("application routes", () => {
     );
   });
 
+  it("opens a searchable bilingual text glossary", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/reference?view=glossary");
+
+    expect(await screen.findByRole("heading", { name: "Глоссарий правил" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Текстовый глоссарий" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(await screen.findByRole("heading", { name: "Круговой огонь" })).toBeVisible();
+    expect(
+      screen.getByText("Оружие может участвовать в атаке из любой огневой дуги."),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "EN" }));
+    expect(screen.getByRole("heading", { name: "All Around" })).toBeVisible();
+    expect(screen.getByText("The weapon can contribute from every arc.")).toBeVisible();
+
+    await user.type(screen.getByRole("searchbox"), "Torrent");
+    expect(screen.getByText("Найдено: 1")).toBeVisible();
+    expect(screen.getByRole("button", { name: /Torrent/u })).toBeVisible();
+  });
+
   it("renders a deep roster route without loading the library first", async () => {
     renderRoute("/rosters/scaffold-demo");
 
@@ -283,7 +339,7 @@ describe("application routes", () => {
       "/rosters/scaffold-demo?ship=demo-ship-001&shipMode=preview&rule=synthetic-rule-torrent",
     );
 
-    const heading = await screen.findByRole("heading", { name: "Torrent" });
+    const heading = await screen.findByRole("heading", { name: "Шквал" });
     await waitFor(() => expect(heading).toHaveFocus());
     const visibleSource = screen
       .getAllByText("Источник: каталог demonstration-1")

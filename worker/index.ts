@@ -5,6 +5,7 @@ import { healthResponseSchema } from "../src/application/health/health-contract"
 import { authRoutes } from "./auth";
 import { assistantRoutes } from "./assistant";
 import { feedbackRoutes, isFeedbackAutomationPath } from "./feedback";
+import { glossaryRoutes } from "./glossary";
 import { assertSameOrigin, HttpError } from "./http";
 import { rosterRoutes } from "./rosters";
 import { referencePdfRoutes } from "./reference-pdf";
@@ -26,6 +27,7 @@ app.use("/api/*", async (context, next) => {
 app.route("/api/auth", authRoutes);
 app.route("/api/assistant", assistantRoutes);
 app.route("/api/feedback", feedbackRoutes);
+app.route("/api/glossary", glossaryRoutes);
 app.route("/api/rosters", rosterRoutes);
 app.route("/reference-pdf", referencePdfRoutes);
 

@@ -4,6 +4,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { healthResponseSchema } from "../src/application/health/health-contract";
 import { retrieveSources } from "./assistant";
+import { parseTranslation } from "./glossary";
 import { sha256 } from "./http";
 import { resolveReferenceDocument } from "./reference-pdf";
 
@@ -188,6 +189,21 @@ describe("Worker API", () => {
     expect(retrieveSources("Эскорт")[0]).toMatchObject({ title: "Escort" });
     expect(retrieveSources("Torpdeo")[0]).toMatchObject({ title: "Torpedo" });
     expect(retrieveSources("фывапролдж")).toEqual([]);
+  });
+
+  it("publishes the text glossary and validates structured translations", async () => {
+    const response = await exports.default.fetch("http://example.com/api/glossary");
+    const payload = await response.json<{ rules: Array<{ id: string; title: string }> }>();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
+    expect(payload.rules.length).toBeGreaterThan(300);
+    expect(payload.rules).toContainEqual(expect.objectContaining({ title: "All Around" }));
+    expect(parseTranslation('{"title":"Круговой огонь","text":"Точный перевод."}')).toEqual({
+      title: "Круговой огонь",
+      text: "Точный перевод.",
+    });
+    expect(() => parseTranslation("not-json")).toThrow("Перевод сейчас недоступен.");
   });
 
   it("limits the rules assistant to five questions per minute", async () => {

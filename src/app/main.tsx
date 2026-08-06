@@ -6,6 +6,7 @@ import { createHttpHealthGateway } from "../infrastructure/health/http-health-ga
 import { createHttpPasswordAuthGateway } from "../infrastructure/auth/http-password-auth-gateway";
 import { createHttpRulesAssistantGateway } from "../infrastructure/assistant/http-rules-assistant-gateway";
 import { createHttpFeedbackGateway } from "../infrastructure/feedback/http-feedback-gateway";
+import { createHttpGlossaryGateway } from "../infrastructure/glossary/http-glossary-gateway";
 import { createPublishedCatalogClient } from "../infrastructure/catalog/published-catalog";
 import { createBrowserRosterRepository } from "../infrastructure/rosters/browser-roster-repository";
 import { createSynchronizingRosterRepository } from "../infrastructure/rosters/synchronizing-roster-repository";
@@ -23,6 +24,7 @@ const router = createAppRouter({
   authGateway: createHttpPasswordAuthGateway(),
   assistantGateway: createHttpRulesAssistantGateway(),
   feedbackGateway: createHttpFeedbackGateway(),
+  glossaryGateway: createHttpGlossaryGateway(),
   healthGateway: createHttpHealthGateway(),
   rosterCreation: {
     setupGateway: publishedCatalog.setupGateway,

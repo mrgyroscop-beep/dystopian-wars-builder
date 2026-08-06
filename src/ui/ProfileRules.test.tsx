@@ -4,10 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ShipProfileRulesReadModel } from "../application/rosters/profile-rules";
 import { WeaponProfileDialog } from "./ProfileDialog";
+import { GlossaryProvider } from "./GlossaryContext";
 import { ProfilePanel, RuleSheet, RulesPanel, SafeStructuredText } from "./ProfileRules";
 
 afterEach(() => {
   cleanup();
+  window.localStorage.removeItem("dwb-rule-language");
   vi.restoreAllMocks();
 });
 
@@ -168,6 +170,44 @@ describe("profile and rules components", () => {
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog", { name: "Torrent (1)" })).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+  });
+
+  it("switches a linked trait between Russian and English", async () => {
+    const user = userEvent.setup();
+    const source = model();
+    render(
+      <GlossaryProvider
+        gateway={{
+          contractVersion: 1,
+          list: () =>
+            Promise.resolve([
+              {
+                id: "R1",
+                title: "Torrent",
+                text: "Original rule.",
+                factions: [],
+                page: 32,
+              },
+            ]),
+          translate: () =>
+            Promise.resolve({
+              id: "R1",
+              language: "ru",
+              sourceTitle: "Torrent",
+              title: "Шквал",
+              text: "Русский текст правила.",
+            }),
+        }}
+      >
+        <RuleSheet model={source} onBack={vi.fn()} onOpenRule={vi.fn()} ruleId="rule-torrent-a" />
+      </GlossaryProvider>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Шквал" })).toBeVisible();
+    expect(screen.getByText("Русский текст правила.")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "EN" }));
+    expect(screen.getByRole("heading", { name: "Torrent" })).toBeVisible();
+    expect(screen.getByText("Первое правило.")).toBeVisible();
   });
 });
 

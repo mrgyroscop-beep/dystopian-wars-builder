@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, type RouteObject } from "react-router-do
 import type { HealthGateway } from "../application/health/health-contract";
 import type { AuthGateway } from "../application/auth/auth-contract";
 import type { FeedbackGateway } from "../application/feedback/feedback-contract";
+import type { GlossaryGateway } from "../application/glossary/glossary-contract";
 import type { RulesAssistantGateway } from "../application/assistant/rules-assistant-contract";
 import type { CreateRosterDependencies } from "../application/rosters/create-roster";
 import type { RosterLibraryDependencies } from "../application/rosters/roster-library";
@@ -22,6 +23,7 @@ export interface AppDependencies {
   authGateway: AuthGateway;
   assistantGateway: RulesAssistantGateway;
   feedbackGateway: FeedbackGateway;
+  glossaryGateway: GlossaryGateway;
   healthGateway: HealthGateway;
   rosterCreation: CreateRosterDependencies;
   rosterLibrary: RosterLibraryDependencies;
@@ -33,6 +35,7 @@ export function createAppRoutes({
   authGateway,
   assistantGateway,
   feedbackGateway,
+  glossaryGateway,
   healthGateway,
   rosterCreation,
   rosterLibrary,
@@ -41,7 +44,7 @@ export function createAppRoutes({
 }: AppDependencies): RouteObject[] {
   return [
     {
-      element: <AppShell authGateway={authGateway} />,
+      element: <AppShell authGateway={authGateway} glossaryGateway={glossaryGateway} />,
       errorElement: <RouteErrorBoundary />,
       children: [
         { index: true, element: <RosterLibraryRoute dependencies={rosterLibrary} /> },

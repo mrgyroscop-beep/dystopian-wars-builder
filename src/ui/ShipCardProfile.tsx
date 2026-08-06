@@ -1,12 +1,4 @@
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent,
-  type MouseEvent,
-} from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
 import type {
@@ -14,9 +6,14 @@ import type {
   RuleReadModel,
   WeaponProfileReadModel,
 } from "../application/rosters/profile-rules";
+import {
+  localizedRuleDisplay,
+  translatedRuleTitle,
+} from "../application/glossary/rule-title-translations";
 import { orbatTemplateFor } from "../app/orbatTemplates";
 import { hardpointWeightFromLabel, type HardpointWeight } from "../domain/catalog";
 import { SafeStructuredText } from "./ProfileRules";
+import { RuleLanguageToggle, useGlossary, useRuleTranslation } from "./GlossaryContext";
 
 const statFields = [
   { label: "MAS", aliases: ["mas", "mass"] },
@@ -525,6 +522,7 @@ export function RuleLinks({
   readonly rules: readonly RuleReadModel[];
   readonly text: string;
 }) {
+  const { language } = useGlossary();
   const matches = textMatches(text, rules);
   if (!matches.length) return text;
 
@@ -534,13 +532,13 @@ export function RuleLinks({
     if (match.start > offset) fragments.push(text.slice(offset, match.start));
     fragments.push(
       <button
-        aria-label={`Показать описание ${match.text}`}
+        aria-label={`Показать описание ${language === "ru" ? localizedRuleDisplay(match.rule.label, match.text) : match.text}`}
         className="ship-card__trait"
         key={`${match.rule.id}:${match.start}`}
         onClick={(event) => onOpenRule(match.rule, match.text, kind, event)}
         type="button"
       >
-        {match.text}
+        {language === "ru" ? localizedRuleDisplay(match.rule.label, match.text) : match.text}
       </button>,
     );
     offset = match.end;
@@ -564,17 +562,23 @@ export function RuleDescription({
 }) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const localized = useRuleTranslation(rule.label);
 
-  useEffect(() => {
-    closeRef.current?.focus();
-    return () => trigger.focus();
-  }, [trigger]);
-
-  function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+  function handleKeyDown(event: globalThis.KeyboardEvent) {
     if (event.key === "Tab") {
       event.preventDefault();
       event.stopPropagation();
-      closeRef.current?.focus();
+      const focusable = [
+        ...(dialogRef.current?.querySelectorAll<HTMLButtonElement>("button:not([disabled])") ?? []),
+      ];
+      const current = focusable.indexOf(document.activeElement as HTMLButtonElement);
+      const next = event.shiftKey
+        ? current <= 0
+          ? focusable.length - 1
+          : current - 1
+        : (current + 1) % focusable.length;
+      focusable[next]?.focus();
       return;
     }
     if (event.key !== "Escape") return;
@@ -582,6 +586,16 @@ export function RuleDescription({
     event.stopPropagation();
     onClose();
   }
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    dialog?.addEventListener("keydown", handleKeyDown);
+    closeRef.current?.focus();
+    return () => {
+      dialog?.removeEventListener("keydown", handleKeyDown);
+      trigger.focus();
+    };
+  });
 
   return (
     <div className="ship-card__rule-layer">
@@ -596,29 +610,53 @@ export function RuleDescription({
         aria-labelledby={titleId}
         aria-modal="true"
         className="ship-card__rule-dialog"
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
       >
         <header>
           <div>
             <p>{kind}</p>
-            <h4 id={titleId}>{display}</h4>
+            <h4 id={titleId}>
+              {localized.language === "ru" && localized.translation
+                ? localized.translation.title
+                : localized.language === "ru"
+                  ? (translatedRuleTitle(rule.label) ?? display)
+                  : display}
+            </h4>
+            {localized.language === "ru" && localized.translation ? <small>{display}</small> : null}
           </div>
-          <button
-            aria-label="Закрыть описание правила"
-            onClick={onClose}
-            onKeyDown={handleKeyDown}
-            ref={closeRef}
-            type="button"
-          >
-            ×
-          </button>
+          <div className="ship-card__rule-actions">
+            <RuleLanguageToggle compact />
+            <button
+              aria-label="Закрыть описание правила"
+              onClick={onClose}
+              ref={closeRef}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
         </header>
         <div className="ship-card__rule-copy">
-          {rule.description ? (
+          {localized.language === "ru" && localized.loading ? (
+            <p aria-live="polite" className="rule-translation-state">
+              Переводим правило…
+            </p>
+          ) : localized.language === "ru" && localized.translation ? (
+            localized.translation.text
+              .split(/\n{2,}/u)
+              .map((paragraph) => <p key={paragraph}>{paragraph}</p>)
+          ) : rule.description ? (
             <SafeStructuredText value={rule.description} />
           ) : (
             <p>{rule.diagnostic ?? "Описание правила отсутствует."}</p>
           )}
+          {localized.language === "ru" && localized.error ? (
+            <p className="rule-translation-error" role="note">
+              {localized.error} Показываем английский оригинал.
+            </p>
+          ) : null}
         </div>
       </section>
     </div>

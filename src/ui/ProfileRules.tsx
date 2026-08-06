@@ -8,6 +8,8 @@ import type {
   WeaponProfileReadModel,
 } from "../application/rosters/profile-rules";
 import { EyeIcon } from "./EyeIcon";
+import { translatedRuleTitle } from "../application/glossary/rule-title-translations";
+import { RuleLanguageToggle, useGlossary, useRuleTranslation } from "./GlossaryContext";
 
 export function SafeStructuredText({
   value,
@@ -177,6 +179,7 @@ export function RulesPanel({
   readonly onOpenRule: (ruleId: string, returnElement: HTMLElement) => void;
 }) {
   const [glossaryOpen, setGlossaryOpen] = useState(false);
+  const { language } = useGlossary();
   return (
     <div className="rules-panel">
       <header className="rules-panel__heading">
@@ -193,12 +196,19 @@ export function RulesPanel({
           {model.rules.map((rule) => (
             <li key={rule.id}>
               <button
-                aria-label={`Открыть правило ${rule.label}`}
+                aria-label={`Открыть правило ${language === "ru" ? (translatedRuleTitle(rule.label) ?? rule.label) : rule.label}`}
                 onClick={(event) => onOpenRule(rule.id, event.currentTarget)}
                 type="button"
               >
                 <span>
-                  <strong>{rule.label}</strong>
+                  <strong>
+                    {language === "ru"
+                      ? (translatedRuleTitle(rule.label) ?? rule.label)
+                      : rule.label}
+                  </strong>
+                  {language === "ru" && translatedRuleTitle(rule.label) ? (
+                    <small>{rule.label}</small>
+                  ) : null}
                   <small>{rule.available ? "Описание доступно" : "Описание недоступно"}</small>
                 </span>
                 <b aria-hidden="true">→</b>
@@ -234,17 +244,40 @@ export function RuleSheet({
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const rule = model.rules.find((candidate) => candidate.id === ruleId) ?? null;
+  const localized = useRuleTranslation(rule?.label ?? "");
   useEffect(() => headingRef.current?.focus(), [ruleId]);
   return (
     <article className="rule-sheet" aria-labelledby="rule-sheet-title">
       <button className="rule-sheet__back" onClick={onBack} type="button">
         ← К правилам
       </button>
-      <p className="preview-category">Карточка правила</p>
-      <h4 id="rule-sheet-title" ref={headingRef} tabIndex={-1}>
-        {rule?.label ?? "Правило не найдено"}
-      </h4>
-      {rule?.available ? (
+      <div className="rule-sheet__heading">
+        <div>
+          <p className="preview-category">Карточка правила</p>
+          <h4 id="rule-sheet-title" ref={headingRef} tabIndex={-1}>
+            {localized.language === "ru" && localized.translation
+              ? localized.translation.title
+              : localized.language === "ru" && rule
+                ? (translatedRuleTitle(rule.label) ?? rule.label)
+                : (rule?.label ?? "Правило не найдено")}
+          </h4>
+          {localized.language === "ru" && localized.translation ? (
+            <small>{rule?.label}</small>
+          ) : null}
+        </div>
+        <RuleLanguageToggle compact />
+      </div>
+      {localized.language === "ru" && localized.loading ? (
+        <p aria-live="polite" className="rule-translation-state">
+          Переводим правило…
+        </p>
+      ) : localized.language === "ru" && localized.translation ? (
+        <div className="structured-text">
+          {localized.translation.text.split(/\n{2,}/u).map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </div>
+      ) : rule?.available ? (
         <SafeStructuredText value={rule.description} onReference={onOpenRule} />
       ) : (
         <div className="rule-unavailable" role="note">
@@ -252,6 +285,11 @@ export function RuleSheet({
           <p>{rule?.diagnostic ?? "Ссылка на правило не разрешена."}</p>
         </div>
       )}
+      {localized.language === "ru" && localized.error ? (
+        <p className="rule-translation-error" role="note">
+          {localized.error} Показываем английский оригинал.
+        </p>
+      ) : null}
       <p className="rules-panel__version">Источник: каталог {model.sourceCatalogVersion}</p>
     </article>
   );
@@ -269,6 +307,7 @@ export function GlossaryDialog({
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const { language } = useGlossary();
   useEffect(() => {
     returnFocus.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -318,7 +357,7 @@ export function GlossaryDialog({
             {rules.map((rule) => (
               <li key={rule.id}>
                 <button onClick={(event) => onOpenRule(rule.id, event.currentTarget)} type="button">
-                  {rule.label}
+                  {language === "ru" ? (translatedRuleTitle(rule.label) ?? rule.label) : rule.label}
                   <span aria-hidden="true">→</span>
                 </button>
               </li>
