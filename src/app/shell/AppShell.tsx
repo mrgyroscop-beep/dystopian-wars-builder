@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import type { AuthGateway, AuthUser } from "../../application/auth/auth-contract";
 import type { GlossaryGateway } from "../../application/glossary/glossary-contract";
-import { GlossaryProvider } from "../../ui/GlossaryContext";
+import { GlossaryProvider, RuleLanguageToggle } from "../../ui/GlossaryContext";
 import { AUTH_SESSION_CHANGED_EVENT } from "../authSessionEvents";
 
 const navigationItems = [
@@ -92,6 +92,9 @@ function AppShellContent({ authGateway }: { readonly authGateway: AuthGateway })
                 {item.label}
               </NavLink>
             ))}
+            <div className="site-header__language">
+              <RuleLanguageToggle compact />
+            </div>
             <Link
               aria-label={accountUser ? `Аккаунт: ${accountUser.displayName}` : "Войти в аккаунт"}
               className="primary-nav__account"

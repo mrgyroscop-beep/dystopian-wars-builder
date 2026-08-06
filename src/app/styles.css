@@ -215,6 +215,23 @@ a:hover {
   box-shadow: inset 0 -2px 0 #e18a68;
 }
 
+.site-header__language {
+  display: flex;
+  align-items: center;
+  margin-inline: 0.25rem;
+}
+
+.site-header__language .rule-language-toggle {
+  color: #dce5e3;
+  background: rgb(255 255 255 / 8%);
+  border-color: rgb(255 255 255 / 32%);
+}
+
+.site-header__language .rule-language-toggle button[aria-pressed="true"] {
+  color: var(--navy);
+  background: #f8f3e6;
+}
+
 .primary-nav__account {
   display: inline-flex;
   min-width: 5.5rem;
@@ -1165,6 +1182,10 @@ button.button {
   .primary-nav__account {
     flex: 1 1 auto;
     max-width: 100%;
+  }
+
+  .site-header__language {
+    margin-inline: 0;
   }
 
   .panel__header {

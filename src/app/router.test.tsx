@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -166,6 +166,27 @@ describe("application routes", () => {
     await waitFor(() => expect(document.title).toContain("Флоты"));
   });
 
+  it("switches the rules language from the site header", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/");
+
+    const language = screen.getByRole("group", { name: "Язык правил" });
+    expect(language).toBeVisible();
+    expect(within(language).getByRole("button", { name: "RU" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await user.click(within(language).getByRole("button", { name: "EN" }));
+
+    expect(within(language).getByRole("button", { name: "EN" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(window.localStorage.getItem("dwb-rule-language")).toBe("en");
+  });
+
   it("requires confirmation before deleting a saved roster", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();
@@ -277,7 +298,8 @@ describe("application routes", () => {
       screen.getByText("Оружие может участвовать в атаке из любой огневой дуги."),
     ).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "EN" }));
+    const glossaryLanguage = screen.getAllByRole("group", { name: "Язык правил" })[1]!;
+    await user.click(within(glossaryLanguage).getByRole("button", { name: "EN" }));
     expect(screen.getByRole("heading", { name: "All Around" })).toBeVisible();
     expect(screen.getByText("The weapon can contribute from every arc.")).toBeVisible();
 
