@@ -255,6 +255,29 @@ describe("application routes", () => {
     expect(screen.getByRole("button", { name: "Удалить Akita Demonstrator" })).toBeVisible();
   });
 
+  it("opens the compatible catalog category from an empty fleet element", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/rosters/scaffold-demo");
+
+    await user.type(await screen.findByLabelText("Поиск"), "старый запрос");
+    await user.click(
+      screen.getByRole("button", { name: "Добавить подходящий корабль в Flagship Element" }),
+    );
+
+    expect(screen.getByLabelText("Поиск")).toHaveValue("");
+    expect(screen.getByLabelText("Категория")).toHaveValue("Flagship");
+    expect(screen.getByText("Akita Demonstrator")).toBeVisible();
+    expect(screen.queryByText("Line Pattern 002")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Каталог" })).toHaveFocus());
+
+    await user.selectOptions(screen.getByLabelText("Категория"), "Patrol");
+    expect(screen.getByText("Patrol Pattern 017")).toBeVisible();
+    expect(screen.queryByText("Patrol Pattern 003")).not.toBeInTheDocument();
+    await user.click(screen.getByText("Patrol Pattern 017"));
+    expect(screen.getByRole("radio", { name: "Flagship Element" })).toBeChecked();
+  });
+
   it("opens a stable-ID rule deep link and focuses its heading", async () => {
     renderRoute(
       "/rosters/scaffold-demo?ship=demo-ship-001&shipMode=preview&rule=synthetic-rule-torrent",

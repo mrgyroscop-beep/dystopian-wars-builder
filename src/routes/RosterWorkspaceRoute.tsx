@@ -9,6 +9,7 @@ import {
   WorkspaceCommandError,
   type CatalogItemReadModel,
   type FleetCategory,
+  type FleetElementReadModel,
   type RosterWorkspaceDependencies,
   type RosterWorkspaceExecution,
   type RosterInstanceReadModel,
@@ -65,6 +66,7 @@ export function RosterWorkspaceRoute({
   const [category, setCategory] = useState<FleetCategory | "all">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedTarget, setSelectedTarget] = useState("");
+  const [catalogTargetId, setCatalogTargetId] = useState<string | null>(null);
   const [editorInstanceId, setEditorInstanceId] = useState<string | null>(null);
   const [contextOrigin, setContextOrigin] = useState<ContextOrigin | null>(null);
   const [activeView, setActiveView] = useState<WorkspaceView>("composition");
@@ -138,7 +140,11 @@ export function RosterWorkspaceRoute({
     direct?.mode === "preview" ? direct.shipId : (directInstance?.definitionId ?? selectedId);
   const resolvedEditorInstanceId = directInstance?.id ?? editorInstanceId;
   const resolvedActiveView: WorkspaceView = direct ? "context" : activeView;
-  const filtered = filterCatalogItems(model.catalog, query, category);
+  const filtered = filterCatalogItems(model.catalog, query, category).filter(
+    (item) =>
+      !catalogTargetId ||
+      item.eligibleTargets.some((target) => target.elementInstanceId === catalogTargetId),
+  );
   const selected = model.catalog.find((item) => item.id === resolvedSelectedId) ?? null;
 
   async function execute(
@@ -190,8 +196,12 @@ export function RosterWorkspaceRoute({
   function openPreview(item: CatalogItemReadModel) {
     setContextOrigin({ view: "catalog", elementId: `catalog-item-${safeId(item.id)}` });
     setSelectedId(item.id);
+    const preferredTarget = item.eligibleTargets.find(
+      (target) => target.elementInstanceId === catalogTargetId,
+    );
     setSelectedTarget(
-      item.eligibleTargets.length === 1 ? item.eligibleTargets[0]!.elementInstanceId : "",
+      preferredTarget?.elementInstanceId ??
+        (item.eligibleTargets.length === 1 ? item.eligibleTargets[0]!.elementInstanceId : ""),
     );
     setCommandError(null);
     setEditorInstanceId(null);
@@ -285,6 +295,32 @@ export function RosterWorkspaceRoute({
       );
   }
 
+  function openCatalogForElement(element: FleetElementReadModel) {
+    const compatibleCategories = new Set(
+      model.catalog
+        .filter((item) =>
+          item.eligibleTargets.some((target) => target.elementInstanceId === element.id),
+        )
+        .map((item) => item.category),
+    );
+    const label = element.label.toLocaleLowerCase("ru");
+    const matchingCategory = fleetCategories.find(
+      (candidate) =>
+        compatibleCategories.has(candidate) && label.includes(candidate.toLocaleLowerCase("ru")),
+    );
+    const nextCategory =
+      matchingCategory ?? (compatibleCategories.size === 1 ? [...compatibleCategories][0]! : "all");
+
+    setCatalogTargetId(element.id);
+    setSelectedTarget(element.id);
+    setCategory(nextCategory);
+    setQuery("");
+    setCatalogCollapsed(false);
+    setActiveView("catalog");
+    setAnnouncement(`Открыт каталог подходящих кораблей для ${element.label}.`);
+    requestAnimationFrame(() => document.getElementById("catalog-title")?.focus());
+  }
+
   async function changeBattlefleet(battlefleetId: string) {
     if (battlefleetId === model.roster.battlefleetId) return;
     const option = model.roster.battlefleets.find((candidate) => candidate.id === battlefleetId);
@@ -303,6 +339,7 @@ export function RosterWorkspaceRoute({
     if (!result?.battlefleetChange) return;
     setSelectedId(null);
     setSelectedTarget("");
+    setCatalogTargetId(null);
     setEditorInstanceId(null);
     setContextOrigin(null);
     setActiveView("composition");
@@ -361,7 +398,10 @@ export function RosterWorkspaceRoute({
                 : undefined
             }
             key={view}
-            onClick={() => setActiveView(view)}
+            onClick={() => {
+              if (view === "catalog") setCatalogTargetId(null);
+              setActiveView(view);
+            }}
             type="button"
           >
             {view === "catalog" ? "Каталог" : "Инспектор"}
@@ -377,7 +417,10 @@ export function RosterWorkspaceRoute({
           <button
             aria-current={resolvedActiveView === view ? "page" : undefined}
             key={view}
-            onClick={() => setActiveView(view)}
+            onClick={() => {
+              if (view === "catalog") setCatalogTargetId(null);
+              setActiveView(view);
+            }}
             type="button"
           >
             {view === "composition" ? "Состав" : view === "catalog" ? "Каталог" : "Корабль"}
@@ -468,6 +511,7 @@ export function RosterWorkspaceRoute({
           onInspect={(instance) =>
             openShipProfile(instance.name, session.editor(instance.id, instance.definitionId))
           }
+          onOpenCatalog={openCatalogForElement}
           onDrop={(definitionId, elementId) => void dropShip(definitionId, elementId)}
           onReturnToIssue={returnToIssue}
           returnTarget={issueReturnId}
@@ -611,7 +655,9 @@ function CatalogPane({
       <div className="builder-pane__header">
         <div className="builder-pane__title">
           <p className="eyebrow">{total} кораблей</p>
-          <h2 id="catalog-title">Каталог</h2>
+          <h2 id="catalog-title" tabIndex={-1}>
+            Каталог
+          </h2>
         </div>
         <button
           aria-expanded={!collapsed}
@@ -720,6 +766,7 @@ function CompositionPane({
   onDuplicate,
   onEdit,
   onInspect,
+  onOpenCatalog,
   onDrop,
   onReturnToIssue,
   returnTarget,
@@ -732,6 +779,7 @@ function CompositionPane({
   readonly onDuplicate: (instanceId: string, name: string) => void;
   readonly onEdit: (instance: RosterInstanceReadModel) => void;
   readonly onInspect: (instance: RosterInstanceReadModel) => void;
+  readonly onOpenCatalog: (element: FleetElementReadModel) => void;
   readonly onDrop: (definitionId: string, elementId: string) => void;
   readonly onReturnToIssue: () => void;
   readonly returnTarget: string | null;
@@ -858,10 +906,15 @@ function CompositionPane({
                   })}
                 </ul>
               ) : (
-                <div className="element-empty">
+                <button
+                  aria-label={`Добавить подходящий корабль в ${element.label}`}
+                  className="element-empty"
+                  onClick={() => onOpenCatalog(element)}
+                  type="button"
+                >
                   <span aria-hidden="true">＋</span>
                   <p>Добавьте подходящий корабль из каталога.</p>
-                </div>
+                </button>
               )}
             </section>
           );

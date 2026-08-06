@@ -1676,15 +1676,34 @@ button.button {
 
 .element-empty {
   display: flex;
+  width: 100%;
   min-height: 4rem;
   align-items: center;
   gap: 0.7rem;
   padding: 0.75rem;
   margin-top: 0.75rem;
   color: var(--text-secondary);
+  font: inherit;
+  text-align: left;
   background: var(--surface-subtle);
   border: 1px dashed var(--border-strong);
   border-radius: 0.4rem;
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.element-empty:hover {
+  color: var(--text-primary);
+  background: var(--surface);
+  border-color: var(--brand);
+}
+
+.element-empty:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .element-empty span {
