@@ -187,6 +187,225 @@ export function ShipCardProfile({
   }
 }
 
+export function ShipMobileProfile({
+  faction,
+  model,
+}: {
+  readonly faction: string;
+  readonly model: ShipEditorReadyReadModel;
+}) {
+  const [activeRule, setActiveRule] = useState<{
+    readonly display: string;
+    readonly kind: string;
+    readonly rule: RuleReadModel;
+    readonly trigger: HTMLButtonElement;
+  } | null>(null);
+  const template = orbatTemplateFor(faction);
+  const properties = profileRow(model, ["properties", "property"]);
+  const baseSystems = profileRow(model, ["systems", "system"]);
+  const configuredSystems =
+    model.profileRules.sections
+      .find((section) => section.id === "systems")
+      ?.rows.filter((row) => isUsefulValue(row.label)) ?? [];
+  const systems = linkedTextEntries(baseSystems, configuredSystems);
+  const weapons = uniqueWeapons(model.profileRules.weapons);
+  const hardpointOptions = uniqueWeapons(
+    model.groups.flatMap((group) =>
+      group.options.flatMap((option) =>
+        option.profile
+          ? [
+              {
+                ...option.profile,
+                hardpointWeight:
+                  option.profile.hardpointWeight ?? hardpointWeightFromLabel(group.label),
+              },
+            ]
+          : [],
+      ),
+    ),
+  );
+  const tags = uniqueText(model.card?.tags ?? [model.card?.nation, model.card?.platform]);
+
+  return (
+    <article
+      aria-label={`Мобильный профиль ${model.name}`}
+      className="ship-mobile-profile"
+      style={{ "--ship-card-accent": template.accent } as CSSProperties}
+    >
+      <header className="ship-mobile-profile__identity">
+        <div>
+          <p>{shortRole(model.card?.role)}</p>
+          <h3>{model.name}</h3>
+          {tags.length ? <small>{tags.join(" · ")}</small> : null}
+        </div>
+        <div className="ship-mobile-profile__vpr">
+          <span>VPR</span>
+          <strong>{model.victoryPoints}</strong>
+        </div>
+      </header>
+
+      <dl className="ship-mobile-profile__limits" aria-label="Ограничения корабля">
+        <div>
+          <dt>Models</dt>
+          <dd>{profileValue(model, ["models"]) || model.modelQuantity.value}</dd>
+        </div>
+        <div>
+          <dt>Escorts</dt>
+          <dd>{groupLimit(model, ["escort"])}</dd>
+        </div>
+        <div>
+          <dt>Gen HP</dt>
+          <dd>{groupLimit(model, ["generator", "gen hp"])}</dd>
+        </div>
+      </dl>
+
+      <section className="ship-mobile-profile__section">
+        <h4>Характеристики</h4>
+        <dl className="ship-mobile-profile__stats">
+          {statFields.map((stat) => (
+            <div key={stat.label}>
+              <dt>{stat.label}</dt>
+              <dd>{profileValue(model, stat.aliases) || "—"}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <div className="ship-mobile-profile__facts">
+        <section>
+          <h4>Свойства</h4>
+          <p>
+            {properties ? (
+              <RuleLinks
+                kind="Property"
+                onOpenRule={openRule}
+                rules={properties.rules ?? []}
+                text={properties.value.plainText.trim()}
+              />
+            ) : (
+              "—"
+            )}
+          </p>
+        </section>
+        <section>
+          <h4>Системы</h4>
+          <p>
+            {systems.length
+              ? systems.map((system, index) => (
+                  <span key={normalizeLabel(system.text)}>
+                    {index ? ", " : null}
+                    <RuleLinks
+                      kind="System"
+                      onOpenRule={openRule}
+                      rules={system.rules}
+                      text={system.text}
+                    />
+                  </span>
+                ))
+              : "—"}
+          </p>
+        </section>
+      </div>
+
+      <MobileWeaponList onOpenRule={openRule} title="Оружие" weapons={weapons} />
+      {hardpointOptions.length ? (
+        <MobileWeaponList
+          onOpenRule={openRule}
+          title="Опции хардпоинтов"
+          weapons={hardpointOptions}
+        />
+      ) : null}
+
+      {activeRule ? (
+        <RuleDescription
+          display={activeRule.display}
+          kind={activeRule.kind}
+          onClose={() => setActiveRule(null)}
+          rule={activeRule.rule}
+          trigger={activeRule.trigger}
+        />
+      ) : null}
+    </article>
+  );
+
+  function openRule(
+    rule: RuleReadModel,
+    display: string,
+    kind: string,
+    event: MouseEvent<HTMLButtonElement>,
+  ) {
+    setActiveRule({ display, kind, rule, trigger: event.currentTarget });
+  }
+}
+
+function MobileWeaponList({
+  onOpenRule,
+  title,
+  weapons,
+}: {
+  readonly onOpenRule: (
+    rule: RuleReadModel,
+    display: string,
+    kind: string,
+    event: MouseEvent<HTMLButtonElement>,
+  ) => void;
+  readonly title: string;
+  readonly weapons: readonly WeaponProfileReadModel[];
+}) {
+  return (
+    <section className="ship-mobile-profile__section ship-mobile-profile__weapons">
+      <h4>{title}</h4>
+      {weapons.length ? (
+        <ul>
+          {weapons.map((weapon) => (
+            <li key={weaponKey(weapon)}>
+              <header>
+                <span className="ship-mobile-profile__weapon-name">
+                  {weapon.hardpointWeight ? (
+                    <span className="ship-mobile-profile__hardpoint">
+                      <HardpointMarker weight={weapon.hardpointWeight} />
+                    </span>
+                  ) : null}
+                  <strong>{weapon.weapon}</strong>
+                </span>
+                <span className="ship-mobile-profile__arc">
+                  <small>ARC</small>
+                  <b>{weapon.arc}</b>
+                </span>
+              </header>
+              <dl className="ship-mobile-profile__ranges" aria-label="Дальность оружия">
+                <div>
+                  <dt>C</dt>
+                  <dd>{weapon.close}</dd>
+                </div>
+                <div>
+                  <dt>S</dt>
+                  <dd>{weapon.standard}</dd>
+                </div>
+                <div>
+                  <dt>E</dt>
+                  <dd>{weapon.extreme}</dd>
+                </div>
+              </dl>
+              <p className="ship-mobile-profile__qualities">
+                <span>Качества</span>
+                <RuleLinks
+                  kind="Weapon quality"
+                  onOpenRule={onOpenRule}
+                  rules={weapon.qualityRules ?? []}
+                  text={weapon.qualities || "—"}
+                />
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="ship-mobile-profile__empty">—</p>
+      )}
+    </section>
+  );
+}
+
 function WeaponTable({
   onOpenRule,
   title,

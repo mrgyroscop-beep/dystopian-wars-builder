@@ -11,7 +11,7 @@ import {
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
 import type { RuleReadModel, WeaponProfileReadModel } from "../application/rosters/profile-rules";
 import { WeaponProfiles } from "./ProfileRules";
-import { RuleDescription, RuleLinks, ShipCardProfile } from "./ShipCardProfile";
+import { RuleDescription, RuleLinks, ShipCardProfile, ShipMobileProfile } from "./ShipCardProfile";
 
 export function ShipProfileDialog({
   faction,
@@ -26,7 +26,10 @@ export function ShipProfileDialog({
 }) {
   return (
     <InspectorDialog backgroundUrl={null} card name={name} onClose={onClose}>
-      <ShipCardProfile faction={faction} model={model} />
+      <ShipMobileProfile faction={faction} model={model} />
+      <div className="profile-dialog__original-card">
+        <ShipCardProfile faction={faction} model={model} />
+      </div>
     </InspectorDialog>
   );
 }
@@ -96,7 +99,7 @@ function InspectorDialog({
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
-  const [cardView, setCardView] = useState<"read" | "fit">("read");
+  const [cardView, setCardView] = useState<"profile" | "original">("profile");
 
   useEffect(() => {
     returnFocus.current =
@@ -154,25 +157,22 @@ function InspectorDialog({
           <div>
             <p className="eyebrow">Профиль ORBAT</p>
             <h2 id={titleId}>{name}</h2>
-            {card && cardView === "read" ? (
-              <p className="profile-dialog__mobile-hint">
-                Перетаскивайте карточку, чтобы прочитать детали
-              </p>
-            ) : null}
           </div>
           <div className="profile-dialog__header-actions">
             {card ? (
               <button
                 aria-label={
-                  cardView === "read"
-                    ? "Показать карточку целиком"
-                    : "Увеличить карточку для чтения"
+                  cardView === "profile"
+                    ? "Показать оригинальную карточку"
+                    : "Показать мобильный профиль"
                 }
                 className="profile-dialog__view-toggle"
-                onClick={() => setCardView((current) => (current === "read" ? "fit" : "read"))}
+                onClick={() =>
+                  setCardView((current) => (current === "profile" ? "original" : "profile"))
+                }
                 type="button"
               >
-                {cardView === "read" ? "Целиком" : "Читать"}
+                {cardView === "profile" ? "Оригинал" : "Профиль"}
               </button>
             ) : null}
             <button
@@ -186,7 +186,7 @@ function InspectorDialog({
           </div>
         </header>
         <div
-          aria-label={card ? "Карточка корабля" : undefined}
+          aria-label={card ? "Профиль корабля" : undefined}
           className="profile-dialog__content"
           role={card ? "region" : undefined}
           tabIndex={card ? 0 : undefined}

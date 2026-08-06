@@ -4,11 +4,24 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
 import type { RuleReadModel, WeaponProfileReadModel } from "../application/rosters/profile-rules";
-import { ShipCardProfile } from "./ShipCardProfile";
+import { ShipCardProfile, ShipMobileProfile } from "./ShipCardProfile";
 
 afterEach(cleanup);
 
 describe("ShipCardProfile", () => {
+  it("renders the mobile profile as readable vertical sections", () => {
+    render(<ShipMobileProfile faction="Empire" model={model()} />);
+
+    const profile = screen.getByRole("article", {
+      name: "Мобильный профиль Akita Super Battleship",
+    });
+    expect(within(profile).getByRole("heading", { name: "Характеристики" })).toBeVisible();
+    expect(within(profile).getByText("MAS").closest("div")).toHaveTextContent("6");
+    expect(within(profile).getByRole("heading", { name: "Оружие" })).toBeVisible();
+    expect(within(profile).getByText("Odachi Gyorai Salvo")).toBeVisible();
+    expect(within(profile).getByRole("heading", { name: "Опции хардпоинтов" })).toBeVisible();
+  });
+
   it("aligns stats, renders hardpoint profiles and opens quality descriptions", async () => {
     const user = userEvent.setup();
     render(<ShipCardProfile faction="Empire" model={model()} />);

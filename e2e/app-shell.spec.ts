@@ -668,7 +668,9 @@ test("keeps the editable mobile chrome within thirty percent of the viewport", a
   expect(fixedHeight).toBeLessThanOrEqual(viewport.height * 0.3);
 });
 
-test("opens the mobile ship card at a readable pannable scale", async ({ page }) => {
+test("opens a readable mobile ship profile and keeps the original card available", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/rosters/scaffold-demo");
   const switcher = page.getByRole("navigation", { name: "Область билдера", exact: true });
@@ -677,21 +679,25 @@ test("opens the mobile ship card at a readable pannable scale", async ({ page })
   await page.getByRole("button", { name: "Показать профиль Akita Demonstrator" }).click();
 
   const dialog = page.getByRole("dialog", { name: "Akita Demonstrator" });
-  const viewport = page.getByRole("region", { name: "Карточка корабля" });
-  await expect(dialog).toHaveAttribute("data-card-view", "read");
-  const readable = await viewport.evaluate((element) => ({
+  const viewport = page.getByRole("region", { name: "Профиль корабля" });
+  await expect(dialog).toHaveAttribute("data-card-view", "profile");
+  await expect(
+    page.getByRole("article", { name: "Мобильный профиль Akita Demonstrator" }),
+  ).toBeVisible();
+  const mobile = await viewport.evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
   }));
-  expect(readable.scrollWidth).toBeGreaterThan(readable.clientWidth * 2);
+  expect(mobile.scrollWidth).toBeLessThanOrEqual(mobile.clientWidth + 1);
 
-  await page.getByRole("button", { name: "Показать карточку целиком" }).click();
-  await expect(dialog).toHaveAttribute("data-card-view", "fit");
-  const fitted = await viewport.evaluate((element) => ({
+  await page.getByRole("button", { name: "Показать оригинальную карточку" }).click();
+  await expect(dialog).toHaveAttribute("data-card-view", "original");
+  await expect(page.getByRole("article", { name: "Карточка Akita Demonstrator" })).toBeVisible();
+  const original = await viewport.evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
   }));
-  expect(fitted.scrollWidth).toBeLessThanOrEqual(fitted.clientWidth + 1);
+  expect(original.scrollWidth).toBeLessThanOrEqual(original.clientWidth + 1);
 });
 
 test("supports Arrow keys, Home and End in editor tabs", async ({ page }) => {
