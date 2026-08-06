@@ -644,6 +644,30 @@ test("returns exact focus on mobile and keeps editor chrome below the workspace 
   await expect(editOrigin).toBeFocused();
 });
 
+test("keeps the editable mobile chrome within thirty percent of the viewport", async ({ page }) => {
+  const viewport = { width: 390, height: 844 } as const;
+  await page.setViewportSize(viewport);
+  await page.goto("/rosters/scaffold-demo");
+  const switcher = page.getByRole("navigation", { name: "Область билдера", exact: true });
+  await switcher.getByRole("button", { name: "Каталог" }).click();
+  await page.getByLabel("Поиск").fill("Akita Demonstrator");
+  await page.getByRole("button", { name: /Akita Demonstrator/u }).click();
+  await page.getByRole("button", { name: "Добавить в состав" }).click();
+  await expect(page.getByText("Редактирование")).toBeAttached();
+
+  const fixedHeight = await page.evaluate(() => {
+    const switcherBox = document
+      .querySelector<HTMLElement>(".workspace-view-switcher--mobile")
+      ?.getBoundingClientRect();
+    const chromeBox = document
+      .querySelector<HTMLElement>(".ship-editor__chrome")
+      ?.getBoundingClientRect();
+    return (switcherBox?.height ?? 0) + (chromeBox?.height ?? 0);
+  });
+
+  expect(fixedHeight).toBeLessThanOrEqual(viewport.height * 0.3);
+});
+
 test("supports Arrow keys, Home and End in editor tabs", async ({ page }) => {
   await page.goto("/rosters/scaffold-demo");
   await page.getByLabel("Поиск").fill("Akita Demonstrator");

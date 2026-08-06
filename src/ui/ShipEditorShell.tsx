@@ -183,9 +183,9 @@ export function ShipEditorShell({
         </dl>
 
         <div className="ship-editor__axes" aria-label="Состояние редактора">
-          <span data-state={model.validity}>Состав: {axisLabel(model.validity)}</span>
-          <span data-state={model.persistence}>Сохранение: {axisLabel(model.persistence)}</span>
-          <span data-state={model.system}>Система: {axisLabel(model.system)}</span>
+          <EditorAxis label="Состав" value={model.validity} />
+          <EditorAxis label="Сохранение" value={model.persistence} />
+          <EditorAxis label="Система" value={model.system} />
         </div>
 
         {model.mode === "preview" ? (
@@ -559,6 +559,25 @@ function EditorGroup({
 
 function signed(value: string): string {
   return Number(value) > 0 ? `+${value}` : value;
+}
+
+function EditorAxis({ label, value }: { readonly label: string; readonly value: string }) {
+  const detail = axisLabel(value);
+  return (
+    <span data-state={value}>
+      <span aria-hidden="true" className="editor-axis__icon">
+        {axisIcon(value)}
+      </span>
+      <strong>{label}</strong>
+      <small className="editor-axis__detail">{detail}</small>
+    </span>
+  );
+}
+
+function axisIcon(value: string): string {
+  if (["valid", "saved-local", "ready"].includes(value)) return "✓";
+  if (["invalid", "save-error", "unavailable"].includes(value)) return "!";
+  return "↻";
 }
 
 function axisLabel(value: string): string {
