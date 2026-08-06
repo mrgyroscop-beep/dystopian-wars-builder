@@ -27,7 +27,13 @@ glossaryRoutes.get("/translations/:ruleId", async (context) => {
   const cacheKey = new Request(cacheUrl, { method: "GET" });
   const cache = caches.default;
   const cached = await cache.match(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    return new Response(cached.body, {
+      status: cached.status,
+      statusText: cached.statusText,
+      headers: new Headers(cached.headers),
+    });
+  }
 
   const translation = await context.env.DB.prepare(
     "SELECT source_title, title, text FROM rule_translations WHERE rule_id = ? AND language = ? AND source_hash = ?",

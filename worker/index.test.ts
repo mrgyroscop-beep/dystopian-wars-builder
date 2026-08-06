@@ -223,6 +223,14 @@ describe("Worker API", () => {
       title: "Круговой огонь",
       text: "Точный перевод.",
     });
+    const cached = await exports.default.fetch(
+      `http://example.com/api/glossary/translations/${rule.id}`,
+    );
+    expect(cached.status).toBe(200);
+    await expect(cached.json()).resolves.toMatchObject({
+      id: rule.id,
+      title: "Круговой огонь",
+    });
   });
 
   it("limits the rules assistant to five questions per minute", async () => {
