@@ -33,6 +33,7 @@ export interface ShipEditorOptionReadModel {
   readonly selectedQuantity: number;
   readonly availability: "available" | "unavailable" | "indeterminate";
   readonly reason: string | null;
+  readonly description?: string | null;
   readonly profile?: WeaponProfileReadModel | null;
 }
 
@@ -96,6 +97,17 @@ export interface ShipEditorUnavailableReadModel {
 }
 
 export type ShipEditorReadModel = ShipEditorReadyReadModel | ShipEditorUnavailableReadModel;
+
+export interface FleetDoctrineReadModel {
+  readonly ownerInstanceId: string;
+  readonly groups: readonly ShipEditorGroupReadModel[];
+}
+
+export interface FleetDoctrineCommand {
+  readonly type: "set-fleet-doctrine";
+  readonly instanceId: string;
+  readonly optionId: string;
+}
 
 export type ShipEditorCommand =
   | {
@@ -278,6 +290,84 @@ export function applyShipEditorCommand(
       "Каталог не позволяет безопасно проверить эту конфигурацию.",
     );
   return candidate;
+}
+
+export function projectFleetDoctrine(
+  snapshot: RosterSnapshot,
+  catalog: DomainCatalog,
+): FleetDoctrineReadModel | null {
+  const owner = snapshot.rootInstanceIds
+    .map((id) => snapshot.instances[id])
+    .find(
+      (instance) => instance && catalog.entities[instance.definitionId]?.kind === "Battlefleet",
+    );
+  if (!owner) return null;
+  const placements = fleetDoctrinePlacements(catalog, owner.definitionId);
+  const options = placements.flatMap((placement) => {
+    const definition = placement.definitionId ? catalog.entities[placement.definitionId] : null;
+    if (!definition) return [];
+    const selected = Object.values(snapshot.instances).some(
+      (instance) =>
+        instance.definitionId === definition.id && instance.forceInstanceId === owner.id,
+    );
+    return [
+      {
+        id: definition.id,
+        label: definition.label.plainText,
+        kind: definition.kind,
+        costLabel: optionCostLabel(catalog, definition, placement),
+        selectedQuantity: selected ? 1 : 0,
+        availability: "available" as const,
+        reason: null,
+        description: optionDescription(catalog, definition),
+      },
+    ];
+  });
+  if (!options.length) return null;
+  return {
+    ownerInstanceId: owner.id,
+    groups: [
+      {
+        id: `fleet-doctrine:${owner.definitionId}`,
+        label: "Доктрина флота",
+        help: "Выберите одну доктрину для всего Battlefleet.",
+        scope: "fleet",
+        control: "exclusive",
+        minimum: 0,
+        maximum: 1,
+        options,
+      },
+    ],
+  };
+}
+
+export function applyFleetDoctrineCommand(
+  snapshot: RosterSnapshot,
+  catalog: DomainCatalog,
+  command: FleetDoctrineCommand,
+  createId: () => string,
+): RosterSnapshot {
+  const owner = snapshot.instances[command.instanceId];
+  if (!owner || catalog.entities[owner.definitionId]?.kind !== "Battlefleet")
+    throw new ShipEditorCommandError("UNKNOWN_INSTANCE", "Battlefleet не найден.");
+  const option = fleetDoctrinePlacements(catalog, owner.definitionId).find(
+    (placement) => placement.definitionId === command.optionId,
+  );
+  if (!option?.definitionId)
+    throw new ShipEditorCommandError("UNKNOWN_OPTION", "Доктрина недоступна для этого флота.");
+  const doctrineIds = new Set(
+    fleetDoctrinePlacements(catalog, owner.definitionId).flatMap((placement) =>
+      placement.definitionId ? [placement.definitionId] : [],
+    ),
+  );
+  const instances = { ...snapshot.instances };
+  for (const instance of Object.values(instances)) {
+    if (instance.forceInstanceId === owner.id && doctrineIds.has(instance.definitionId))
+      delete instances[instance.id];
+  }
+  const id = freshId(instances, createId);
+  instances[id] = selection(id, option.definitionId, null, null, owner.id, owner.id, 1);
+  return { ...snapshot, instances };
 }
 
 export function projectShipEditor(
@@ -572,6 +662,7 @@ function projectGroup(
               ? null
               : (placement?.overlay.attributes["editor.unavailableReason"] ??
                 availabilityReason(availability?.reasonCodes ?? [])),
+          description: optionDescription(catalog, definition ?? null),
           profile: projectWeaponDefinition(catalog, definition ?? null),
         },
       ];
@@ -611,10 +702,69 @@ function projectStandaloneGroup(
         selectedQuantity: selected,
         availability: "available",
         reason: null,
+        description: optionDescription(catalog, definition ?? null),
         profile: projectWeaponDefinition(catalog, definition ?? null),
       },
     ],
   };
+}
+
+function optionDescription(catalog: DomainCatalog, definition: DomainEntity | null): string | null {
+  if (!definition) return null;
+  const descriptions = [
+    definition.description?.plainText.trim() ?? "",
+    ...definition.ruleIds.map((id) => {
+      const rule = catalog.entities[id];
+      return rule?.kind === "Rule" ? (rule.description?.plainText.trim() ?? "") : "";
+    }),
+  ].filter((value, index, values) => Boolean(value) && values.indexOf(value) === index);
+  return descriptions.length ? descriptions.join("\n\n") : null;
+}
+
+function fleetDoctrinePlacements(
+  catalog: DomainCatalog,
+  battlefleetDefinitionId: string,
+): Placement[] {
+  const direct = slotsForDefinition(catalog, battlefleetDefinitionId)
+    .filter((slot) => slot.kind === "Doctrine")
+    .flatMap((slot) => directSlotOptionPlacements(catalog, slot));
+  const doctrineCategoryIds = new Set(
+    Object.values(catalog.entities)
+      .filter(
+        (entity) =>
+          entity.kind === "Category" && /fleet\s+doctrines?/iu.test(entity.label.plainText),
+      )
+      .map((entity) => entity.id),
+  );
+  const containerIds = new Set(
+    Object.values(catalog.entities)
+      .filter(
+        (entity) =>
+          entity.kind === "Doctrine" ||
+          (entity.kind === "Option" &&
+            (entity.categoryIds.some((id) => doctrineCategoryIds.has(id)) ||
+              /fleet\s+doctrines?/iu.test(entity.label.plainText))),
+      )
+      .map((entity) => entity.id),
+  );
+  const categorized = Object.values(catalog.placements).filter((placement) => {
+    if (!containerIds.has(placement.ownerId) || !placement.definitionId) return false;
+    const definition = catalog.entities[placement.definitionId];
+    return Boolean(
+      definition &&
+      ["Option", "Doctrine"].includes(definition.kind) &&
+      !/fleet\s+doctrines?/iu.test(definition.label.plainText) &&
+      (definition.ruleIds.length > 0 || definition.description?.plainText.trim()),
+    );
+  });
+  const unique = new Map<string, Placement>();
+  for (const placement of [...direct, ...categorized].sort(
+    (left, right) => left.order - right.order || left.id.localeCompare(right.id),
+  )) {
+    if (placement.definitionId && !unique.has(placement.definitionId))
+      unique.set(placement.definitionId, placement);
+  }
+  return [...unique.values()];
 }
 
 function resolveGroupContext(

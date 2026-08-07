@@ -217,6 +217,13 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
           "demo.catalog": "hidden",
         },
         costIds: points === 0 ? [] : [pointCostId],
+        ...(kind === "Doctrine"
+          ? {
+              description: presentation(
+                "Корабли Kagutsuchi Battlefleet получают единый оперативный приказ адмирала.",
+              ),
+            }
+          : {}),
         fields: kind === "Weapon" ? weaponFields(id, label) : [],
         ruleIds:
           kind === "Weapon"

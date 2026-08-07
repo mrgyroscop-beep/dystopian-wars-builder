@@ -88,8 +88,7 @@ describe("ShipEditorShell", () => {
     expect(document.body.textContent).not.toMatch(/opaque-slot|DEMO-/u);
   });
 
-  it("renders fixed and variable Model quantity and opens fleet-level Doctrine controls", async () => {
-    const user = userEvent.setup();
+  it("renders variable Model quantity without duplicating fleet-level Doctrine controls", () => {
     const onCommand = vi.fn();
     const variable = {
       ...editorModel("akita"),
@@ -117,8 +116,7 @@ describe("ShipEditorShell", () => {
       { type: "set-model-quantity", instanceId: "model-instance", quantity: 2 },
       expect.any(String),
     );
-    await user.click(screen.getByRole("button", { name: "Настроить доктрину" }));
-    expect(screen.getByRole("group", { name: /Доктрина флота/u })).toBeInTheDocument();
+    expect(screen.queryByText("Доктрина флота")).not.toBeInTheDocument();
   });
 
   it("renders an honest unsupported-data state", () => {

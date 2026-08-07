@@ -62,6 +62,34 @@ describe("roster workspace application boundary", () => {
     expect(fixture.saveCalls).toHaveLength(firstSaveCount);
   });
 
+  it("projects and saves the fleet doctrine directly on the Battlefleet root", async () => {
+    const fixture = harness(["doctrine-selection"]);
+    const session = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
+    const doctrine = session.model.doctrine;
+
+    expect(doctrine).not.toBeNull();
+    expect(doctrine!.groups[0]).toMatchObject({
+      label: "Доктрина флота",
+      minimum: 0,
+      maximum: 1,
+    });
+    expect(doctrine!.groups[0]!.options[0]).toMatchObject({
+      label: "Kagutsuchi Doctrine",
+      selectedQuantity: 0,
+      description: "Корабли Kagutsuchi Battlefleet получают единый оперативный приказ адмирала.",
+    });
+
+    const selected = await session.execute({
+      type: "set-fleet-doctrine",
+      instanceId: doctrine!.ownerInstanceId,
+      optionId: doctrine!.groups[0]!.options[0]!.id,
+    });
+
+    expect(selected.doctrine!.groups[0]!.options[0]!.selectedQuantity).toBe(1);
+    const reopened = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
+    expect(reopened.model.doctrine!.groups[0]!.options[0]!.selectedQuantity).toBe(1);
+  });
+
   it("uses direct slot options and repairs previously saved nested profile selections", async () => {
     const fixture = harness(["unit-1", "model-1"]);
     const baseCatalog = createDemonstrationFleetCatalog();

@@ -2551,6 +2551,241 @@ button.button {
   font-weight: 750;
 }
 
+.fleet-doctrine {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--accent);
+  border-radius: 0.55rem;
+  overflow: hidden;
+}
+
+.fleet-doctrine__toggle {
+  display: grid;
+  width: 100%;
+  min-height: 4.25rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  color: var(--text-primary);
+  text-align: left;
+  background: var(--surface);
+  border: 0;
+  cursor: pointer;
+}
+
+.fleet-doctrine__toggle:hover {
+  background: var(--surface-subtle);
+}
+
+.fleet-doctrine__mark {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  color: var(--surface);
+  background: var(--brand);
+}
+
+.fleet-doctrine__copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.fleet-doctrine__copy .eyebrow {
+  margin: 0;
+}
+
+.fleet-doctrine__copy strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+}
+
+.fleet-doctrine__copy small {
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fleet-doctrine__chevron {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  color: var(--brand);
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.fleet-doctrine__content {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  background: var(--surface-subtle);
+  border-top: 1px solid var(--border);
+}
+
+.fleet-doctrine__group {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.fleet-doctrine__group legend {
+  padding: 0;
+  font-weight: 800;
+}
+
+.fleet-doctrine__group > p {
+  margin: 0.2rem 0 0.55rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.fleet-doctrine__options {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.fleet-doctrine__option {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+.fleet-doctrine__option[data-selected="true"] {
+  background: var(--surface-selected);
+  border-color: var(--brand);
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.fleet-doctrine__option[data-availability="unavailable"],
+.fleet-doctrine__option[data-availability="indeterminate"] {
+  color: var(--error-text);
+  background: var(--error-tint);
+}
+
+.fleet-doctrine__option label {
+  display: grid;
+  min-width: 0;
+  min-height: 3.2rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  cursor: pointer;
+}
+
+.fleet-doctrine__option label > span {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.fleet-doctrine__option label small {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+}
+
+.fleet-doctrine__option input[type="radio"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: 0;
+  accent-color: var(--brand);
+}
+
+.fleet-doctrine__inspect {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-right: 0.35rem;
+  place-items: center;
+  color: var(--brand);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.fleet-doctrine__inspect svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.doctrine-dialog-backdrop {
+  z-index: 130;
+}
+
+.doctrine-dialog__dismiss {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.doctrine-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(38rem, 100%);
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 2px solid var(--brand);
+  border-radius: 0.55rem;
+  box-shadow: 0 24px 70px rgb(4 18 24 / 48%);
+  overflow: auto;
+}
+
+.doctrine-dialog > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  color: var(--surface);
+  background: var(--brand);
+  border-bottom: 3px solid var(--accent);
+}
+
+.doctrine-dialog h2,
+.doctrine-dialog header p {
+  margin: 0;
+}
+
+.doctrine-dialog > header button {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  color: var(--brand);
+  background: var(--surface);
+  border: 0;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.doctrine-dialog__description {
+  padding: 1.25rem;
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
 .element-state {
   display: inline-flex;
   min-height: 2rem;

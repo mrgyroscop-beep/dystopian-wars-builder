@@ -375,6 +375,41 @@ describe("application routes", () => {
     );
   });
 
+  it("shows doctrine as the first accordion in composition and opens its description", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    const { container } = renderRoute("/rosters/scaffold-demo");
+
+    const toggle = await screen.findByRole("button", { name: /Доктрина флота.*Не выбрана/u });
+    const doctrine = container.querySelector(".fleet-doctrine")!;
+    const firstFleetElement = container.querySelector(".fleet-element")!;
+    expect(
+      doctrine.compareDocumentPosition(firstFleetElement) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const option = screen.getByRole("radio", { name: /Kagutsuchi Doctrine/u });
+    expect(option).not.toBeChecked();
+
+    await user.click(
+      screen.getByRole("button", { name: "Показать описание доктрины Kagutsuchi Doctrine" }),
+    );
+    expect(screen.getByRole("dialog", { name: "Kagutsuchi Doctrine" })).toHaveTextContent(
+      "единый оперативный приказ адмирала",
+    );
+    const closeDescription = screen.getByRole("button", { name: "Закрыть описание доктрины" });
+    expect(closeDescription).toHaveFocus();
+    await user.tab();
+    expect(closeDescription).toHaveFocus();
+    await user.click(closeDescription);
+
+    await user.click(option);
+    expect(await screen.findByRole("radio", { name: /Kagutsuchi Doctrine/u })).toBeChecked();
+    expect(toggle).toHaveAccessibleName(/Доктрина флота.*Kagutsuchi Doctrine/u);
+  });
+
   it("uses compact icon actions with accessible names for roster ships", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();

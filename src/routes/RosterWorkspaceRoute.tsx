@@ -18,12 +18,14 @@ import {
 } from "../application/rosters/workspace";
 import {
   ShipEditorCommandError,
+  type FleetDoctrineCommand,
   type ShipEditorCommand,
   type ShipEditorReadModel,
   type ShipEditorReadyReadModel,
 } from "../application/rosters/ship-editor";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 import { EyeIcon } from "../ui/EyeIcon";
+import { FleetDoctrinePanel } from "../ui/FleetDoctrine";
 import { ShipProfileDialog } from "../ui/ProfileDialog";
 import { ShipEditorShell } from "../ui/ShipEditorShell";
 
@@ -488,6 +490,7 @@ export function RosterWorkspaceRoute({
             model.catalog.find((candidate) => candidate.id === draggedDefinitionId) ?? null
           }
           model={model}
+          onDoctrineCommand={(command, message) => void execute(command, message)}
           onDelete={(instanceId, name, elementId) =>
             void execute(
               { type: "delete", instanceId },
@@ -763,6 +766,7 @@ function CompositionPane({
   draggedItem,
   model,
   onDelete,
+  onDoctrineCommand,
   onDuplicate,
   onEdit,
   onInspect,
@@ -776,6 +780,7 @@ function CompositionPane({
   readonly draggedItem: CatalogItemReadModel | null;
   readonly model: RosterWorkspaceReadModel;
   readonly onDelete: (instanceId: string, name: string, elementId: string) => void;
+  readonly onDoctrineCommand: (command: FleetDoctrineCommand, message: string) => void;
   readonly onDuplicate: (instanceId: string, name: string) => void;
   readonly onEdit: (instance: RosterInstanceReadModel) => void;
   readonly onInspect: (instance: RosterInstanceReadModel) => void;
@@ -792,6 +797,9 @@ function CompositionPane({
         <h2 id="composition-title">Состав</h2>
       </div>
       <div className="element-list">
+        {model.doctrine ? (
+          <FleetDoctrinePanel busy={busy} doctrine={model.doctrine} onCommand={onDoctrineCommand} />
+        ) : null}
         {model.elements.map((element) => {
           const isDropTarget = Boolean(
             draggedItem?.eligibleTargets.some((target) => target.elementInstanceId === element.id),

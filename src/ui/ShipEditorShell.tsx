@@ -48,7 +48,6 @@ export function ShipEditorShell({
   readonly ruleId?: string | null;
 }) {
   const [tab, setTab] = useState<EditorTab>(ruleId ? "rules" : "configuration");
-  const [fleetEditorOpen, setFleetEditorOpen] = useState(false);
   const [openGroupId, setOpenGroupId] = useState<ShipEditorGroupId | null>(() =>
     model.dataState === "ready" ? (model.groups[0]?.id ?? null) : null,
   );
@@ -286,50 +285,6 @@ export function ShipEditorShell({
             </dl>
           </section>
 
-          {model.fleetGroups.length ? (
-            <>
-              <section className="doctrine-navigation" id="fleet-doctrine">
-                <div>
-                  <h4>Доктрина флота</h4>
-                  <p>Доктрина принадлежит Battlefleet и настраивается на уровне состава.</p>
-                </div>
-                <button
-                  aria-controls="fleet-doctrine-editor"
-                  aria-expanded={fleetEditorOpen}
-                  onClick={() => setFleetEditorOpen((value) => !value)}
-                  type="button"
-                >
-                  {fleetEditorOpen ? "Закрыть настройки" : "Настроить доктрину"}
-                </button>
-              </section>
-
-              {fleetEditorOpen ? (
-                <section
-                  aria-label="Настройка доктрины флота"
-                  className="fleet-doctrine-editor editor-groups"
-                  id="fleet-doctrine-editor"
-                >
-                  {model.fleetGroups.map((group, groupIndex) => (
-                    <EditorGroup
-                      busy={busy}
-                      domId={`ship-editor-group-fleet-${groupIndex}`}
-                      group={group}
-                      key={group.id}
-                      model={model}
-                      nameToken={`fleet-${groupIndex}`}
-                      onCommand={onCommand}
-                      onInspectWeapon={setInspectedWeapon}
-                      onToggle={() =>
-                        setOpenGroupId((current) => (current === group.id ? null : group.id))
-                      }
-                      open={openGroupId === group.id}
-                    />
-                  ))}
-                </section>
-              ) : null}
-            </>
-          ) : null}
-
           {model.problems.length ? (
             <section className="editor-problems" aria-labelledby={`${tabsId}-problems-title`}>
               <h4 id={`${tabsId}-problems-title`}>Что исправить</h4>
@@ -401,8 +356,7 @@ function OptionCopy({ option }: { readonly option: ShipEditorOptionReadModel }) 
 function groupDomId(model: ShipEditorReadyReadModel, groupId: ShipEditorGroupId): string {
   const unitIndex = model.groups.findIndex((group) => group.id === groupId);
   if (unitIndex >= 0) return `ship-editor-group-unit-${unitIndex}`;
-  const fleetIndex = model.fleetGroups.findIndex((group) => group.id === groupId);
-  return fleetIndex >= 0 ? `ship-editor-group-fleet-${fleetIndex}` : "ship-editor-title";
+  return "ship-editor-title";
 }
 
 function EditorGroup({

@@ -16,11 +16,15 @@ import type {
   StoredRoster,
 } from "./create-roster";
 import {
+  applyFleetDoctrineCommand,
   applyShipEditorCommand,
   directSlotOptionPlacements,
   isShipEditorDefinition,
   materializeShipStructure,
+  projectFleetDoctrine,
   projectShipEditor,
+  type FleetDoctrineReadModel,
+  type FleetDoctrineCommand,
   type ShipEditorCommand,
   type ShipEditorReadModel,
 } from "./ship-editor";
@@ -123,6 +127,7 @@ export interface RosterWorkspaceReadModel {
     readonly availabilityLabel: string;
   };
   readonly catalog: readonly CatalogItemReadModel[];
+  readonly doctrine: FleetDoctrineReadModel | null;
   readonly elements: readonly FleetElementReadModel[];
   readonly problems: readonly WorkspaceProblemReadModel[];
 }
@@ -136,6 +141,7 @@ export type RosterWorkspaceCommand =
   | { readonly type: "duplicate"; readonly instanceId: string }
   | { readonly type: "delete"; readonly instanceId: string }
   | { readonly type: "change-battlefleet"; readonly battlefleetId: string }
+  | FleetDoctrineCommand
   | ShipEditorCommand;
 
 export interface RosterCatalogGateway {
@@ -584,6 +590,11 @@ function applyCommand(
       "UNKNOWN_BATTLEFLEET",
       "Смена Battlefleet должна выполняться на уровне рабочей сессии.",
     );
+  if (command.type === "set-fleet-doctrine")
+    return {
+      snapshot: applyFleetDoctrineCommand(snapshot, catalog, command, createId),
+      createdInstanceId: null,
+    };
   if (
     command.type === "replace-exclusive" ||
     command.type === "set-choice-quantity" ||
@@ -758,6 +769,7 @@ function projectWorkspace(
             : "Каталог недоступен",
     },
     catalog: catalogItems,
+    doctrine: projectFleetDoctrine(stored.roster, catalog),
     elements,
     problems: problems.sort((left, right) => left.id.localeCompare(right.id)),
   };
