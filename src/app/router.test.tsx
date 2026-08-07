@@ -378,9 +378,12 @@ describe("application routes", () => {
   });
 
   it("renders a deep roster route without loading the library first", async () => {
-    renderRoute("/rosters/scaffold-demo");
+    const { container } = renderRoute("/rosters/scaffold-demo");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
+    expect(container.querySelector(".app-shell--workspace")).toBeInTheDocument();
+    expect(container.querySelector(".main-content--workspace")).toBeInTheDocument();
+    expect(container.querySelector(".site-footer")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Состав" })).toBeVisible();
     expect(screen.getByText("0 выбрано · 1 мин. · 3 макс.")).toHaveAttribute(
       "aria-label",

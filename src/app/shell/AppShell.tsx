@@ -30,6 +30,8 @@ export function AppShell({ authGateway, glossaryGateway }: AppShellProps) {
 function AppShellContent({ authGateway }: { readonly authGateway: AuthGateway }) {
   const location = useLocation();
   const feedbackSource = safeScreen(location.pathname);
+  const isRosterWorkspace =
+    location.pathname.startsWith("/rosters/") && location.pathname !== "/rosters/new";
   const [accountUser, setAccountUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
@@ -56,7 +58,7 @@ function AppShellContent({ authGateway }: { readonly authGateway: AuthGateway })
 
   const accountLabel = accountUser?.displayName ?? "Войти";
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isRosterWorkspace ? " app-shell--workspace" : ""}`}>
       <a className="skip-link" href="#main-content">
         Перейти к содержимому
       </a>
@@ -108,13 +110,19 @@ function AppShellContent({ authGateway }: { readonly authGateway: AuthGateway })
         </div>
       </header>
 
-      <main className="main-content" id="main-content" tabIndex={-1}>
+      <main
+        className={`main-content${isRosterWorkspace ? " main-content--workspace" : ""}`}
+        id="main-content"
+        tabIndex={-1}
+      >
         <Outlet />
       </main>
 
-      <footer className="site-footer">
-        <p>Dystopian Wars 4.0 · локальные флоты доступны без регистрации</p>
-      </footer>
+      {isRosterWorkspace ? null : (
+        <footer className="site-footer">
+          <p>Dystopian Wars 4.0 · локальные флоты доступны без регистрации</p>
+        </footer>
+      )}
     </div>
   );
 }
