@@ -78,6 +78,7 @@ export interface FleetElementReadModel {
   readonly definitionId: string;
   readonly label: string;
   readonly minimum: number;
+  readonly maximum: number | null;
   readonly instances: readonly RosterInstanceReadModel[];
 }
 
@@ -880,10 +881,36 @@ function projectElements(
           requirement?.label ||
           "Element",
         minimum: requirement?.minimum ?? 0,
+        maximum: fleetElementMaximum(element, catalog),
         instances: children,
       };
     })
     .sort((left, right) => left.label.localeCompare(right.label, "ru"));
+}
+
+function fleetElementMaximum(
+  element: RosterSelectionInstance,
+  catalog: DomainCatalog,
+): number | null {
+  const definition = catalog.entities[element.definitionId];
+  const placement = element.placementId ? catalog.placements[element.placementId] : null;
+  const constraintIds = new Set([
+    ...(definition?.constraintIds ?? []),
+    ...(placement?.overlay.constraintIds ?? []),
+  ]);
+  const maxima = [...constraintIds].flatMap((id) => {
+    const constraint = catalog.entities[id];
+    if (
+      constraint?.kind !== "Constraint" ||
+      constraint.expression.field !== "selections" ||
+      constraint.expression.operator !== "max" ||
+      !constraint.expression.evaluable
+    )
+      return [];
+    const value = Number(constraint.expression.value);
+    return Number.isSafeInteger(value) && value >= 0 ? [value] : [];
+  });
+  return maxima.length ? Math.min(...maxima) : null;
 }
 
 function projectSelectedLoadout(

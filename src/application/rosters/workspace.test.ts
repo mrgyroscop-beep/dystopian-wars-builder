@@ -43,6 +43,20 @@ describe("roster workspace application boundary", () => {
       "Flagship Element",
       "Line Element",
     ]);
+    expect(first!.model.elements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          definitionId: "demo-flagship",
+          minimum: 1,
+          maximum: 3,
+        }),
+        expect.objectContaining({
+          definitionId: "demo-line",
+          minimum: 1,
+          maximum: 6,
+        }),
+      ]),
+    );
     expect(Object.keys(savedAfterFirstOpen.roster.instances)).toHaveLength(3);
     expect(second!.model.elements).toEqual(first!.model.elements);
     expect(fixture.saveCalls).toHaveLength(firstSaveCount);

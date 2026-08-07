@@ -816,8 +816,11 @@ function CompositionPane({
               <header>
                 <div>
                   <h3 id={`fleet-element-title-${safeId(element.id)}`}>{element.label}</h3>
-                  <p>
-                    {element.instances.length} / {element.minimum} обязательно
+                  <p
+                    aria-label={`Выбрано ${element.instances.length}, минимум ${element.minimum}, максимум ${element.maximum ?? "не ограничен"}`}
+                  >
+                    {element.instances.length} выбрано · {element.minimum} мин. ·{" "}
+                    {element.maximum ?? "—"} макс.
                   </p>
                 </div>
                 <span

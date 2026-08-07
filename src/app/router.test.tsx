@@ -313,6 +313,14 @@ describe("application routes", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Состав" })).toBeVisible();
+    expect(screen.getByText("0 выбрано · 1 мин. · 3 макс.")).toHaveAttribute(
+      "aria-label",
+      "Выбрано 0, минимум 1, максимум 3",
+    );
+    expect(screen.getByText("0 выбрано · 1 мин. · 6 макс.")).toHaveAttribute(
+      "aria-label",
+      "Выбрано 0, минимум 1, максимум 6",
+    );
   });
 
   it("uses compact icon actions with accessible names for roster ships", async () => {

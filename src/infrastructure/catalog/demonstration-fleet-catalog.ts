@@ -43,6 +43,10 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
   const crownBattlefleetId = entityId("demo-crown-vanguard");
   const commandElementId = entityId("demo-command");
   const patrolElementId = entityId("demo-patrol");
+  const flagshipMaximumId = entityId("demo-flagship-maximum");
+  const lineMaximumId = entityId("demo-line-maximum");
+  const commandMaximumId = entityId("demo-command-maximum");
+  const patrolMaximumId = entityId("demo-patrol-maximum");
   const akitaDiscountModifierId = entityId("demo-akita-escort-discount-modifier");
   const akitaRequirementModifierId = entityId("demo-akita-kagutsuchi-requirement");
   const categories = categoryNames.map((name) =>
@@ -51,11 +55,43 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
   const entities: DomainEntity[] = [
     entity("Battlefleet", empireBattlefleetId, "Harbour Patrol"),
     entity("Battlefleet", empireLineBattlefleetId, "Line Squadron"),
-    entity("BattlefleetElement", flagshipElementId, "Flagship Element"),
-    entity("BattlefleetElement", lineElementId, "Line Element"),
+    entity("BattlefleetElement", flagshipElementId, "Flagship Element", {
+      constraintIds: [flagshipMaximumId],
+    }),
+    entity("BattlefleetElement", lineElementId, "Line Element", {
+      constraintIds: [lineMaximumId],
+    }),
     entity("Battlefleet", crownBattlefleetId, "Vanguard Exercise"),
-    entity("BattlefleetElement", commandElementId, "Command Element"),
-    entity("BattlefleetElement", patrolElementId, "Patrol Element"),
+    entity("BattlefleetElement", commandElementId, "Command Element", {
+      constraintIds: [commandMaximumId],
+    }),
+    entity("BattlefleetElement", patrolElementId, "Patrol Element", {
+      constraintIds: [patrolMaximumId],
+    }),
+    expressionEntity("Constraint", flagshipMaximumId, {
+      operator: "max",
+      field: "selections",
+      scope: "parent",
+      value: "3",
+    }),
+    expressionEntity("Constraint", lineMaximumId, {
+      operator: "max",
+      field: "selections",
+      scope: "parent",
+      value: "6",
+    }),
+    expressionEntity("Constraint", commandMaximumId, {
+      operator: "max",
+      field: "selections",
+      scope: "parent",
+      value: "3",
+    }),
+    expressionEntity("Constraint", patrolMaximumId, {
+      operator: "max",
+      field: "selections",
+      scope: "parent",
+      value: "4",
+    }),
     entity("CostType", pointsTypeId, "Points"),
     entity("CostType", victoryPointsTypeId, "VP"),
     ...categories,
