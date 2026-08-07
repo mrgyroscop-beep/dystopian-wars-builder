@@ -187,16 +187,15 @@ describe("profile and rules components", () => {
                 text: "Original rule.",
                 factions: [],
                 page: 32,
+                translation: {
+                  id: "R1",
+                  language: "ru",
+                  sourceTitle: "Torrent",
+                  title: "Шквал",
+                  text: "Русский текст правила.",
+                },
               },
             ]),
-          translate: () =>
-            Promise.resolve({
-              id: "R1",
-              language: "ru",
-              sourceTitle: "Torrent",
-              title: "Шквал",
-              text: "Русский текст правила.",
-            }),
         }}
       >
         <RuleSheet model={source} onBack={vi.fn()} onOpenRule={vi.fn()} ruleId="rule-torrent-a" />

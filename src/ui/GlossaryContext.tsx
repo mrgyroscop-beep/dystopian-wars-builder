@@ -100,8 +100,8 @@ export function useRuleTranslation(
       .list(controller.signal)
       .then((rules) => findRule(rules, title))
       .then((rule) => {
-        if (!rule) throw new Error("Термин не найден в текстовом глоссарии.");
-        return gateway.translate(rule.id, controller.signal);
+        if (!rule) throw new Error("Термин не найден в сохранённом русском глоссарии.");
+        return rule.translation;
       })
       .then(
         (translation) => {
@@ -114,7 +114,7 @@ export function useRuleTranslation(
               key,
               translation: null,
               loading: false,
-              error: error instanceof Error ? error.message : "Перевод сейчас недоступен.",
+              error: error instanceof Error ? error.message : "Сохранённый перевод недоступен.",
             });
         },
       );

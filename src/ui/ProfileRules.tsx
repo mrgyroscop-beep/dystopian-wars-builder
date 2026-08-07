@@ -269,7 +269,7 @@ export function RuleSheet({
       </div>
       {localized.language === "ru" && localized.loading ? (
         <p aria-live="polite" className="rule-translation-state">
-          Переводим правило…
+          Загружаем сохранённый перевод…
         </p>
       ) : localized.language === "ru" && localized.translation ? (
         <div className="structured-text">

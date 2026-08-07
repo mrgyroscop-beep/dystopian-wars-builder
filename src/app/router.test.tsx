@@ -105,6 +105,13 @@ const testDependencies = {
           text: "The weapon can contribute from every arc.",
           factions: ["Empire"],
           page: 26,
+          translation: {
+            id: "R1",
+            language: "ru" as const,
+            sourceTitle: "All Around",
+            title: "Круговой огонь",
+            text: "Оружие может участвовать в атаке из любой огневой дуги.",
+          },
         },
         {
           id: "R2",
@@ -112,19 +119,29 @@ const testDependencies = {
           text: "Resolve several attacks as one torrent.",
           factions: ["Empire", "Union"],
           page: 32,
+          translation: {
+            id: "R2",
+            language: "ru" as const,
+            sourceTitle: "Torrent",
+            title: "Шквал",
+            text: "Проведите несколько атак как один шквал.",
+          },
+        },
+        {
+          id: "R3",
+          title: "Kagutsuchi Doctrine",
+          text: "Ships receive one coordinated admiral order.",
+          factions: ["Empire"],
+          page: null,
+          translation: {
+            id: "R3",
+            language: "ru" as const,
+            sourceTitle: "Kagutsuchi Doctrine",
+            title: "Доктрина Кагуцути",
+            text: "Корабли получают единый оперативный приказ адмирала.",
+          },
         },
       ]),
-    translate: (ruleId: string) =>
-      Promise.resolve({
-        id: ruleId,
-        language: "ru" as const,
-        sourceTitle: ruleId === "R1" ? "All Around" : "Torrent",
-        title: ruleId === "R1" ? "Круговой огонь" : "Шквал",
-        text:
-          ruleId === "R1"
-            ? "Оружие может участвовать в атаке из любой огневой дуги."
-            : "Проведите несколько атак как один шквал.",
-      }),
   },
   healthGateway: { read: readHealth } satisfies HealthGateway,
   rosterCreation,
@@ -390,14 +407,14 @@ describe("application routes", () => {
 
     await user.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    const option = screen.getByRole("radio", { name: /Kagutsuchi Doctrine/u });
+    const option = await screen.findByRole("radio", { name: "Доктрина Кагуцути" });
     expect(option).not.toBeChecked();
 
     await user.click(
-      screen.getByRole("button", { name: "Показать описание доктрины Kagutsuchi Doctrine" }),
+      screen.getByRole("button", { name: "Показать описание доктрины Доктрина Кагуцути" }),
     );
-    expect(screen.getByRole("dialog", { name: "Kagutsuchi Doctrine" })).toHaveTextContent(
-      "единый оперативный приказ адмирала",
+    expect(await screen.findByRole("dialog", { name: "Доктрина Кагуцути" })).toHaveTextContent(
+      "Корабли получают единый оперативный приказ адмирала.",
     );
     const closeDescription = screen.getByRole("button", { name: "Закрыть описание доктрины" });
     expect(closeDescription).toHaveFocus();
@@ -406,8 +423,8 @@ describe("application routes", () => {
     await user.click(closeDescription);
 
     await user.click(option);
-    expect(await screen.findByRole("radio", { name: /Kagutsuchi Doctrine/u })).toBeChecked();
-    expect(toggle).toHaveAccessibleName(/Доктрина флота.*Kagutsuchi Doctrine/u);
+    expect(await screen.findByRole("radio", { name: "Доктрина Кагуцути" })).toBeChecked();
+    expect(toggle).toHaveAccessibleName(/Доктрина флота.*Доктрина Кагуцути/u);
   });
 
   it("uses compact icon actions with accessible names for roster ships", async () => {

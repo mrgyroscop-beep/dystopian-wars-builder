@@ -1,41 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 
-import type { GlossaryRule, RuleTranslation } from "../application/glossary/glossary-contract";
+import type { GlossaryRule } from "../application/glossary/glossary-contract";
 import { translatedRuleTitle } from "../application/glossary/rule-title-translations";
 import { RuleLanguageToggle, useGlossary } from "../ui/GlossaryContext";
 
 export function GlossaryPanel() {
   const { gateway, language } = useGlossary();
   const [rules, setRules] = useState<readonly GlossaryRule[]>([]);
-  const [translations, setTranslations] = useState<ReadonlyMap<string, RuleTranslation>>(
-    () => new Map(),
-  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [translationError, setTranslationError] = useState<{
-    readonly id: string;
-    readonly message: string;
-  } | null>(null);
   const normalizedSearch = normalize(search);
   const visibleRules = useMemo(
     () =>
       rules.filter((rule) => {
         if (!normalizedSearch) return true;
-        const translated = translations.get(rule.id);
         return normalize(
-          `${rule.title} ${translated?.title ?? ""} ${translatedRuleTitle(rule.title) ?? ""}`,
+          `${rule.title} ${rule.translation.title} ${translatedRuleTitle(rule.title) ?? ""}`,
         ).includes(normalizedSearch);
       }),
-    [normalizedSearch, rules, translations],
+    [normalizedSearch, rules],
   );
   const selected =
     rules.find((rule) => rule.id === selectedId) ?? visibleRules[0] ?? rules[0] ?? null;
-  const translated = selected ? (translations.get(selected.id) ?? null) : null;
-  const translationLoading = Boolean(
-    language === "ru" && selected && !translated && translationError?.id !== selected.id,
-  );
+  const translated = selected?.translation ?? null;
 
   useEffect(() => {
     if (!gateway) {
@@ -58,27 +47,6 @@ export function GlossaryPanel() {
     );
     return () => controller.abort();
   }, [gateway]);
-
-  useEffect(() => {
-    if (!gateway || language !== "ru" || !selected || translated) return;
-    const controller = new AbortController();
-    void Promise.resolve().then(() => setTranslationError(null));
-    void gateway.translate(selected.id, controller.signal).then(
-      (translation) => {
-        if (controller.signal.aborted) return;
-        setTranslations((current) => new Map(current).set(selected.id, translation));
-      },
-      (reason: unknown) => {
-        if (!controller.signal.aborted) {
-          setTranslationError({
-            id: selected.id,
-            message: reason instanceof Error ? reason.message : "Перевод сейчас недоступен.",
-          });
-        }
-      },
-    );
-    return () => controller.abort();
-  }, [gateway, language, selected, translated]);
 
   if (loading)
     return (
@@ -104,10 +72,7 @@ export function GlossaryPanel() {
         <div>
           <p className="eyebrow">Текстовый справочник · {rules.length} терминов</p>
           <h2 id="text-glossary-title">Глоссарий правил</h2>
-          <p>
-            Быстрый поиск без PDF. Русский перевод создаётся для выбранного термина и сохраняется
-            для следующих открытий.
-          </p>
+          <p>Быстрый поиск без PDF. Русские переводы сохранены вместе с версией правил.</p>
         </div>
         <RuleLanguageToggle />
       </header>
@@ -129,7 +94,7 @@ export function GlossaryPanel() {
           {visibleRules.length ? (
             <ol>
               {visibleRules.map((rule, index) => {
-                const translation = translations.get(rule.id);
+                const translation = rule.translation;
                 return (
                   <li key={rule.id}>
                     <button
@@ -143,9 +108,7 @@ export function GlossaryPanel() {
                           ? (translation?.title ?? translatedRuleTitle(rule.title) ?? rule.title)
                           : rule.title}
                       </strong>
-                      {language === "ru" && (translation || translatedRuleTitle(rule.title)) ? (
-                        <small>{rule.title}</small>
-                      ) : null}
+                      {language === "ru" ? <small>{rule.title}</small> : null}
                     </button>
                   </li>
                 );
@@ -165,45 +128,22 @@ export function GlossaryPanel() {
         {selected ? (
           <article className="text-glossary__entry" key={selected.id}>
             <header>
-              <p>
-                {language === "ru" && translationError?.id !== selected.id
-                  ? "Русский перевод"
-                  : "English original"}
-              </p>
+              <p>{language === "ru" ? "Русский перевод" : "English original"}</p>
               <h3>
                 {language === "ru"
                   ? (translated?.title ?? translatedRuleTitle(selected.title) ?? selected.title)
                   : selected.title}
               </h3>
-              {language === "ru" && (translated || translatedRuleTitle(selected.title)) ? (
-                <small>{selected.title}</small>
-              ) : null}
+              {language === "ru" ? <small>{selected.title}</small> : null}
             </header>
 
-            {language === "ru" && translationLoading ? (
-              <div aria-live="polite" className="text-glossary__translation-state">
-                <span aria-hidden="true">↻</span>
-                <p>
-                  <strong>Переводим термин</strong>
-                  Точная формулировка появится здесь через несколько секунд.
-                </p>
-              </div>
-            ) : (
-              <div className="text-glossary__copy">
-                {(language === "ru" && translated ? translated.text : selected.text)
-                  .split(/\n{2,}/u)
-                  .map((paragraph) => (
-                    <p key={paragraph}>{paragraph}</p>
-                  ))}
-              </div>
-            )}
-
-            {language === "ru" && translationError?.id === selected.id ? (
-              <div className="text-glossary__translation-error" role="note">
-                <strong>Показываем оригинал</strong>
-                <p>{translationError.message}</p>
-              </div>
-            ) : null}
+            <div className="text-glossary__copy">
+              {(language === "ru" && translated ? translated.text : selected.text)
+                .split(/\n{2,}/u)
+                .map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+            </div>
 
             <footer>
               <span>{selected.factions.join(" · ") || "Все фракции"}</span>

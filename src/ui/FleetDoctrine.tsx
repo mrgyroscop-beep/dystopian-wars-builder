@@ -6,6 +6,7 @@ import type {
   ShipEditorOptionReadModel,
 } from "../application/rosters/ship-editor";
 import { EyeIcon } from "./EyeIcon";
+import { useRuleTranslation } from "./GlossaryContext";
 
 export function FleetDoctrinePanel({
   busy,
@@ -39,7 +40,7 @@ export function FleetDoctrinePanel({
           <span className="eyebrow">Первый элемент состава</span>
           <strong id={`${panelId}-title`}>Доктрина флота</strong>
           <small>
-            {selected.length ? selected.map((option) => option.label).join(" · ") : "Не выбрана"}
+            {selected.length ? <DoctrineTitle doctrine={selected[0]!} /> : "Не выбрана"}
           </small>
         </span>
         <span className="fleet-doctrine__chevron" aria-hidden="true">
@@ -54,51 +55,26 @@ export function FleetDoctrinePanel({
               <legend>{group.label}</legend>
               <p>{group.help}</p>
               <div className="fleet-doctrine__options">
-                {group.options.map((option, optionIndex) => {
-                  const unavailable = option.availability !== "available";
-                  const checked = option.selectedQuantity > 0;
-                  const optionInputId = `${panelId}-${groupIndex}-${optionIndex}`;
-                  return (
-                    <div
-                      className="fleet-doctrine__option"
-                      data-availability={option.availability}
-                      data-selected={checked ? "true" : undefined}
-                      key={option.id}
-                    >
-                      <label aria-label={option.label} htmlFor={optionInputId}>
-                        <input
-                          checked={checked}
-                          disabled={busy || unavailable}
-                          id={optionInputId}
-                          name={`fleet-doctrine-${groupIndex}`}
-                          onChange={() =>
-                            onCommand(
-                              {
-                                type: "set-fleet-doctrine",
-                                instanceId: doctrine.ownerInstanceId,
-                                optionId: option.id,
-                              },
-                              `Выбрана доктрина ${option.label}.`,
-                            )
-                          }
-                          type="radio"
-                        />
-                        <span>
-                          <strong>{option.label}</strong>
-                          <small>{option.reason ?? option.costLabel}</small>
-                        </span>
-                      </label>
-                      <button
-                        aria-label={`Показать описание доктрины ${option.label}`}
-                        className="fleet-doctrine__inspect"
-                        onClick={() => setInspected(option)}
-                        type="button"
-                      >
-                        <EyeIcon />
-                      </button>
-                    </div>
-                  );
-                })}
+                {group.options.map((option, optionIndex) => (
+                  <DoctrineOption
+                    busy={busy}
+                    doctrine={option}
+                    inputId={`${panelId}-${groupIndex}-${optionIndex}`}
+                    key={option.id}
+                    name={`fleet-doctrine-${groupIndex}`}
+                    onInspect={() => setInspected(option)}
+                    onSelect={(label) =>
+                      onCommand(
+                        {
+                          type: "set-fleet-doctrine",
+                          instanceId: doctrine.ownerInstanceId,
+                          optionId: option.id,
+                        },
+                        `Выбрана доктрина ${label}.`,
+                      )
+                    }
+                  />
+                ))}
               </div>
             </fieldset>
           ))}
@@ -112,6 +88,68 @@ export function FleetDoctrinePanel({
   );
 }
 
+function DoctrineTitle({ doctrine }: { readonly doctrine: ShipEditorOptionReadModel }) {
+  const localized = useRuleTranslation(doctrine.label);
+  return localized.language === "ru" && localized.translation
+    ? localized.translation.title
+    : doctrine.label;
+}
+
+function DoctrineOption({
+  busy,
+  doctrine,
+  inputId,
+  name,
+  onInspect,
+  onSelect,
+}: {
+  readonly busy: boolean;
+  readonly doctrine: ShipEditorOptionReadModel;
+  readonly inputId: string;
+  readonly name: string;
+  readonly onInspect: () => void;
+  readonly onSelect: (label: string) => void;
+}) {
+  const localized = useRuleTranslation(doctrine.label);
+  const translated = localized.language === "ru" ? localized.translation : null;
+  const label = translated?.title ?? doctrine.label;
+  const unavailable = doctrine.availability !== "available";
+  const checked = doctrine.selectedQuantity > 0;
+  return (
+    <div
+      className="fleet-doctrine__option"
+      data-availability={doctrine.availability}
+      data-selected={checked ? "true" : undefined}
+    >
+      <label aria-label={label} htmlFor={inputId}>
+        <input
+          checked={checked}
+          disabled={busy || unavailable}
+          id={inputId}
+          name={name}
+          onChange={() => onSelect(label)}
+          type="radio"
+        />
+        <span>
+          <strong>{label}</strong>
+          <small>
+            {translated ? `${doctrine.label} · ` : ""}
+            {doctrine.reason ?? doctrine.costLabel}
+          </small>
+        </span>
+      </label>
+      <button
+        aria-label={`Показать описание доктрины ${label}`}
+        className="fleet-doctrine__inspect"
+        onClick={onInspect}
+        type="button"
+      >
+        <EyeIcon />
+      </button>
+    </div>
+  );
+}
+
 function DoctrineDescriptionDialog({
   doctrine,
   onClose,
@@ -122,6 +160,8 @@ function DoctrineDescriptionDialog({
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const localized = useRuleTranslation(doctrine.label);
+  const translated = localized.language === "ru" ? localized.translation : null;
 
   useEffect(() => {
     returnFocus.current =
@@ -166,14 +206,17 @@ function DoctrineDescriptionDialog({
         <header>
           <div>
             <p className="eyebrow">Доктрина флота</p>
-            <h2 id={titleId}>{doctrine.label}</h2>
+            <h2 id={titleId}>{translated?.title ?? doctrine.label}</h2>
+            {translated ? <small>{doctrine.label}</small> : null}
           </div>
           <button aria-label="Закрыть описание доктрины" onClick={onClose} type="button">
             ×
           </button>
         </header>
         <p className="doctrine-dialog__description">
-          {doctrine.description || "Описание этой доктрины отсутствует в текущем каталоге."}
+          {translated?.text ||
+            doctrine.description ||
+            "Описание этой доктрины отсутствует в текущем каталоге."}
         </p>
       </dialog>
       <button
