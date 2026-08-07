@@ -18,6 +18,7 @@ import { RosterLibraryRoute } from "../routes/RosterLibraryRoute";
 import { RosterWorkspaceRoute } from "../routes/RosterWorkspaceRoute";
 import { ReferenceLibraryRoute } from "../routes/ReferenceLibraryRoute";
 import { SettingsRoute } from "../routes/SettingsRoute";
+import { CampaignRoute } from "../routes/CampaignRoute";
 
 export interface AppDependencies {
   authGateway: AuthGateway;
@@ -48,6 +49,7 @@ export function createAppRoutes({
       errorElement: <RouteErrorBoundary />,
       children: [
         { index: true, element: <RosterLibraryRoute dependencies={rosterLibrary} /> },
+        { path: "campaign/:scenarioId?/:tab?", element: <CampaignRoute /> },
         { path: "rosters/new", element: <NewRosterRoute {...rosterCreation} /> },
         {
           path: "reference",

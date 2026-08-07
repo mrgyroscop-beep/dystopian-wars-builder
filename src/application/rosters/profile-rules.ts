@@ -8,6 +8,7 @@ import type {
   Slot,
 } from "../../domain/catalog";
 import type { RosterSelectionInstance, RosterSnapshot } from "../../domain/roster";
+import type { RuleTranslation } from "../glossary/glossary-contract";
 
 export type ProfileSlotRole = "PSA" | "FPS 1" | "FPS 2" | "FPS 3";
 
@@ -44,6 +45,7 @@ export interface RuleReadModel {
   readonly description: SafePresentation | null;
   readonly available: boolean;
   readonly diagnostic: string | null;
+  readonly translation?: RuleTranslation;
 }
 
 export interface ProfileDiagnosticReadModel {

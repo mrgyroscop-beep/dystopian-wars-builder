@@ -244,7 +244,7 @@ export function RuleSheet({
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const rule = model.rules.find((candidate) => candidate.id === ruleId) ?? null;
-  const localized = useRuleTranslation(rule?.label ?? "");
+  const localized = useRuleTranslation(rule?.label ?? "", rule?.translation);
   useEffect(() => headingRef.current?.focus(), [ruleId]);
   return (
     <article className="rule-sheet" aria-labelledby="rule-sheet-title">

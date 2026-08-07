@@ -75,7 +75,10 @@ export function RuleLanguageToggle({ compact = false }: { readonly compact?: boo
   );
 }
 
-export function useRuleTranslation(title: string): {
+export function useRuleTranslation(
+  title: string,
+  embedded?: RuleTranslation,
+): {
   readonly language: RuleLanguage;
   readonly translation: RuleTranslation | null;
   readonly loading: boolean;
@@ -91,7 +94,7 @@ export function useRuleTranslation(title: string): {
   const key = `${language}:${title}`;
 
   useEffect(() => {
-    if (language !== "ru" || !gateway) return;
+    if (language !== "ru" || !gateway || embedded) return;
     const controller = new AbortController();
     void gateway
       .list(controller.signal)
@@ -116,7 +119,10 @@ export function useRuleTranslation(title: string): {
         },
       );
     return () => controller.abort();
-  }, [gateway, key, language, title]);
+  }, [embedded, gateway, key, language, title]);
+
+  if (language === "ru" && embedded)
+    return { language, translation: embedded, loading: false, error: null };
 
   if (state.key !== key)
     return {

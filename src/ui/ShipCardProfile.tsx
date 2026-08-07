@@ -563,7 +563,7 @@ export function RuleDescription({
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
-  const localized = useRuleTranslation(rule.label);
+  const localized = useRuleTranslation(rule.label, rule.translation);
 
   function handleKeyDown(event: globalThis.KeyboardEvent) {
     if (event.key === "Tab") {

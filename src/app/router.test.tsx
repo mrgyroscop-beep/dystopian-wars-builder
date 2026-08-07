@@ -308,6 +308,58 @@ describe("application routes", () => {
     expect(screen.getByRole("button", { name: /Torrent/u })).toBeVisible();
   });
 
+  it("opens a selected campaign act and switches between its mission and fixed fleets", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/campaign/act-4/mission");
+
+    expect(screen.getByRole("heading", { level: 1, name: "Dominion of the Dragon" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Кампания" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: /Акт 4/u })).toHaveAttribute("aria-current", "step");
+    expect(screen.getByRole("link", { name: "Миссия" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("img", { name: /Схема расстановки/u })).toBeVisible();
+    expect(screen.getByText("Запас Хранителя Короны — 8 кубиков")).toBeVisible();
+
+    await user.click(screen.getByRole("link", { name: "Флот Короны" }));
+
+    expect(await screen.findByRole("heading", { name: "HMIS Strikakulam" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Флот Короны" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByText("6")).toBeVisible();
+  });
+
+  it("keeps campaign traits clickable in the fleet and detailed profile", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/campaign/act-4/crown");
+
+    const shipHeading = await screen.findByRole("heading", { name: "HMIS Strikakulam" });
+    const shipCard = shipHeading.closest("li");
+    expect(shipCard).not.toBeNull();
+
+    await user.click(within(shipCard!).getByRole("button", { name: /Охотник|Hunter/u }));
+    expect(await screen.findByRole("dialog", { name: "Охотник" })).toHaveTextContent(
+      "активный адмирал может перебросить",
+    );
+    await user.click(screen.getByRole("button", { name: "Закрыть описание правила" }));
+
+    await user.click(within(shipCard!).getByRole("button", { name: "Профиль" }));
+    expect(await screen.findByRole("dialog", { name: "HMIS Strikakulam" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Профиль корабля" })).toHaveTextContent(
+      "Torpedo Salvo",
+    );
+
+    const guardianButtons = screen.getAllByRole("button", {
+      name: /Генератор-хранитель|Guardian Generator/u,
+    });
+    await user.click(guardianButtons[0]!);
+    expect(await screen.findByRole("dialog", { name: "Генератор-хранитель" })).toHaveTextContent(
+      "запасом Хранителя",
+    );
+  });
+
   it("renders a deep roster route without loading the library first", async () => {
     renderRoute("/rosters/scaffold-demo");
 
