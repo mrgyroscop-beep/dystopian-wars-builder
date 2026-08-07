@@ -341,6 +341,32 @@ describe("application routes", () => {
     expect(screen.getByRole("button", { name: "Удалить Akita Demonstrator" })).toBeVisible();
   });
 
+  it("marks a fleet element when its maximum ship count is exceeded", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/rosters/scaffold-demo");
+
+    const catalogShipName = await screen.findByText("Akita Demonstrator");
+    await user.click(catalogShipName.closest("button")!);
+    await user.click(screen.getByRole("button", { name: "Добавить в состав" }));
+    for (let copy = 0; copy < 3; copy += 1) {
+      await user.click(
+        screen.getAllByRole("button", { name: "Копировать Akita Demonstrator" })[0]!,
+      );
+    }
+
+    const exceededLimit = await screen.findByLabelText(
+      "Лимит превышен. Выбрано 4, минимум 1, максимум 3",
+    );
+    expect(exceededLimit).toHaveTextContent("! 4 выбрано · 1 мин. · 3 макс.");
+    expect(exceededLimit).toHaveAttribute("data-state", "exceeded");
+    expect(exceededLimit).toHaveAttribute(
+      "aria-label",
+      "Лимит превышен. Выбрано 4, минимум 1, максимум 3",
+    );
+    expect(screen.getByText("Превышен лимит")).toHaveClass("element-state--error");
+  });
+
   it("opens the compatible catalog category from an empty fleet element", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();

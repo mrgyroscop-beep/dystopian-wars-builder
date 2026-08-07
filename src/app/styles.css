@@ -1672,6 +1672,11 @@ button.button {
   font-size: 0.8rem;
 }
 
+.fleet-element__limit[data-state="exceeded"] {
+  color: var(--error-text);
+  font-weight: 750;
+}
+
 .element-state {
   display: inline-flex;
   min-height: 2rem;

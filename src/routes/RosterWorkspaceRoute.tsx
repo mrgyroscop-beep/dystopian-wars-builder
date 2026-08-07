@@ -796,6 +796,9 @@ function CompositionPane({
           const isDropTarget = Boolean(
             draggedItem?.eligibleTargets.some((target) => target.elementInstanceId === element.id),
           );
+          const isOverLimit =
+            element.maximum !== null && element.instances.length > element.maximum;
+          const meetsMinimum = element.instances.length >= element.minimum;
           return (
             <section
               className="fleet-element"
@@ -817,23 +820,24 @@ function CompositionPane({
                 <div>
                   <h3 id={`fleet-element-title-${safeId(element.id)}`}>{element.label}</h3>
                   <p
-                    aria-label={`Выбрано ${element.instances.length}, минимум ${element.minimum}, максимум ${element.maximum ?? "не ограничен"}`}
+                    aria-label={`${isOverLimit ? "Лимит превышен. " : ""}Выбрано ${element.instances.length}, минимум ${element.minimum}, максимум ${element.maximum ?? "не ограничен"}`}
+                    className="fleet-element__limit"
+                    data-state={isOverLimit ? "exceeded" : "within"}
                   >
+                    {isOverLimit ? <span aria-hidden="true">! </span> : null}
                     {element.instances.length} выбрано · {element.minimum} мин. ·{" "}
                     {element.maximum ?? "—"} макс.
                   </p>
                 </div>
                 <span
                   className={
-                    element.instances.length >= element.minimum
+                    meetsMinimum && !isOverLimit
                       ? "element-state element-state--ready"
                       : "element-state element-state--error"
                   }
                 >
-                  <span aria-hidden="true">
-                    {element.instances.length >= element.minimum ? "✓" : "!"}
-                  </span>
-                  {element.instances.length >= element.minimum ? "Заполнен" : "Нужен корабль"}
+                  <span aria-hidden="true">{meetsMinimum && !isOverLimit ? "✓" : "!"}</span>
+                  {isOverLimit ? "Превышен лимит" : meetsMinimum ? "Заполнен" : "Нужен корабль"}
                 </span>
               </header>
               {returnTarget ? (
