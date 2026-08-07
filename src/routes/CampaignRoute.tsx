@@ -11,7 +11,6 @@ import {
   campaignScenarios,
   type CampaignFaction,
   type CampaignFleetUnit,
-  type CampaignMarker,
   type CampaignScenario,
   type CampaignTab,
 } from "../campaign/campaignData";
@@ -188,69 +187,17 @@ function MissionPanel({ scenario }: { readonly scenario: CampaignScenario }) {
 function BattleMap({ scenario }: { readonly scenario: CampaignScenario }) {
   return (
     <figure className="campaign-map">
-      <svg aria-labelledby="campaign-map-title" role="img" viewBox="0 0 100 100">
-        <title id="campaign-map-title">Схема расстановки для {scenario.title}</title>
-        <defs>
-          <pattern height="8" id="campaign-water" patternUnits="userSpaceOnUse" width="8">
-            <path
-              d="M0 5 Q2 3 4 5 T8 5"
-              fill="none"
-              stroke="rgba(255,255,255,.14)"
-              strokeWidth=".7"
-            />
-          </pattern>
-        </defs>
-        <rect className="campaign-map__water" height="88" rx="2" width="88" x="6" y="6" />
-        <rect fill="url(#campaign-water)" height="88" rx="2" width="88" x="6" y="6" />
-        <path className="campaign-map__centre" d="M50 7V93M7 50H93" />
-        <path className="campaign-map__crown-edge" d="M7 7H93" />
-        <path className="campaign-map__empire-edge" d="M7 93H93" />
-        <text className="campaign-map__edge-label" x="50" y="4">
-          КРАЙ КОРОНЫ
-        </text>
-        <text className="campaign-map__edge-label" x="50" y="99">
-          КРАЙ ИМПЕРИИ
-        </text>
-        {scenario.markers.map((marker, index) => (
-          <MapMarker key={`${marker.kind}:${index}`} marker={marker} />
-        ))}
-      </svg>
+      <img
+        alt={`Схема расстановки для ${scenario.title}`}
+        decoding="async"
+        src={`/campaign/maps/act-${scenario.act}.png`}
+      />
       <figcaption>
         <span>Схема поля</span>
         <strong>{scenario.battlefield}</strong>
-        <small>Положение объектов показано пропорционально схеме сценария.</small>
+        <small>Оригинальная схема расстановки из кампанийного буклета.</small>
       </figcaption>
     </figure>
-  );
-}
-
-function MapMarker({ marker }: { readonly marker: CampaignMarker }) {
-  const labels = {
-    mine: "Минное поле",
-    platform: "Морская платформа",
-    refinery: "Ashmore Refinery",
-    wreck: "Обломки",
-  } as const;
-  return (
-    <g
-      className={`campaign-map__marker campaign-map__marker--${marker.kind}`}
-      transform={`translate(${marker.x} ${marker.y})`}
-    >
-      <title>{labels[marker.kind]}</title>
-      {marker.kind === "mine" ? <circle cx="0" cy="0" r="5" /> : null}
-      {marker.kind === "platform" ? <path d="M0-6 5-2 3 5-3 5-5-2Z" /> : null}
-      {marker.kind === "refinery" ? <path d="M-10-5H10V5H-10Z" /> : null}
-      {marker.kind === "wreck" ? <path d="M-6 3-2-5 1-1 5-4 6 4 0 6Z" /> : null}
-      <text x="0" y={marker.kind === "refinery" ? "1.5" : "2"}>
-        {marker.kind === "mine"
-          ? "M"
-          : marker.kind === "platform"
-            ? "P"
-            : marker.kind === "refinery"
-              ? "AR"
-              : "W"}
-      </text>
-    </g>
   );
 }
 
