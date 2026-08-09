@@ -7,7 +7,7 @@ import { rulesCorpus } from "./rules-corpus.generated";
 
 const MODEL = "@cf/meta/llama-3.2-3b-instruct";
 const GLOSSARY_URL =
-  "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.03a_W.pdf";
+  "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.03b_W.pdf";
 const translatedRuleAliases = [
   { title: "All Around", pattern: /(?:кругов\p{L}*|всесторонн\p{L}*)/u },
   { title: "Torpedo", pattern: /торпед\p{L}*/u },
@@ -140,13 +140,23 @@ export function retrieveSources(question: string) {
     .map((source) => {
       const title = normalize(source.title);
       const text = normalize(source.text);
-      let score = title === normalizedQuestion ? 100 : normalizedQuestion.includes(title) ? 50 : 0;
+      const translatedTitle = normalize(source.translation.title);
+      const translatedText = normalize(source.translation.text);
+      let score =
+        title === normalizedQuestion || translatedTitle === normalizedQuestion
+          ? 100
+          : normalizedQuestion.includes(title) || normalizedQuestion.includes(translatedTitle)
+            ? 50
+            : 0;
       if (translatedTitles.has(title)) score += 80;
       for (const term of terms) {
-        if (title.includes(term)) score += 12;
-        if (text.includes(term)) score += 2;
+        if (title.includes(term) || translatedTitle.includes(term)) score += 12;
+        if (text.includes(term) || translatedText.includes(term)) score += 2;
       }
-      const fuzzyScore = fuzzyTitleScore(title, fuzzyTerms);
+      const fuzzyScore = Math.max(
+        fuzzyTitleScore(title, fuzzyTerms),
+        fuzzyTitleScore(translatedTitle, fuzzyTerms),
+      );
       if (fuzzyScore >= 0.7) score += 40 + Math.round(fuzzyScore * 20);
       return { ...source, score };
     })

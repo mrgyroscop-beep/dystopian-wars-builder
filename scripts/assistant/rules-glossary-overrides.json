@@ -1,0 +1,18 @@
+{
+  "version": "4.03b",
+  "entries": {
+    "Entropic Generator": {
+      "title": "Entropic",
+      "text": "When a model is the target of an Attack action, its Admiral can re-roll two Blank results in the Resistance Roll for each weapon in its unit that has this Quality. Weapons mounted on models that have a System Failure Critical Damage Effect are disregarded."
+    },
+    "ESCF Munitions": {
+      "title": "E.S.C.F Munitions"
+    },
+    "Lasu (Localised Anomaly Stabilisation Unit)": {
+      "title": "L.A.S.U (Localised Anomaly Stabilisation Unit)"
+    },
+    "Turbo Encabulation Drive": {
+      "title": "T.E.D (Turbo Encabulation Drive)"
+    }
+  }
+}

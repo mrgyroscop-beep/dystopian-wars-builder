@@ -8,6 +8,9 @@ const index = JSON.parse(fs.readFileSync(path.join(catalogRoot, "factions.json")
 const glossaryPages = JSON.parse(
   fs.readFileSync(path.join(import.meta.dirname, "rules-glossary-pages.json"), "utf8"),
 );
+const glossaryOverrides = JSON.parse(
+  fs.readFileSync(path.join(import.meta.dirname, "rules-glossary-overrides.json"), "utf8"),
+).entries;
 const translations = JSON.parse(
   fs.readFileSync(
     path.join(projectRoot, "data", "generated", "glossary-translations.ru.json"),
@@ -23,12 +26,18 @@ for (const faction of Object.values(index.factions)) {
   );
   for (const entity of Object.values(catalog.entities)) {
     if (entity.kind !== "Rule") continue;
-    const title = entity.label?.plainText?.trim();
-    const text = entity.description?.plainText?.trim();
+    const sourceTitle = entity.label?.plainText?.trim();
+    const sourceText = entity.description?.plainText?.trim();
+    const documentPath = entity.provenance?.documentPath;
+    const glossaryOverride =
+      documentPath === "Rules Glossary.cat" && sourceTitle
+        ? glossaryOverrides[sourceTitle]
+        : undefined;
+    const title = glossaryOverride?.title ?? sourceTitle;
+    const text = glossaryOverride?.text ?? sourceText;
     if (!title || !text) continue;
     const key = `${title}\n${text}`;
     const current = uniqueRules.get(key);
-    const documentPath = entity.provenance?.documentPath;
     if (current) {
       current.factions.add(faction.label);
       if (documentPath) current.documents.add(documentPath);

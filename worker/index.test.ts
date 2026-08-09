@@ -110,6 +110,14 @@ describe("Worker API", () => {
     ]);
   });
 
+  it("serves the current official Rules Glossary", () => {
+    expect(resolveReferenceDocument("glossary-4-03b")).toEqual({
+      filename: "dystopian-wars-glossary-4-03b.pdf",
+      url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.03b_W.pdf",
+    });
+    expect(resolveReferenceDocument("glossary-4-03a")).toBeNull();
+  });
+
   it("registers and signs in with email and password", async () => {
     const headers = { "Content-Type": "application/json", Origin: "http://example.com" };
     const registration = await exports.default.fetch("http://example.com/api/auth/register", {
@@ -186,6 +194,10 @@ describe("Worker API", () => {
     expect(retrieveSources("Аблятив армор")[0]).toMatchObject({
       title: "Ablative Armour",
     });
+    expect(retrieveSources("Энтропийное")[0]).toMatchObject({
+      title: "Entropic",
+      page: 28,
+    });
     expect(retrieveSources("Эскорт")[0]).toMatchObject({ title: "Escort" });
     expect(retrieveSources("Torpdeo")[0]).toMatchObject({ title: "Torpedo" });
     expect(retrieveSources("фывапролдж")).toEqual([]);
@@ -212,6 +224,16 @@ describe("Worker API", () => {
       title: "Круговой огонь",
     });
     expect(rule.translation.text.length).toBeGreaterThan(20);
+
+    const entropic = payload.rules.find((candidate) => candidate.title === "Entropic");
+    if (!entropic) throw new Error("Entropic quality is missing from the corpus.");
+    expect(entropic.text).toContain("System Failure Critical Damage Effect");
+    expect(entropic.translation).toMatchObject({
+      sourceTitle: "Entropic",
+      title: "Энтропийное",
+    });
+    expect(entropic.translation.text).toContain("Отказ системы");
+    expect(payload.rules.some((candidate) => candidate.title === "Entropic Generator")).toBe(false);
   });
 
   it("limits the rules assistant to five questions per minute", async () => {

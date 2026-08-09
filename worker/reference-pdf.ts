@@ -7,9 +7,9 @@ const documents = {
     filename: "dystopian-wars-rules-4-00.pdf",
     url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW-Rule-Book-4.00_Full_W.pdf",
   },
-  "glossary-4-03a": {
-    filename: "dystopian-wars-glossary-4-03a.pdf",
-    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.03a_W.pdf",
+  "glossary-4-03b": {
+    filename: "dystopian-wars-glossary-4-03b.pdf",
+    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.03b_W.pdf",
   },
   "quick-reference": {
     filename: "dystopian-wars-quick-reference.pdf",
