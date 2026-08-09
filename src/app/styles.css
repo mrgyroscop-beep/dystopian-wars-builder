@@ -6693,9 +6693,9 @@ button.button {
 .main-content--workspace .fleet-workspace {
   height: 100%;
   min-height: 0;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 0;
-  padding: 0.55rem;
+  padding: 0;
   background:
     linear-gradient(90deg, rgb(18 63 74 / 4%) 1px, transparent 1px) 0 0 / 2rem 2rem,
     var(--canvas);
@@ -6707,101 +6707,91 @@ button.button {
   z-index: 12;
   display: grid;
   min-width: 0;
-  gap: 0.4rem;
-  padding: 0.5rem;
-  background: color-mix(in srgb, var(--surface) 96%, var(--canvas));
-  border: 1px solid var(--border-strong);
-  border-bottom: 3px solid var(--brand);
-  box-shadow: 0 10px 28px rgb(20 38 45 / 9%);
+  gap: 0;
 }
 
-.main-content--workspace .fleet-workspace__heading {
-  min-height: 3.25rem;
-  align-items: center;
+.workspace-command-strip {
+  display: grid;
+  min-width: 0;
+  min-height: 5rem;
+  grid-template-columns: minmax(15rem, 1.15fr) minmax(11rem, 0.65fr) minmax(20rem, 1.45fr);
+  margin-inline: 0.55rem;
+  background: color-mix(in srgb, var(--surface) 97%, var(--canvas));
+  border: 1px solid var(--border-strong);
+  border-bottom: 3px solid var(--brand);
 }
 
 .fleet-workspace__identity {
+  display: grid;
   min-width: 0;
+  align-content: center;
+  padding: 0.65rem 1rem;
 }
 
-.main-content--workspace .fleet-workspace__heading h1 {
+.main-content--workspace .fleet-workspace__identity h1 {
   max-width: 44ch;
   margin: 0.08rem 0 0;
   overflow: hidden;
-  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
   line-height: 1.08;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.main-content--workspace .fleet-workspace__heading .eyebrow {
+.main-content--workspace .fleet-workspace__identity .eyebrow,
+.workspace-command-metrics dt {
+  color: var(--signal);
   font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.main-content--workspace .fleet-workspace__actions {
+.workspace-command-metrics {
+  display: grid;
   min-width: 0;
-  align-items: center;
-  gap: 0.45rem;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+  margin: 0;
+  border-left: 1px solid var(--border);
 }
 
-.main-content--workspace .battlefleet-switcher {
-  min-width: min(22rem, 45vw);
-  grid-template-columns: auto minmax(10rem, 1fr);
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.main-content--workspace .battlefleet-switcher select {
-  min-height: 2.75rem;
-}
-
-.main-content--workspace .battlefleet-switcher small {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.main-content--workspace .fleet-workspace__actions .button {
-  min-height: 2.75rem;
-  padding: 0.55rem 0.75rem;
-  white-space: nowrap;
-}
-
-.main-content--workspace .workspace-summary--sticky {
-  position: static;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  background: var(--surface-subtle);
-  box-shadow: none;
-}
-
-.main-content--workspace .workspace-summary--sticky .summary-item {
-  min-height: 3rem;
+.workspace-command-metrics > div {
+  display: grid;
+  min-width: 0;
   align-content: center;
-  gap: 0.1rem;
-  padding: 0.35rem 0.65rem;
+  padding: 0.65rem 0.9rem;
 }
 
-.main-content--workspace .workspace-summary--sticky dt {
-  font-size: 0.62rem;
-  letter-spacing: 0.07em;
+.workspace-command-metrics > div + div {
+  border-left: 1px solid var(--border);
 }
 
-.main-content--workspace .workspace-summary--sticky dd {
+.workspace-command-metrics dd {
+  margin: 0.35rem 0 0;
   overflow: hidden;
-  font-size: clamp(0.72rem, 1vw, 0.92rem);
-  line-height: 1.2;
+  font-family: "Roboto Mono", "IBM Plex Mono", monospace;
+  font-size: clamp(0.95rem, 1.4vw, 1.2rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.summary-label--compact {
-  display: none;
+.main-content--workspace .battlefleet-switcher {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 0.3rem;
+  padding: 0.65rem 1rem;
+  border-left: 1px solid var(--border);
+}
+
+.main-content--workspace .battlefleet-switcher select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  text-overflow: ellipsis;
 }
 
 .main-content--workspace .system-message {
@@ -6817,7 +6807,7 @@ button.button {
 .main-content--workspace .builder-grid {
   min-height: 0;
   gap: 0.55rem;
-  padding-top: 0.55rem;
+  padding: 0.55rem;
 }
 
 .main-content--workspace .builder-pane {
@@ -6902,29 +6892,15 @@ button.button {
 
   .main-content--workspace .workspace-view-switcher--tablet {
     display: flex;
+    margin: 0.55rem 0.55rem 0;
   }
 
   .main-content--workspace .workspace-view-switcher--mobile {
     display: none;
   }
 
-  .main-content--workspace .workspace-summary--sticky .summary-item:last-child {
-    grid-column: auto;
-  }
-
-  .main-content--workspace .fleet-workspace__heading {
-    align-items: center;
-    flex-direction: row;
-  }
-
-  .main-content--workspace .fleet-workspace__heading .button {
-    align-self: auto;
-  }
-
-  .main-content--workspace .fleet-workspace__actions {
-    width: auto;
-    align-items: center;
-    flex-direction: row;
+  .main-content--workspace .workspace-command-strip {
+    grid-template-columns: minmax(12rem, 1fr) minmax(9rem, 0.65fr) minmax(15rem, 1.25fr);
   }
 
   .main-content--workspace .builder-grid {
@@ -7013,74 +6989,58 @@ button.button {
   .main-content--workspace .workspace-command-deck {
     gap: 0;
     padding: 0;
+  }
+
+  .main-content--workspace .workspace-command-strip {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1.25fr) minmax(9rem, 0.95fr);
+    margin-inline: 0;
     border-width: 0 0 2px;
   }
 
-  .main-content--workspace .fleet-workspace__heading {
-    min-height: 0;
-    align-items: stretch;
-    flex-direction: row;
-    gap: 0.45rem;
-    padding: 0.4rem 0.5rem;
-  }
-
   .main-content--workspace .fleet-workspace__identity {
-    display: grid;
-    align-content: center;
-    flex: 1 1 auto;
+    padding: 0.45rem 0.6rem;
   }
 
-  .main-content--workspace .fleet-workspace__heading h1 {
-    font-size: 1rem;
+  .main-content--workspace .fleet-workspace__identity h1 {
+    font-size: clamp(0.95rem, 4.5vw, 1.15rem);
   }
 
-  .main-content--workspace .fleet-workspace__actions {
-    width: min(52%, 14rem);
-    align-items: stretch;
-    flex-direction: row;
+  .main-content--workspace .fleet-workspace__identity .eyebrow,
+  .main-content--workspace .workspace-command-metrics dt {
+    font-size: 0.52rem;
+  }
+
+  .main-content--workspace .workspace-command-metrics {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+  }
+
+  .main-content--workspace .workspace-command-metrics > div {
+    padding: 0.45rem 0.5rem;
+  }
+
+  .main-content--workspace .workspace-command-metrics dd {
+    margin-top: 0.22rem;
+    font-size: clamp(0.72rem, 3.2vw, 0.88rem);
   }
 
   .main-content--workspace .battlefleet-switcher {
-    min-width: 0;
-    flex: 1 1 auto;
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .main-content--workspace .battlefleet-switcher > span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+    grid-column: 1 / -1;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.38rem 0.6rem 0.45rem;
+    border-top: 1px solid var(--border);
+    border-left: 0;
   }
 
   .main-content--workspace .battlefleet-switcher select {
     width: 100%;
     min-width: 0;
+    min-height: 2.65rem;
     padding-inline: 0.45rem 1.75rem;
     font-size: 0.75rem;
     text-overflow: ellipsis;
-  }
-
-  .main-content--workspace .fleet-workspace__actions .button {
-    width: 2.75rem;
-    min-width: 2.75rem;
-    padding: 0;
-    overflow: hidden;
-    color: transparent;
-    font-size: 0;
-    white-space: nowrap;
-  }
-
-  .main-content--workspace .fleet-workspace__actions .button::before {
-    color: var(--brand);
-    content: "+";
-    font-size: 1.4rem;
-    font-weight: 500;
   }
 
   .main-content--workspace .workspace-view-switcher--tablet {
@@ -7090,6 +7050,7 @@ button.button {
   .main-content--workspace .workspace-view-switcher--mobile {
     position: static;
     display: flex;
+    margin: 0;
     padding: 0.2rem 0.3rem;
     border-width: 1px 0;
     border-radius: 0;
@@ -7097,38 +7058,6 @@ button.button {
 
   .main-content--workspace .workspace-view-switcher button {
     min-height: 2.75rem;
-  }
-
-  .main-content--workspace .workspace-summary--sticky {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    border-width: 0;
-    border-radius: 0;
-  }
-
-  .main-content--workspace .workspace-summary--sticky .summary-item {
-    min-height: 2.9rem;
-    padding: 0.25rem 0.35rem;
-  }
-
-  .main-content--workspace .workspace-summary--sticky .summary-item[data-axis="availability"] {
-    display: none;
-  }
-
-  .main-content--workspace .workspace-summary--sticky dt {
-    font-size: 0.52rem;
-  }
-
-  .main-content--workspace .workspace-summary--sticky dd {
-    gap: 0.15rem;
-    font-size: clamp(0.61rem, 2.7vw, 0.74rem);
-  }
-
-  .main-content--workspace .summary-label--full {
-    display: none;
-  }
-
-  .main-content--workspace .summary-label--compact {
-    display: inline;
   }
 
   .main-content--workspace .system-message {

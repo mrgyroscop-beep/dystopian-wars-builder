@@ -357,81 +357,39 @@ export function RosterWorkspaceRoute({
   return (
     <div className="fleet-workspace" data-active-view={resolvedActiveView}>
       <div className="workspace-command-deck">
-        <header className="fleet-workspace__heading">
+        <header className="workspace-command-strip">
           <div className="fleet-workspace__identity">
             <p className="eyebrow">{model.roster.faction}</p>
             <h1>{model.roster.name}</h1>
           </div>
-          <div className="fleet-workspace__actions">
-            <label className="battlefleet-switcher">
-              <span>Battlefleet</span>
-              <select
-                aria-describedby="battlefleet-switcher-hint"
-                disabled={busy || model.roster.battlefleets.length < 2}
-                onChange={(event) => void changeBattlefleet(event.target.value)}
-                value={model.roster.battlefleetId}
-              >
-                {model.roster.battlefleets.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                    {option.removedShipCount > 0 ? ` · удалит ${option.removedShipCount}` : ""}
-                  </option>
-                ))}
-              </select>
-              <small id="battlefleet-switcher-hint">
-                Состав, доступность и очки пересчитаются автоматически.
-              </small>
-            </label>
-            <Link className="button button--secondary" to="/rosters/new">
-              Новый флот
-            </Link>
-          </div>
+          <dl className="workspace-command-metrics" aria-label="Параметры флота">
+            <div>
+              <dt>Points</dt>
+              <dd>
+                {model.summary.points} / {model.summary.pointsLimit}
+              </dd>
+            </div>
+            <div>
+              <dt>VPR</dt>
+              <dd>{model.summary.victoryPoints}</dd>
+            </div>
+          </dl>
+          <label className="battlefleet-switcher">
+            <span>Battlefleet</span>
+            <select
+              disabled={busy || model.roster.battlefleets.length < 2}
+              onChange={(event) => void changeBattlefleet(event.target.value)}
+              value={model.roster.battlefleetId}
+            >
+              {model.roster.battlefleets.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                  {option.removedShipCount > 0 ? ` · удалит ${option.removedShipCount}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
         </header>
-
-        <nav
-          className="workspace-view-switcher workspace-view-switcher--tablet"
-          aria-label="Боковая область билдера"
-        >
-          {(["catalog", "context"] as const).map((view) => (
-            <button
-              aria-current={
-                (view === "catalog" && resolvedActiveView !== "context") ||
-                resolvedActiveView === view
-                  ? "page"
-                  : undefined
-              }
-              key={view}
-              onClick={() => {
-                if (view === "catalog") setCatalogTargetId(null);
-                setActiveView(view);
-              }}
-              type="button"
-            >
-              {view === "catalog" ? "Каталог" : "Инспектор"}
-            </button>
-          ))}
-        </nav>
-
-        <nav
-          className="workspace-view-switcher workspace-view-switcher--mobile"
-          aria-label="Область билдера"
-        >
-          {(["catalog", "composition", "context"] as const).map((view) => (
-            <button
-              aria-current={resolvedActiveView === view ? "page" : undefined}
-              key={view}
-              onClick={() => {
-                if (view === "catalog") setCatalogTargetId(null);
-                setActiveView(view);
-              }}
-              type="button"
-            >
-              {view === "composition" ? "Состав" : view === "catalog" ? "Каталог" : "Корабль"}
-            </button>
-          ))}
-        </nav>
-
-        <WorkspaceSummary busy={busy} model={model} />
 
         {model.summary.persistence === "save-error" ? (
           <div className="system-message system-message--error" role="alert">
@@ -461,6 +419,49 @@ export function RosterWorkspaceRoute({
           {announcement}
         </p>
       </div>
+
+      <nav
+        className="workspace-view-switcher workspace-view-switcher--tablet"
+        aria-label="Боковая область билдера"
+      >
+        {(["catalog", "context"] as const).map((view) => (
+          <button
+            aria-current={
+              (view === "catalog" && resolvedActiveView !== "context") ||
+              resolvedActiveView === view
+                ? "page"
+                : undefined
+            }
+            key={view}
+            onClick={() => {
+              if (view === "catalog") setCatalogTargetId(null);
+              setActiveView(view);
+            }}
+            type="button"
+          >
+            {view === "catalog" ? "Каталог" : "Инспектор"}
+          </button>
+        ))}
+      </nav>
+
+      <nav
+        className="workspace-view-switcher workspace-view-switcher--mobile"
+        aria-label="Область билдера"
+      >
+        {(["catalog", "composition", "context"] as const).map((view) => (
+          <button
+            aria-current={resolvedActiveView === view ? "page" : undefined}
+            key={view}
+            onClick={() => {
+              if (view === "catalog") setCatalogTargetId(null);
+              setActiveView(view);
+            }}
+            type="button"
+          >
+            {view === "composition" ? "Состав" : view === "catalog" ? "Каталог" : "Корабль"}
+          </button>
+        ))}
+      </nav>
 
       <div
         className="builder-grid"
@@ -566,69 +567,6 @@ export function RosterWorkspaceRoute({
         />
       ) : null}
     </div>
-  );
-}
-
-function WorkspaceSummary({
-  busy,
-  model,
-}: {
-  readonly busy: boolean;
-  readonly model: RosterWorkspaceReadModel;
-}) {
-  const persistenceState = busy ? "saving" : model.summary.persistence;
-  const persistenceLabel = busy ? "Сохранение…" : model.summary.persistenceLabel;
-  return (
-    <dl
-      className="workspace-summary workspace-summary--sticky"
-      id="workspace-summary"
-      aria-label="Сводка флота"
-    >
-      <div className="summary-item">
-        <dt>Points</dt>
-        <dd>
-          {model.summary.points} / {model.summary.pointsLimit}
-        </dd>
-      </div>
-      <div className="summary-item">
-        <dt>VPR</dt>
-        <dd>{model.summary.victoryPoints}</dd>
-      </div>
-      <div className="summary-item" data-axis="validity" data-state={model.summary.validity}>
-        <dt>Состав</dt>
-        <dd>
-          <span aria-hidden="true">{model.summary.validity === "valid" ? "✓" : "!"}</span>{" "}
-          <span className="summary-label--full">{model.summary.validityLabel}</span>
-          <span className="summary-label--compact">
-            {model.problems.length ? `Ошибки: ${model.problems.length}` : "Готов"}
-          </span>
-        </dd>
-      </div>
-      <div className="summary-item" data-axis="persistence" data-state={persistenceState}>
-        <dt>Сохранение</dt>
-        <dd>
-          <span aria-hidden="true">{persistenceState === "saved-local" ? "✓" : "↻"}</span>{" "}
-          <span className="summary-label--full">{persistenceLabel}</span>
-          <span className="summary-label--compact">
-            {persistenceState === "saved-local"
-              ? "Сохранено"
-              : persistenceState === "saving"
-                ? "Сохраняем…"
-                : "Не сохранено"}
-          </span>
-        </dd>
-      </div>
-      <div
-        className="summary-item"
-        data-axis="availability"
-        data-state={model.summary.availability}
-      >
-        <dt>Система</dt>
-        <dd>
-          <span aria-hidden="true">●</span> {model.summary.availabilityLabel}
-        </dd>
-      </div>
-    </dl>
   );
 }
 

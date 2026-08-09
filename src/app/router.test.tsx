@@ -384,6 +384,23 @@ describe("application routes", () => {
     expect(container.querySelector(".app-shell--workspace")).toBeInTheDocument();
     expect(container.querySelector(".main-content--workspace")).toBeInTheDocument();
     expect(container.querySelector(".site-footer")).not.toBeInTheDocument();
+    const commandStrip = container.querySelector<HTMLElement>(".workspace-command-strip");
+    expect(commandStrip).not.toBeNull();
+    const command = within(commandStrip!);
+    expect(command.getByText("Empire")).toBeVisible();
+    expect(command.getByRole("heading", { level: 1, name: "Учебная эскадра" })).toBeVisible();
+    expect(command.getByText("Points")).toBeVisible();
+    expect(command.getByText("0 / 1000")).toBeVisible();
+    expect(command.getByText("VPR")).toBeVisible();
+    expect(command.getByRole("combobox", { name: "Battlefleet" })).toHaveValue(
+      "demo-empire-patrol",
+    );
+    expect(command.queryByText("Состав")).not.toBeInTheDocument();
+    expect(command.queryByText("Сохранение")).not.toBeInTheDocument();
+    expect(command.queryByText("Система")).not.toBeInTheDocument();
+    expect(command.queryByText("Новый флот")).not.toBeInTheDocument();
+    expect(command.queryByText(/пересчитаются автоматически/u)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Новый флот" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Состав" })).toBeVisible();
     expect(screen.getByText("0 выбрано · 1 мин. · 3 макс.")).toHaveAttribute(
       "aria-label",
