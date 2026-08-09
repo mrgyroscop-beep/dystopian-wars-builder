@@ -2777,6 +2777,16 @@ button.button {
   white-space: pre-line;
 }
 
+.doctrine-dialog__fallback {
+  padding: 0.7rem 0.85rem;
+  margin: 1rem 1rem 0;
+  color: var(--warning-text);
+  background: var(--warning-tint);
+  border-left: 3px solid var(--warning);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
 .element-state {
   display: inline-flex;
   min-height: 2rem;

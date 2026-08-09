@@ -19,6 +19,7 @@ import {
   reconstructDomainCatalog,
   type ContentHasher,
   type DomainCatalog,
+  type DomainEntity,
   type LosslessGraph,
 } from "../../src/domain/catalog";
 import {
@@ -29,7 +30,9 @@ import {
 } from "../../src/domain/roster";
 import { projectRosterSetup } from "../../src/application/rosters/create-roster";
 import {
+  applyFleetDoctrineCommand,
   applyShipEditorCommand,
+  projectFleetDoctrine,
   projectShipEditor,
   type ShipEditorReadyReadModel,
 } from "../../src/application/rosters/ship-editor";
@@ -410,6 +413,158 @@ describe("pinned real domain model", () => {
     );
   });
 
+  it("projects real doctrine restrictions, exact costs and both Enlightened families", () => {
+    const empireBattlefleet = Object.values(first.entities).find(
+      (entity) => entity.kind === "Battlefleet" && entity.provenance.documentPath === "Empire.cat",
+    )!;
+    const chineseFlagship = realUnitWithCategories("Empire.cat", [
+      "Flagship",
+      "Chinese",
+      "Surface",
+    ]);
+    const japaneseFlagship = realUnitWithCategories("Empire.cat", ["Flagship", "Japanese"]);
+    const empireReady = doctrineSnapshot(empireBattlefleet.id, chineseFlagship.id);
+    const empireUnavailable = doctrineSnapshot(empireBattlefleet.id, japaneseFlagship.id);
+    const paddlewheelReady = projectFleetDoctrine(empireReady, first)!
+      .groups.flatMap((group) => group.options)
+      .find((option) => option.label === "PADDLEWHEEL SURGE")!;
+    const paddlewheelUnavailable = projectFleetDoctrine(empireUnavailable, first)!
+      .groups.flatMap((group) => group.options)
+      .find((option) => option.label === "PADDLEWHEEL SURGE")!;
+
+    if (!paddlewheelReady || !paddlewheelUnavailable)
+      throw new Error(
+        JSON.stringify(
+          projectFleetDoctrine(empireReady, first)?.groups.map((group) => ({
+            label: group.label,
+            options: group.options.map((option) => option.label),
+          })),
+        ),
+      );
+    expect(paddlewheelReady).toMatchObject({
+      availability: "available",
+      costLabel: "+30 Points",
+    });
+    expect(paddlewheelUnavailable).toMatchObject({
+      availability: "unavailable",
+    });
+    expect(paddlewheelUnavailable.reason).toMatch(/Chinese/iu);
+    expect(paddlewheelUnavailable.reason).toMatch(/Surface/iu);
+    expect(() =>
+      applyFleetDoctrineCommand(
+        empireUnavailable,
+        first,
+        {
+          type: "set-fleet-doctrine",
+          instanceId: "real:doctrine:force",
+          optionId: paddlewheelUnavailable.id,
+        },
+        () => "real:doctrine:blocked",
+      ),
+    ).toThrow(/Chinese|Surface/iu);
+    const empireSelected = applyFleetDoctrineCommand(
+      empireReady,
+      first,
+      {
+        type: "set-fleet-doctrine",
+        instanceId: "real:doctrine:force",
+        optionId: paddlewheelReady.id,
+      },
+      () => "real:doctrine:paddlewheel",
+    );
+    expect(
+      evaluateRoster(first, empireSelected).totals.find((total) => total.resource === "points"),
+    ).toMatchObject({ value: "30", complete: true });
+
+    for (const documentPath of [
+      "Sultanate.cat",
+      "Crown.cat",
+      "Union.cat",
+      "Empire.cat",
+      "Alliance.cat",
+      "Commonwealth.cat",
+      "Imperium.cat",
+    ]) {
+      const battlefleet = Object.values(first.entities).find(
+        (entity) =>
+          entity.kind === "Battlefleet" && entity.provenance.documentPath === documentPath,
+      )!;
+      const projectedOptions = projectFleetDoctrine(
+        doctrineSnapshot(battlefleet.id),
+        first,
+      )!.groups.flatMap((group) => group.options);
+      const projectedByLabel = new Map(projectedOptions.map((option) => [option.label, option]));
+      const projectedLabels = new Set(projectedByLabel.keys());
+      const restrictedLabels = Object.values(first.entities)
+        .filter(
+          (entity) =>
+            entity.kind === "Option" &&
+            entity.provenance.documentPath === documentPath &&
+            doctrineText(entity).includes("Doctrine can only be purchased"),
+        )
+        .map((entity) => entity.label.plainText);
+      expect(restrictedLabels.length, documentPath).toBeGreaterThan(0);
+      expect(
+        restrictedLabels.filter((label) => !projectedLabels.has(label)),
+        documentPath,
+      ).toEqual([]);
+      for (const label of restrictedLabels) {
+        expect(projectedByLabel.get(label)?.availability, `${documentPath}: ${label}`).toBe(
+          "unavailable",
+        );
+        expect(projectedByLabel.get(label)?.reason, `${documentPath}: ${label}`).toMatch(
+          /flagship|флагман/iu,
+        );
+      }
+      expect(projectedLabels.size).toBe(projectedOptions.length);
+    }
+
+    const enlightenedBattlefleet = Object.values(first.entities).find(
+      (entity) =>
+        entity.kind === "Battlefleet" &&
+        entity.provenance.documentPath === "Enlightened.cat" &&
+        entity.ruleIds.some(
+          (id) => first.entities[id]?.label.plainText === "Multiple Manufacturers",
+        ),
+    )!;
+    const enlightenedFlagship = realUnitWithCategories("Enlightened.cat", ["Flagship"]);
+    let enlightened = doctrineSnapshot(enlightenedBattlefleet.id, enlightenedFlagship.id);
+    let projected = projectFleetDoctrine(enlightened, first)!;
+    expect(projected.selectionMode).toBe("one-per-group");
+    expect(projected.groups.map((group) => group.label)).toEqual([
+      "Driven By The Peer",
+      "Constructed By The Forge",
+    ]);
+    let created = 0;
+    for (const group of projected.groups) {
+      const option = group.options.find((candidate) => candidate.availability === "available")!;
+      enlightened = applyFleetDoctrineCommand(
+        enlightened,
+        first,
+        {
+          type: "set-fleet-doctrine",
+          instanceId: "real:doctrine:force",
+          optionId: option.id,
+        },
+        () => `real:doctrine:selected:${++created}`,
+      );
+    }
+    projected = projectFleetDoctrine(enlightened, first)!;
+    const selectedOptions = projected.groups
+      .flatMap((group) => group.options)
+      .filter((option) => option.selectedQuantity);
+    expect(selectedOptions).toHaveLength(2);
+    const selectedCosts = selectedOptions.map((option) =>
+      Number(option.costLabel.match(/[+-]?\d+/u)?.[0] ?? 0),
+    );
+    expect(
+      evaluateRoster(first, enlightened).totals.find((total) => total.resource === "points"),
+    ).toMatchObject({
+      value: String(Math.max(...selectedCosts)),
+      complete: true,
+    });
+  });
+
   it("projects every real forceEntry into the creation scenario without publishing payloads", () => {
     const setup = projectRosterSetup(first);
     const projectedBattlefleets = setup.factions.flatMap((faction) => faction.battlefleets);
@@ -779,4 +934,52 @@ function descendants(rootId: string): string[] {
     }
   }
   return [...visited];
+}
+
+function doctrineSnapshot(
+  battlefleetDefinitionId: string,
+  unitDefinitionId?: string,
+): RosterSnapshot {
+  const forceId = rosterInstanceId("real:doctrine:force");
+  const unitId = rosterInstanceId("real:doctrine:unit");
+  return {
+    contractVersion: 1,
+    id: "real-doctrine",
+    catalogContentVersion: first.contentVersion,
+    rootInstanceIds: [forceId],
+    instances: {
+      [forceId]: realInstance(forceId, battlefleetDefinitionId, null, forceId),
+      ...(unitDefinitionId
+        ? { [unitId]: realInstance(unitId, unitDefinitionId, forceId, forceId) }
+        : {}),
+    },
+  };
+}
+
+function realUnitWithCategories(
+  documentPath: string,
+  requiredLabels: readonly string[],
+): DomainEntity {
+  const categories = new Set(
+    Object.values(first.entities)
+      .filter(
+        (entity) => entity.kind === "Category" && requiredLabels.includes(entity.label.plainText),
+      )
+      .map((entity) => entity.id),
+  );
+  const unit = Object.values(first.entities).find(
+    (entity) =>
+      entity.kind === "Unit" &&
+      entity.provenance.documentPath === documentPath &&
+      [...categories].every((categoryId) => entity.categoryIds.includes(categoryId)),
+  );
+  if (!unit) throw new Error(`Missing ${documentPath} unit with ${requiredLabels.join(", ")}`);
+  return unit;
+}
+
+function doctrineText(entity: DomainEntity): string {
+  return [
+    entity.description?.plainText ?? "",
+    ...entity.ruleIds.map((id) => first.entities[id]?.description?.plainText ?? ""),
+  ].join(" ");
 }

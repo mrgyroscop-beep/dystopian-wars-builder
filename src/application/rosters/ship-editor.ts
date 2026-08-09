@@ -100,6 +100,7 @@ export type ShipEditorReadModel = ShipEditorReadyReadModel | ShipEditorUnavailab
 
 export interface FleetDoctrineReadModel {
   readonly ownerInstanceId: string;
+  readonly selectionMode: "one-total" | "one-per-group";
   readonly groups: readonly ShipEditorGroupReadModel[];
 }
 
@@ -302,42 +303,58 @@ export function projectFleetDoctrine(
       (instance) => instance && catalog.entities[instance.definitionId]?.kind === "Battlefleet",
     );
   if (!owner) return null;
-  const placements = fleetDoctrinePlacements(catalog, owner.definitionId);
-  const options = placements.flatMap((placement) => {
-    const definition = placement.definitionId ? catalog.entities[placement.definitionId] : null;
-    if (!definition) return [];
-    const selected = Object.values(snapshot.instances).some(
-      (instance) =>
-        instance.definitionId === definition.id && instance.forceInstanceId === owner.id,
-    );
-    return [
-      {
-        id: definition.id,
-        label: definition.label.plainText,
-        kind: definition.kind,
-        costLabel: optionCostLabel(catalog, definition, placement),
-        selectedQuantity: selected ? 1 : 0,
-        availability: "available" as const,
-        reason: null,
-        description: optionDescription(catalog, definition),
-      },
-    ];
-  });
-  if (!options.length) return null;
+  const inventory = fleetDoctrineInventory(catalog, owner.definitionId);
+  if (!inventory.candidates.length) return null;
+  const selectedDefinitions = new Set(
+    Object.values(snapshot.instances)
+      .filter((instance) => instance.forceInstanceId === owner.id)
+      .map((instance) => instance.definitionId),
+  );
+  const selectedLabels = new Set(
+    [...selectedDefinitions]
+      .map((id) => catalog.entities[id]?.label.plainText)
+      .filter((label): label is string => Boolean(label))
+      .map(normalizeDoctrineLabel),
+  );
+  const grouped = new Map<string, FleetDoctrineCandidate[]>();
+  for (const candidate of inventory.candidates) {
+    const group = grouped.get(candidate.familyId) ?? [];
+    group.push(candidate);
+    grouped.set(candidate.familyId, group);
+  }
   return {
     ownerInstanceId: owner.id,
-    groups: [
-      {
-        id: `fleet-doctrine:${owner.definitionId}`,
-        label: "Доктрина флота",
-        help: "Выберите одну доктрину для всего Battlefleet.",
-        scope: "fleet",
-        control: "exclusive",
-        minimum: 0,
-        maximum: 1,
-        options,
-      },
-    ],
+    selectionMode: inventory.multipleManufacturers ? "one-per-group" : "one-total",
+    groups: [...grouped.entries()].map(([familyId, candidates]) => ({
+      id: `fleet-doctrine:${owner.definitionId}:${familyId}`,
+      label: candidates[0]?.familyLabel ?? "Доктрина флота",
+      help: inventory.multipleManufacturers
+        ? "Можно выбрать по одной доктрине из каждой семьи. Более дешёвая из двух не увеличивает стоимость флота."
+        : candidates.length === inventory.candidates.length
+          ? "Выберите одну доктрину для всего Battlefleet."
+          : "Выберите одну доктрину для всего Battlefleet — выбор в другой семье будет заменён.",
+      scope: "fleet" as const,
+      control: "exclusive" as const,
+      minimum: 0,
+      maximum: 1,
+      options: candidates.map((candidate) => {
+        const availability = fleetDoctrineAvailability(snapshot, catalog, owner, candidate);
+        return {
+          id: candidate.definition.id,
+          label: candidate.definition.label.plainText,
+          kind: candidate.definition.kind,
+          costLabel: optionCostLabel(catalog, candidate.definition, candidate.placement),
+          selectedQuantity:
+            selectedDefinitions.has(candidate.definition.id) ||
+            selectedLabels.has(normalizeDoctrineLabel(candidate.definition.label.plainText))
+              ? 1
+              : 0,
+          availability: availability.state,
+          reason: availability.reason,
+          description: optionDescription(catalog, candidate.definition),
+        };
+      }),
+    })),
   };
 }
 
@@ -350,15 +367,24 @@ export function applyFleetDoctrineCommand(
   const owner = snapshot.instances[command.instanceId];
   if (!owner || catalog.entities[owner.definitionId]?.kind !== "Battlefleet")
     throw new ShipEditorCommandError("UNKNOWN_INSTANCE", "Battlefleet не найден.");
-  const option = fleetDoctrinePlacements(catalog, owner.definitionId).find(
-    (placement) => placement.definitionId === command.optionId,
+  const inventory = fleetDoctrineInventory(catalog, owner.definitionId);
+  const option = inventory.candidates.find(
+    (candidate) => candidate.definition.id === command.optionId,
   );
-  if (!option?.definitionId)
+  if (!option)
     throw new ShipEditorCommandError("UNKNOWN_OPTION", "Доктрина недоступна для этого флота.");
+  const availability = fleetDoctrineAvailability(snapshot, catalog, owner, option);
+  if (availability.state !== "available")
+    throw new ShipEditorCommandError(
+      availability.state === "indeterminate" ? "INDETERMINATE" : "UNAVAILABLE",
+      availability.reason ?? "Доктрина недоступна для текущего Battlefleet.",
+    );
   const doctrineIds = new Set(
-    fleetDoctrinePlacements(catalog, owner.definitionId).flatMap((placement) =>
-      placement.definitionId ? [placement.definitionId] : [],
-    ),
+    inventory.rawCandidates
+      .filter(
+        (candidate) => !inventory.multipleManufacturers || candidate.familyId === option.familyId,
+      )
+      .map((candidate) => candidate.definition.id),
   );
   const instances = { ...snapshot.instances };
   for (const instance of Object.values(instances)) {
@@ -366,7 +392,15 @@ export function applyFleetDoctrineCommand(
       delete instances[instance.id];
   }
   const id = freshId(instances, createId);
-  instances[id] = selection(id, option.definitionId, null, null, owner.id, owner.id, 1);
+  instances[id] = selection(
+    id,
+    option.definition.id,
+    option.placement.id,
+    option.placement.slotId,
+    owner.id,
+    owner.id,
+    1,
+  );
   return { ...snapshot, instances };
 }
 
@@ -721,13 +755,57 @@ function optionDescription(catalog: DomainCatalog, definition: DomainEntity | nu
   return descriptions.length ? descriptions.join("\n\n") : null;
 }
 
-function fleetDoctrinePlacements(
+interface FleetDoctrineCandidate {
+  readonly placement: Placement;
+  readonly definition: DomainEntity;
+  readonly familyId: string;
+  readonly familyLabel: string;
+  readonly familyOrder: number;
+}
+
+interface FleetDoctrineInventory {
+  readonly candidates: readonly FleetDoctrineCandidate[];
+  readonly rawCandidates: readonly FleetDoctrineCandidate[];
+  readonly multipleManufacturers: boolean;
+}
+
+function fleetDoctrineInventory(
   catalog: DomainCatalog,
   battlefleetDefinitionId: string,
-): Placement[] {
-  const direct = slotsForDefinition(catalog, battlefleetDefinitionId)
+): FleetDoctrineInventory {
+  const battlefleet = catalog.entities[battlefleetDefinitionId];
+  const defaultFamily = {
+    id: "fleet",
+    label: "Доктрина флота",
+    order: 0,
+  };
+  const raw: FleetDoctrineCandidate[] = [];
+  const add = (
+    placement: Placement,
+    family: { readonly id: string; readonly label: string; readonly order: number },
+  ) => {
+    const definition = placement.definitionId ? catalog.entities[placement.definitionId] : null;
+    if (
+      !definition ||
+      !["Option", "Doctrine"].includes(definition.kind) ||
+      /fleet\s+doctrines?/iu.test(definition.label.plainText) ||
+      (!definition.ruleIds.length && !definition.description?.plainText.trim())
+    )
+      return;
+    raw.push({
+      placement,
+      definition,
+      familyId: family.id,
+      familyLabel: family.label,
+      familyOrder: family.order,
+    });
+  };
+
+  for (const placement of slotsForDefinition(catalog, battlefleetDefinitionId)
     .filter((slot) => slot.kind === "Doctrine")
-    .flatMap((slot) => directSlotOptionPlacements(catalog, slot));
+    .flatMap((slot) => directSlotOptionPlacements(catalog, slot)))
+    add(placement, defaultFamily);
+
   const doctrineCategoryIds = new Set(
     Object.values(catalog.entities)
       .filter(
@@ -736,35 +814,298 @@ function fleetDoctrinePlacements(
       )
       .map((entity) => entity.id),
   );
-  const containerIds = new Set(
-    Object.values(catalog.entities)
-      .filter(
-        (entity) =>
-          entity.kind === "Doctrine" ||
-          (entity.kind === "Option" &&
-            (entity.categoryIds.some((id) => doctrineCategoryIds.has(id)) ||
-              /fleet\s+doctrines?/iu.test(entity.label.plainText))),
-      )
-      .map((entity) => entity.id),
+  const roots = Object.values(catalog.entities).filter(
+    (entity) =>
+      entity.kind === "Doctrine" ||
+      (entity.kind === "Option" &&
+        entity.provenance.documentRootId === battlefleet?.provenance.documentRootId &&
+        (entity.categoryIds.some((id) => doctrineCategoryIds.has(id)) ||
+          /fleet\s+doctrines?/iu.test(entity.label.plainText))),
   );
-  const categorized = Object.values(catalog.placements).filter((placement) => {
-    if (!containerIds.has(placement.ownerId) || !placement.definitionId) return false;
-    const definition = catalog.entities[placement.definitionId];
+  const outgoing = new Map<string, Placement[]>();
+  for (const placement of Object.values(catalog.placements)) {
+    const placements = outgoing.get(placement.ownerId) ?? [];
+    placements.push(placement);
+    outgoing.set(placement.ownerId, placements);
+  }
+  const visit = (
+    ownerId: string,
+    family: { readonly id: string; readonly label: string; readonly order: number },
+    visited: ReadonlySet<string>,
+  ) => {
+    if (visited.has(ownerId)) return;
+    const nextVisited = new Set(visited).add(ownerId);
+    for (const placement of (outgoing.get(ownerId) ?? []).sort(
+      (left, right) => left.order - right.order || left.id.localeCompare(right.id),
+    )) {
+      const definition = placement.definitionId ? catalog.entities[placement.definitionId] : null;
+      if (!definition || !["Option", "Doctrine", "OptionSlot"].includes(definition.kind)) continue;
+      const nextFamily =
+        definition.kind === "OptionSlot" && !/fleet\s+doctrines?/iu.test(definition.label.plainText)
+          ? {
+              id: normalizeDoctrineLabel(definition.label.plainText),
+              label: definition.label.plainText,
+              order: Number(definition.attributes.sortIndex ?? placement.order),
+            }
+          : family;
+      add(placement, nextFamily);
+      visit(definition.id, nextFamily, nextVisited);
+    }
+  };
+  for (const root of roots) visit(root.id, defaultFamily, new Set());
+
+  const visibleForFaction = raw.filter(
+    (candidate) => !hiddenForPrimaryCatalogue(catalog, battlefleet, candidate),
+  );
+  const unique = new Map<string, FleetDoctrineCandidate>();
+  for (const candidate of visibleForFaction) {
+    const key = `${candidate.familyId}:${normalizeDoctrineLabel(candidate.definition.label.plainText)}`;
+    const existing = unique.get(key);
+    if (
+      !existing ||
+      doctrineCandidateRank(candidate, battlefleet) > doctrineCandidateRank(existing, battlefleet)
+    )
+      unique.set(key, candidate);
+  }
+  const deduplicated = [...unique.values()];
+  const hasNamedFamilies = deduplicated.some((candidate) => candidate.familyId !== "fleet");
+  const candidates = deduplicated
+    .filter((candidate) => !hasNamedFamilies || candidate.familyId !== "fleet")
+    .sort(
+      (left, right) =>
+        left.familyOrder - right.familyOrder ||
+        left.placement.order - right.placement.order ||
+        left.definition.label.plainText.localeCompare(right.definition.label.plainText),
+    );
+  return {
+    candidates,
+    rawCandidates: raw,
+    multipleManufacturers: Boolean(
+      battlefleet?.ruleIds.some(
+        (id) => catalog.entities[id]?.label.plainText === "Multiple Manufacturers",
+      ),
+    ),
+  };
+}
+
+function doctrineCandidateRank(
+  candidate: FleetDoctrineCandidate,
+  battlefleet: DomainEntity | undefined,
+): number {
+  const local =
+    candidate.definition.provenance.documentRootId === battlefleet?.provenance.documentRootId;
+  const visibleByDefault = candidate.definition.attributes.hidden !== "true";
+  return (local ? 4 : 0) + (visibleByDefault ? 2 : 0) + (candidate.placement.resolved ? 1 : 0);
+}
+
+function hiddenForPrimaryCatalogue(
+  catalog: DomainCatalog,
+  battlefleet: DomainEntity | undefined,
+  candidate: FleetDoctrineCandidate,
+): boolean {
+  if (!battlefleet) return false;
+  const modifierIds = [
+    ...candidate.definition.modifierIds,
+    ...candidate.placement.overlay.modifierIds,
+  ];
+  return modifierIds.some((id) => {
+    const modifier = catalog.entities[id];
     return Boolean(
-      definition &&
-      ["Option", "Doctrine"].includes(definition.kind) &&
-      !/fleet\s+doctrines?/iu.test(definition.label.plainText) &&
-      (definition.ruleIds.length > 0 || definition.description?.plainText.trim()),
+      modifier?.kind === "Modifier" &&
+      modifier.expression.field === "hidden" &&
+      modifier.expression.value === "true" &&
+      modifier.conditionIds.some((conditionId) =>
+        conditionReferencesPrimaryCatalogue(
+          catalog,
+          conditionId,
+          battlefleet.provenance.documentRootId,
+          new Set(),
+        ),
+      ),
     );
   });
-  const unique = new Map<string, Placement>();
-  for (const placement of [...direct, ...categorized].sort(
-    (left, right) => left.order - right.order || left.id.localeCompare(right.id),
-  )) {
-    if (placement.definitionId && !unique.has(placement.definitionId))
-      unique.set(placement.definitionId, placement);
+}
+
+function conditionReferencesPrimaryCatalogue(
+  catalog: DomainCatalog,
+  conditionId: string,
+  documentRootId: string,
+  visited: Set<string>,
+): boolean {
+  if (visited.has(conditionId)) return false;
+  visited.add(conditionId);
+  const condition = catalog.entities[conditionId];
+  if (!condition || (condition.kind !== "Condition" && condition.kind !== "ConditionGroup"))
+    return false;
+  if (
+    condition.kind === "Condition" &&
+    condition.expression.scope === "primary-catalogue" &&
+    condition.expression.references.some(
+      (id) => catalog.entities[id]?.provenance.documentRootId === documentRootId,
+    )
+  )
+    return true;
+  return condition.conditionIds.some((id) =>
+    conditionReferencesPrimaryCatalogue(catalog, id, documentRootId, visited),
+  );
+}
+
+function fleetDoctrineAvailability(
+  snapshot: RosterSnapshot,
+  catalog: DomainCatalog,
+  owner: RosterSelectionInstance,
+  candidate: FleetDoctrineCandidate,
+): {
+  readonly state: ShipEditorOptionReadModel["availability"];
+  readonly reason: string | null;
+} {
+  const requirements = doctrineFlagshipRequirements(catalog, candidate);
+  const hiddenByDefault =
+    candidate.definition.attributes.hidden === "true" ||
+    candidate.placement.overlay.attributes.hidden === "true";
+  if (!requirements.length)
+    return hiddenByDefault
+      ? {
+          state: "indeterminate",
+          reason: "Каталог не содержит безопасно интерпретируемых условий этой доктрины.",
+        }
+      : { state: "available", reason: null };
+  const flagships = fleetUnitCategoryLabels(snapshot, catalog, owner.id).filter((labels) =>
+    labels.has("flagship"),
+  );
+  if (!flagships.length)
+    return {
+      state: "unavailable",
+      reason: "Сначала добавьте подходящий флагман в Battlefleet.",
+    };
+  if (flagships.some((labels) => requirements.every((requirement) => labels.has(requirement.key))))
+    return { state: "available", reason: null };
+  return {
+    state: "unavailable",
+    reason: `Требуется флагман с признаками: ${requirements
+      .filter((requirement) => requirement.key !== "flagship")
+      .map((requirement) => requirement.label)
+      .join(" · ")}.`,
+  };
+}
+
+function doctrineFlagshipRequirements(
+  catalog: DomainCatalog,
+  candidate: FleetDoctrineCandidate,
+): readonly { readonly key: string; readonly label: string }[] {
+  const description = optionDescription(catalog, candidate.definition) ?? "";
+  const phrase = /doctrine can only be purchased for an?\s+(.+?)\s+flagship unit/iu.exec(
+    description,
+  )?.[1];
+  const normalizedPhrase = normalizeDoctrineLabel(phrase ?? "");
+  const requirements = phrase
+    ? Object.values(catalog.entities)
+        .filter((entity) => {
+          const label = normalizeDoctrineLabel(entity.label.plainText);
+          return entity.kind === "Category" && label.length > 2 && normalizedPhrase.includes(label);
+        })
+        .map((entity) => ({
+          key: normalizeDoctrineLabel(entity.label.plainText),
+          label: entity.label.plainText,
+        }))
+    : [];
+  const conditionIds = [
+    ...candidate.definition.modifierIds,
+    ...candidate.placement.overlay.modifierIds,
+  ].flatMap((id) => {
+    const modifier = catalog.entities[id];
+    return modifier?.kind === "Modifier" &&
+      modifier.expression.field === "hidden" &&
+      modifier.expression.value === "false"
+      ? modifier.conditionIds
+      : [];
+  });
+  for (const conditionId of conditionIds) {
+    for (const requirement of conditionCategoryRequirements(catalog, conditionId, new Set()))
+      requirements.push(requirement);
   }
-  return [...unique.values()];
+  if (phrase || requirements.some((requirement) => requirement.key === "flagship"))
+    requirements.unshift({ key: "flagship", label: "Flagship" });
+  return [...new Map(requirements.map((requirement) => [requirement.key, requirement])).values()];
+}
+
+function conditionCategoryRequirements(
+  catalog: DomainCatalog,
+  conditionId: string,
+  visited: Set<string>,
+): { readonly key: string; readonly label: string }[] {
+  if (visited.has(conditionId)) return [];
+  visited.add(conditionId);
+  const condition = catalog.entities[conditionId];
+  if (!condition || (condition.kind !== "Condition" && condition.kind !== "ConditionGroup"))
+    return [];
+  if (condition.kind === "Condition")
+    return condition.expression.references.flatMap((id) => {
+      const category = catalog.entities[id];
+      return category?.kind === "Category"
+        ? [
+            {
+              key: normalizeDoctrineLabel(category.label.plainText),
+              label: category.label.plainText,
+            },
+          ]
+        : [];
+    });
+  return condition.conditionIds.flatMap((id) =>
+    conditionCategoryRequirements(catalog, id, visited),
+  );
+}
+
+function fleetUnitCategoryLabels(
+  snapshot: RosterSnapshot,
+  catalog: DomainCatalog,
+  forceInstanceId: string,
+): readonly ReadonlySet<string>[] {
+  const instances = Object.values(snapshot.instances);
+  const children = new Map<string, RosterSelectionInstance[]>();
+  for (const instance of instances) {
+    if (!instance.parentInstanceId) continue;
+    const entries = children.get(instance.parentInstanceId) ?? [];
+    entries.push(instance);
+    children.set(instance.parentInstanceId, entries);
+  }
+  const labelsFor = (root: RosterSelectionInstance): ReadonlySet<string> => {
+    const labels = new Set<string>();
+    const pending = [root];
+    const visited = new Set<string>();
+    while (pending.length) {
+      const instance = pending.shift()!;
+      if (visited.has(instance.id)) continue;
+      visited.add(instance.id);
+      const definition = catalog.entities[instance.definitionId];
+      const placement = instance.placementId ? catalog.placements[instance.placementId] : null;
+      for (const id of [
+        ...(definition?.categoryIds ?? []),
+        ...(placement?.overlay.categoryIds ?? []),
+      ]) {
+        const category = catalog.entities[id];
+        if (category?.kind === "Category")
+          labels.add(normalizeDoctrineLabel(category.label.plainText));
+      }
+      pending.push(...(children.get(instance.id) ?? []));
+    }
+    return labels;
+  };
+  return instances
+    .filter(
+      (instance) =>
+        instance.forceInstanceId === forceInstanceId &&
+        catalog.entities[instance.definitionId]?.kind === "Unit",
+    )
+    .map(labelsFor);
+}
+
+function normalizeDoctrineLabel(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase("en")
+    .replace(/[^a-z0-9]+/gu, " ")
+    .trim();
 }
 
 function resolveGroupContext(
@@ -1180,13 +1521,13 @@ function optionCostLabel(
   const structuralModel = structuralModelPlacement?.definitionId
     ? catalog.entities[structuralModelPlacement.definitionId]
     : null;
-  const ids = [
+  const ids = new Set([
     ...(definition?.costIds ?? []),
     ...(placement?.overlay.costIds ?? []),
     ...(structuralModel?.costIds ?? []),
     ...(structuralModelPlacement?.overlay.costIds ?? []),
-  ];
-  const points = ids.reduce((sum, id) => {
+  ]);
+  const points = [...ids].reduce((sum, id) => {
     const candidate = catalog.entities[id];
     if (
       candidate?.kind !== "Cost" ||

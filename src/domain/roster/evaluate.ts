@@ -55,6 +55,8 @@ const EMPTY_TARGET: ProblemTarget = {
   slotId: null,
 };
 
+const MULTIPLE_MANUFACTURERS_RULE = "Multiple Manufacturers";
+
 export function rosterInstanceId(value: string): RosterInstanceId {
   return value as RosterInstanceId;
 }
@@ -101,6 +103,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     evaluateEntityConstraints(instance);
     evaluateSlots(instance);
   }
+  applyBattlefleetDoctrineDiscounts();
 
   const sortedProblems = [...problems.values()].sort(compareProblem);
   const status = sortedProblems.some((problem) => problem.severity === "indeterminate")
@@ -329,6 +332,63 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           continue;
         }
         addCost(candidate, origin, instance, entity);
+      }
+    }
+  }
+
+  function applyBattlefleetDoctrineDiscounts(): void {
+    for (const force of instances) {
+      const battlefleet = catalog.entities[force.definitionId];
+      if (
+        battlefleet?.kind !== "Battlefleet" ||
+        !battlefleet.ruleIds.some(
+          (ruleId) => catalog.entities[ruleId]?.label.plainText === MULTIPLE_MANUFACTURERS_RULE,
+        )
+      )
+        continue;
+      const doctrineInstanceIds = new Set(
+        instances.flatMap((instance) => {
+          const definition = catalog.entities[instance.definitionId];
+          return instance.parentInstanceId === force.id &&
+            instance.forceInstanceId === force.id &&
+            (definition?.kind === "Option" || definition?.kind === "Doctrine")
+            ? [instance.id]
+            : [];
+        }),
+      );
+      const doctrineCosts = [...doctrineInstanceIds].flatMap((instanceId) => {
+        const values = contributions.flatMap((contribution) => {
+          if (contribution.instanceId !== instanceId || contribution.resource !== "points")
+            return [];
+          const value = parseDecimal(contribution.value);
+          return value ? [value] : [];
+        });
+        return values.length
+          ? [
+              {
+                instanceId,
+                value: values.reduce(addDecimal, zeroDecimal()),
+              },
+            ]
+          : [];
+      });
+      if (doctrineCosts.length < 2) continue;
+      doctrineCosts.sort(
+        (left, right) =>
+          compareDecimal(left.value, right.value) ||
+          left.instanceId.localeCompare(right.instanceId),
+      );
+      const freeInstanceId = doctrineCosts[0]!.instanceId;
+      for (let index = 0; index < contributions.length; index += 1) {
+        const contribution = contributions[index]!;
+        if (contribution.instanceId !== freeInstanceId || contribution.resource !== "points")
+          continue;
+        const value = parseDecimal(contribution.value);
+        const cost = catalog.entities[contribution.costId];
+        if (!value || cost?.kind !== "Cost") continue;
+        const total = totalFor(cost);
+        total.value = addDecimal(total.value, multiplyDecimalByInteger(value, -1));
+        contributions[index] = { ...contribution, unitValue: "0", value: "0" };
       }
     }
   }

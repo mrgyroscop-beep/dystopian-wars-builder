@@ -40,7 +40,14 @@ export function FleetDoctrinePanel({
           <span className="eyebrow">Первый элемент состава</span>
           <strong id={`${panelId}-title`}>Доктрина флота</strong>
           <small>
-            {selected.length ? <DoctrineTitle doctrine={selected[0]!} /> : "Не выбрана"}
+            {selected.length
+              ? selected.map((option, index) => (
+                  <span key={option.id}>
+                    {index > 0 ? " · " : null}
+                    <DoctrineTitle doctrine={option} />
+                  </span>
+                ))
+              : "Не выбрана"}
           </small>
         </span>
         <span className="fleet-doctrine__chevron" aria-hidden="true">
@@ -61,7 +68,11 @@ export function FleetDoctrinePanel({
                     doctrine={option}
                     inputId={`${panelId}-${groupIndex}-${optionIndex}`}
                     key={option.id}
-                    name={`fleet-doctrine-${groupIndex}`}
+                    name={
+                      doctrine.selectionMode === "one-per-group"
+                        ? `fleet-doctrine-${groupIndex}`
+                        : `fleet-doctrine-${doctrine.ownerInstanceId}`
+                    }
                     onInspect={() => setInspected(option)}
                     onSelect={(label) =>
                       onCommand(
@@ -113,6 +124,8 @@ function DoctrineOption({
   const localized = useRuleTranslation(doctrine.label);
   const translated = localized.language === "ru" ? localized.translation : null;
   const label = translated?.title ?? doctrine.label;
+  const englishFallback =
+    localized.language === "ru" && !localized.loading && !localized.translation;
   const unavailable = doctrine.availability !== "available";
   const checked = doctrine.selectedQuantity > 0;
   return (
@@ -134,6 +147,7 @@ function DoctrineOption({
           <strong>{label}</strong>
           <small>
             {translated ? `${doctrine.label} · ` : ""}
+            {englishFallback ? "Оригинал EN · " : ""}
             {doctrine.reason ?? doctrine.costLabel}
           </small>
         </span>
@@ -162,6 +176,8 @@ function DoctrineDescriptionDialog({
   const returnFocus = useRef<HTMLElement | null>(null);
   const localized = useRuleTranslation(doctrine.label);
   const translated = localized.language === "ru" ? localized.translation : null;
+  const englishFallback =
+    localized.language === "ru" && !localized.loading && !localized.translation;
 
   useEffect(() => {
     returnFocus.current =
@@ -213,6 +229,11 @@ function DoctrineDescriptionDialog({
             ×
           </button>
         </header>
+        {englishFallback ? (
+          <p className="doctrine-dialog__fallback" role="status">
+            Перевод пока недоступен. Ниже показан английский оригинал из каталога.
+          </p>
+        ) : null}
         <p className="doctrine-dialog__description">
           {translated?.text ||
             doctrine.description ||
