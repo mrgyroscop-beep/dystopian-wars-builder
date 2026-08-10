@@ -10,7 +10,7 @@ import type {
 } from "../application/rosters/ship-editor";
 import type { WeaponProfileReadModel } from "../application/rosters/profile-rules";
 import { EyeIcon } from "./EyeIcon";
-import { WeaponProfileDialog } from "./ProfileDialog";
+import { OptionDescriptionDialog, WeaponProfileDialog } from "./ProfileDialog";
 
 export function ShipEditorShell({
   busy,
@@ -29,6 +29,10 @@ export function ShipEditorShell({
     model.dataState === "ready" ? (model.groups[0]?.id ?? null) : null,
   );
   const [inspectedWeapon, setInspectedWeapon] = useState<WeaponProfileReadModel | null>(null);
+  const [inspectedOption, setInspectedOption] = useState<{
+    readonly description: string;
+    readonly name: string;
+  } | null>(null);
 
   if (model.dataState !== "ready")
     return (
@@ -98,6 +102,10 @@ export function ShipEditorShell({
               model={model}
               nameToken={`unit-${groupIndex}`}
               onCommand={onCommand}
+              onInspectOption={(option) =>
+                option.description &&
+                setInspectedOption({ description: option.description, name: option.label })
+              }
               onInspectWeapon={setInspectedWeapon}
               onToggle={() => setOpenGroupId((current) => (current === group.id ? null : group.id))}
               open={openGroupId === group.id}
@@ -119,6 +127,13 @@ export function ShipEditorShell({
       </section>
       {inspectedWeapon ? (
         <WeaponProfileDialog onClose={() => setInspectedWeapon(null)} profile={inspectedWeapon} />
+      ) : null}
+      {inspectedOption ? (
+        <OptionDescriptionDialog
+          description={inspectedOption.description}
+          name={inspectedOption.name}
+          onClose={() => setInspectedOption(null)}
+        />
       ) : null}
     </article>
   );
@@ -146,6 +161,7 @@ function EditorGroup({
   model,
   nameToken,
   onCommand,
+  onInspectOption,
   onInspectWeapon,
   onToggle,
   open,
@@ -156,6 +172,7 @@ function EditorGroup({
   readonly model: ShipEditorReadyReadModel;
   readonly nameToken: string;
   readonly onCommand: (command: ShipEditorCommand, announcement: string) => void;
+  readonly onInspectOption: (option: ShipEditorOptionReadModel) => void;
   readonly onInspectWeapon: (profile: WeaponProfileReadModel) => void;
   readonly onToggle: () => void;
   readonly open: boolean;
@@ -233,16 +250,58 @@ function EditorGroup({
                   />
                   <OptionCopy option={option} />
                 </label>
-                {option.profile ? (
-                  <button
-                    aria-label={`Показать свойства ${option.label}`}
-                    className="option-inspect"
-                    onClick={() => option.profile && onInspectWeapon(option.profile)}
-                    type="button"
-                  >
-                    <EyeIcon />
-                  </button>
-                ) : null}
+                <OptionInspect
+                  onInspectOption={onInspectOption}
+                  onInspectWeapon={onInspectWeapon}
+                  option={option}
+                />
+              </div>
+            ) : group.maximum === 1 ? (
+              <div
+                className="editor-option editor-option--toggle"
+                data-availability={option.availability}
+                data-selected={option.selectedQuantity > 0 ? "true" : undefined}
+                key={option.id}
+              >
+                <button
+                  aria-pressed={option.selectedQuantity > 0}
+                  className="editor-option__toggle"
+                  disabled={busy || model.mode === "preview" || option.availability !== "available"}
+                  onClick={() => {
+                    if (!model.instanceId) return;
+                    const selected = option.selectedQuantity > 0;
+                    onCommand(
+                      selected
+                        ? {
+                            type: "set-choice-quantity",
+                            instanceId: model.instanceId,
+                            groupId: group.id,
+                            optionId: option.id,
+                            quantity: 0,
+                          }
+                        : {
+                            type: "replace-exclusive",
+                            instanceId: model.instanceId,
+                            groupId: group.id,
+                            optionId: option.id,
+                          },
+                      selected
+                        ? `${group.label}: выбор ${option.label} снят.`
+                        : `${group.label}: выбрано ${option.label}.`,
+                    );
+                  }}
+                  type="button"
+                >
+                  <span aria-hidden="true" className="editor-option__toggle-mark">
+                    {option.selectedQuantity > 0 ? "✓" : "+"}
+                  </span>
+                  <OptionCopy option={option} />
+                </button>
+                <OptionInspect
+                  onInspectOption={onInspectOption}
+                  onInspectWeapon={onInspectWeapon}
+                  option={option}
+                />
               </div>
             ) : (
               <div
@@ -251,42 +310,93 @@ function EditorGroup({
                 key={option.id}
               >
                 <OptionCopy option={option} />
-                <input
-                  aria-label={`Количество ${option.label}`}
-                  disabled={busy || model.mode === "preview" || option.availability !== "available"}
-                  max={group.maximum}
-                  min={group.minimum}
-                  onChange={(event) =>
-                    model.instanceId &&
-                    onCommand(
-                      {
-                        type: "set-choice-quantity",
-                        instanceId: model.instanceId,
-                        groupId: group.id,
-                        optionId: option.id,
-                        quantity: event.currentTarget.valueAsNumber,
-                      },
-                      `${group.label}: ${event.currentTarget.valueAsNumber} из ${group.maximum}.`,
-                    )
-                  }
-                  type="number"
-                  value={option.selectedQuantity}
-                />
-                {option.profile ? (
+                <div className="quantity-stepper">
                   <button
-                    aria-label={`Показать свойства ${option.label}`}
-                    className="option-inspect"
-                    onClick={() => option.profile && onInspectWeapon(option.profile)}
+                    aria-label={`Уменьшить количество ${option.label}`}
+                    disabled={
+                      busy ||
+                      model.mode === "preview" ||
+                      option.availability !== "available" ||
+                      option.selectedQuantity <= group.minimum
+                    }
+                    onClick={() =>
+                      model.instanceId &&
+                      onCommand(
+                        {
+                          type: "set-choice-quantity",
+                          instanceId: model.instanceId,
+                          groupId: group.id,
+                          optionId: option.id,
+                          quantity: option.selectedQuantity - 1,
+                        },
+                        `${group.label}: ${option.selectedQuantity - 1} из ${group.maximum}.`,
+                      )
+                    }
                     type="button"
                   >
-                    <EyeIcon />
+                    <span aria-hidden="true">−</span>
                   </button>
-                ) : null}
+                  <output aria-label={`Выбрано ${option.selectedQuantity}`}>
+                    {option.selectedQuantity}
+                  </output>
+                  <button
+                    aria-label={`Увеличить количество ${option.label}`}
+                    disabled={
+                      busy ||
+                      model.mode === "preview" ||
+                      option.availability !== "available" ||
+                      option.selectedQuantity >= group.maximum
+                    }
+                    onClick={() =>
+                      model.instanceId &&
+                      onCommand(
+                        {
+                          type: "set-choice-quantity",
+                          instanceId: model.instanceId,
+                          groupId: group.id,
+                          optionId: option.id,
+                          quantity: option.selectedQuantity + 1,
+                        },
+                        `${group.label}: ${option.selectedQuantity + 1} из ${group.maximum}.`,
+                      )
+                    }
+                    type="button"
+                  >
+                    <span aria-hidden="true">+</span>
+                  </button>
+                </div>
+                <OptionInspect
+                  onInspectOption={onInspectOption}
+                  onInspectWeapon={onInspectWeapon}
+                  option={option}
+                />
               </div>
             ),
           )}
         </div>
       ) : null}
     </section>
+  );
+}
+
+function OptionInspect({
+  onInspectOption,
+  onInspectWeapon,
+  option,
+}: {
+  readonly onInspectOption: (option: ShipEditorOptionReadModel) => void;
+  readonly onInspectWeapon: (profile: WeaponProfileReadModel) => void;
+  readonly option: ShipEditorOptionReadModel;
+}) {
+  if (!option.profile && !option.description) return null;
+  return (
+    <button
+      aria-label={`Показать свойства ${option.label}`}
+      className="option-inspect"
+      onClick={() => (option.profile ? onInspectWeapon(option.profile) : onInspectOption(option))}
+      type="button"
+    >
+      <EyeIcon />
+    </button>
   );
 }

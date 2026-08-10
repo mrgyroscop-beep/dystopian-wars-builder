@@ -80,6 +80,81 @@ describe("ShipEditorShell", () => {
     expect(document.body.textContent).not.toMatch(/opaque-slot|DEMO-/u);
   });
 
+  it("uses a clickable optional choice instead of a zero input", async () => {
+    const user = userEvent.setup();
+    const onCommand = vi.fn();
+    const optionalGenerator = group("generators", "Generators", 0, 1, [
+      {
+        ...option("interphase", "Interphase Generator", "Generator"),
+        description: "This generator bends light around the vessel.",
+      },
+      option("atomic", "Atomic Generator", "Generator"),
+    ]);
+    render(
+      <ShipEditorShell
+        busy={false}
+        model={{ ...editorModel("matsumoto"), groups: [optionalGenerator] }}
+        onAdd={vi.fn()}
+        onBack={vi.fn()}
+        onCommand={onCommand}
+      />,
+    );
+
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+    const generator = screen.getByRole("button", {
+      name: /Interphase Generator/u,
+      pressed: false,
+    });
+    expect(generator).toHaveAttribute("aria-pressed", "false");
+    await user.click(generator);
+    expect(onCommand).toHaveBeenCalledWith(
+      {
+        type: "replace-exclusive",
+        instanceId: "matsumoto",
+        groupId: "generators",
+        optionId: "interphase",
+      },
+      expect.any(String),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Показать свойства Interphase Generator" }),
+    );
+    expect(screen.getByRole("dialog", { name: "Interphase Generator" })).toHaveTextContent(
+      "bends light",
+    );
+  });
+
+  it("hires escorts with bounded stepper controls", async () => {
+    const user = userEvent.setup();
+    const onCommand = vi.fn();
+    const escorts = group("escorts", "Escorts", 0, 4, [option("escort", "Escorts", "Escort")]);
+    render(
+      <ShipEditorShell
+        busy={false}
+        model={{ ...editorModel("matsumoto"), groups: [escorts] }}
+        onAdd={vi.fn()}
+        onBack={vi.fn()}
+        onCommand={onCommand}
+      />,
+    );
+
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Выбрано 0")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Уменьшить количество Escorts" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Увеличить количество Escorts" }));
+    expect(onCommand).toHaveBeenCalledWith(
+      {
+        type: "set-choice-quantity",
+        instanceId: "matsumoto",
+        groupId: "escorts",
+        optionId: "escort",
+        quantity: 1,
+      },
+      expect.any(String),
+    );
+  });
+
   it("hides the Model tile even when its quantity is variable", () => {
     const onCommand = vi.fn();
     const variable = {

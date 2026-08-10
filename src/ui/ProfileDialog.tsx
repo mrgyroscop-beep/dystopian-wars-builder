@@ -89,11 +89,40 @@ export function WeaponProfileDialog({
   }
 }
 
+export function OptionDescriptionDialog({
+  description,
+  name,
+  onClose,
+}: {
+  readonly description: string;
+  readonly name: string;
+  readonly onClose: () => void;
+}) {
+  return (
+    <InspectorDialog
+      backgroundUrl={null}
+      closeLabel="Закрыть свойства"
+      compact
+      eyebrow="Свойство корабля"
+      name={name}
+      onClose={onClose}
+    >
+      <div className="option-description">
+        {description.split(/\n{2,}/u).map((paragraph) => (
+          <p key={paragraph}>{paragraph}</p>
+        ))}
+      </div>
+    </InspectorDialog>
+  );
+}
+
 function InspectorDialog({
   backgroundUrl,
   card = false,
   children,
+  closeLabel = "Закрыть профиль",
   compact = false,
+  eyebrow = "Профиль ORBAT",
   imageSearchHref,
   name,
   onClose,
@@ -101,7 +130,9 @@ function InspectorDialog({
   readonly backgroundUrl: string | null;
   readonly card?: boolean;
   readonly children: ReactNode;
+  readonly closeLabel?: string;
   readonly compact?: boolean;
+  readonly eyebrow?: string;
   readonly imageSearchHref?: string;
   readonly name: string;
   readonly onClose: () => void;
@@ -165,7 +196,7 @@ function InspectorDialog({
         <div className="profile-dialog__veil" aria-hidden="true" />
         <header className="profile-dialog__header">
           <div>
-            <p className="eyebrow">Профиль ORBAT</p>
+            <p className="eyebrow">{eyebrow}</p>
             <h2 id={titleId}>{name}</h2>
           </div>
           <div className="profile-dialog__header-actions">
@@ -198,7 +229,7 @@ function InspectorDialog({
               </button>
             ) : null}
             <button
-              aria-label="Закрыть профиль"
+              aria-label={closeLabel}
               className="profile-dialog__close"
               onClick={onClose}
               type="button"
@@ -217,7 +248,7 @@ function InspectorDialog({
         </div>
       </dialog>
       <button
-        aria-label="Закрыть профиль по фону"
+        aria-label={`${closeLabel} по фону`}
         className="profile-dialog__dismiss"
         onClick={onClose}
         type="button"
