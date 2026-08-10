@@ -482,6 +482,18 @@ describe("application routes", () => {
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Копировать Akita Demonstrator" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Удалить Akita Demonstrator" })).toBeVisible();
+    const imageSearchLinks = screen.getAllByRole("link", {
+      name: "Найти изображения Akita Demonstrator в Google",
+    });
+    expect(imageSearchLinks).toHaveLength(2);
+    for (const link of imageSearchLinks) {
+      expect(link).toHaveAttribute(
+        "href",
+        "https://www.google.com/search?q=Akita+Demonstrator+Dystopian+Wars&tbm=isch",
+      );
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    }
   });
 
   it("marks a fleet element when its maximum ship count is exceeded", async () => {
