@@ -395,6 +395,100 @@ describe("catalog-driven ship editor application boundary", () => {
     );
   });
 
+  it("keeps optional maximum-one alternatives neutral and replaceable at capacity", () => {
+    const fixture = setup();
+    const attachmentSlot = Object.values(fixture.catalog.slots).find(
+      (candidate) => candidate.label.plainText === "Attachments",
+    )!;
+    const repairCrane = entityByLabel(fixture.catalog, "Repair Crane");
+    const repairPlacement = fixture.catalog.placements[attachmentSlot.optionPlacementIds[0]!]!;
+    const shieldSourceId = sourceNodeId("test", "selectionEntry", "shield-generator");
+    const shieldId = entityId(shieldSourceId);
+    const shieldPlacementId = placementId(
+      attachmentSlot.ownerId,
+      sourceNodeId("test", "selectionEntry", "shield-generator-placement"),
+      1,
+      "ownership",
+    );
+    const shieldLabel = toSafePresentation("Shield Generator");
+    const catalog: DomainCatalog = {
+      ...fixture.catalog,
+      entities: {
+        ...fixture.catalog.entities,
+        [shieldId]: {
+          ...repairCrane,
+          id: shieldId,
+          label: shieldLabel,
+          labels: {
+            ...repairCrane.labels,
+            canonicalLabel: shieldLabel.plainText,
+            fallbackLabel: shieldLabel.plainText,
+            sourceLabel: shieldLabel.plainText,
+          },
+          identity: {
+            ...repairCrane.identity,
+            canonicalId: shieldId,
+            sourceNodeId: shieldSourceId,
+          },
+        },
+      },
+      placements: {
+        ...fixture.catalog.placements,
+        [shieldPlacementId]: {
+          ...repairPlacement,
+          id: shieldPlacementId,
+          definitionId: shieldId,
+          order: 1,
+          targetSourceNodeId: shieldSourceId,
+        },
+      },
+      slots: {
+        ...fixture.catalog.slots,
+        [attachmentSlot.id]: {
+          ...attachmentSlot,
+          placementIds: [...attachmentSlot.placementIds, shieldPlacementId],
+          optionPlacementIds: [...attachmentSlot.optionPlacementIds, shieldPlacementId],
+        },
+      },
+    };
+    const tailored = { ...fixture, catalog };
+    let snapshot = materialize(tailored);
+    let model = project(snapshot, tailored);
+    const attachments = group(model, "Attachments");
+
+    snapshot = applyShipEditorCommand(
+      snapshot,
+      catalog,
+      {
+        type: "replace-exclusive",
+        instanceId: fixture.unit.id,
+        groupId: attachments.id,
+        optionId: option(model, "Attachments", "Repair Crane").id,
+      },
+      fixture.createId,
+    );
+    model = project(snapshot, tailored);
+    expect(option(model, "Attachments", "Shield Generator")).toMatchObject({
+      availability: "available",
+      reason: null,
+    });
+
+    snapshot = applyShipEditorCommand(
+      snapshot,
+      catalog,
+      {
+        type: "replace-exclusive",
+        instanceId: fixture.unit.id,
+        groupId: attachments.id,
+        optionId: option(model, "Attachments", "Shield Generator").id,
+      },
+      fixture.createId,
+    );
+    model = project(snapshot, tailored);
+    expect(option(model, "Attachments", "Repair Crane").selectedQuantity).toBe(0);
+    expect(option(model, "Attachments", "Shield Generator").selectedQuantity).toBe(1);
+  });
+
   it("shows the structural Model cost for a Unit attachment", () => {
     const fixture = setup();
     const snapshot = materialize(fixture);

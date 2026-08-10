@@ -5615,8 +5615,7 @@ button.button {
   cursor: pointer;
 }
 
-.editor-option:has(input:checked),
-.editor-option[data-selected="true"] {
+.editor-option:has(input:checked) {
   background: var(--surface-selected);
   border-color: var(--brand);
   box-shadow: inset 3px 0 0 var(--brand);
@@ -5699,52 +5698,6 @@ button.button {
   font-family: "Roboto Mono", "IBM Plex Mono", monospace;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-}
-
-.editor-option__toggle {
-  display: flex;
-  min-width: 0;
-  min-height: 2.75rem;
-  flex: 1 1 auto;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.55rem;
-  color: inherit;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-}
-
-.editor-option--toggle {
-  gap: 0;
-  padding: 0;
-}
-
-.editor-option--toggle .option-inspect {
-  margin-right: 0.45rem;
-}
-
-.editor-option__toggle:disabled {
-  cursor: not-allowed;
-}
-
-.editor-option__toggle-mark {
-  display: grid;
-  width: 1.5rem;
-  height: 1.5rem;
-  place-items: center;
-  flex: 0 0 auto;
-  color: var(--brand);
-  border: 1px solid var(--border-strong);
-  border-radius: 50%;
-  font-weight: 800;
-}
-
-.editor-option[data-selected="true"] .editor-option__toggle-mark {
-  color: #ffffff;
-  background: var(--brand);
-  border-color: var(--brand);
 }
 
 .quantity-stepper {
@@ -6077,7 +6030,7 @@ button.button {
 
   .editor-option--quantity {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .editor-option--quantity .editor-option__copy {
@@ -6093,12 +6046,6 @@ button.button {
     grid-column: 2;
     grid-row: 2;
     justify-self: end;
-  }
-
-  .editor-option--quantity .option-inspect {
-    grid-column: 3;
-    grid-row: 2;
-    margin-left: 0;
   }
 
   .editor-group__summary {

@@ -221,7 +221,7 @@ function EditorGroup({
         <div className="editor-group__body">
           <p>{group.help}</p>
           {group.options.map((option) =>
-            group.control === "exclusive" ? (
+            group.maximum === 1 ? (
               <div
                 className="editor-option"
                 data-availability={option.availability}
@@ -250,53 +250,6 @@ function EditorGroup({
                   />
                   <OptionCopy option={option} />
                 </label>
-                <OptionInspect
-                  onInspectOption={onInspectOption}
-                  onInspectWeapon={onInspectWeapon}
-                  option={option}
-                />
-              </div>
-            ) : group.maximum === 1 ? (
-              <div
-                className="editor-option editor-option--toggle"
-                data-availability={option.availability}
-                data-selected={option.selectedQuantity > 0 ? "true" : undefined}
-                key={option.id}
-              >
-                <button
-                  aria-pressed={option.selectedQuantity > 0}
-                  className="editor-option__toggle"
-                  disabled={busy || model.mode === "preview" || option.availability !== "available"}
-                  onClick={() => {
-                    if (!model.instanceId) return;
-                    const selected = option.selectedQuantity > 0;
-                    onCommand(
-                      selected
-                        ? {
-                            type: "set-choice-quantity",
-                            instanceId: model.instanceId,
-                            groupId: group.id,
-                            optionId: option.id,
-                            quantity: 0,
-                          }
-                        : {
-                            type: "replace-exclusive",
-                            instanceId: model.instanceId,
-                            groupId: group.id,
-                            optionId: option.id,
-                          },
-                      selected
-                        ? `${group.label}: выбор ${option.label} снят.`
-                        : `${group.label}: выбрано ${option.label}.`,
-                    );
-                  }}
-                  type="button"
-                >
-                  <span aria-hidden="true" className="editor-option__toggle-mark">
-                    {option.selectedQuantity > 0 ? "✓" : "+"}
-                  </span>
-                  <OptionCopy option={option} />
-                </button>
                 <OptionInspect
                   onInspectOption={onInspectOption}
                   onInspectWeapon={onInspectWeapon}
@@ -365,11 +318,6 @@ function EditorGroup({
                     <span aria-hidden="true">+</span>
                   </button>
                 </div>
-                <OptionInspect
-                  onInspectOption={onInspectOption}
-                  onInspectWeapon={onInspectWeapon}
-                  option={option}
-                />
               </div>
             ),
           )}

@@ -80,7 +80,7 @@ describe("ShipEditorShell", () => {
     expect(document.body.textContent).not.toMatch(/opaque-slot|DEMO-/u);
   });
 
-  it("uses a clickable optional choice instead of a zero input", async () => {
+  it("uses the same radio choice pattern for optional generators", async () => {
     const user = userEvent.setup();
     const onCommand = vi.fn();
     const optionalGenerator = group("generators", "Generators", 0, 1, [
@@ -101,11 +101,8 @@ describe("ShipEditorShell", () => {
     );
 
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
-    const generator = screen.getByRole("button", {
-      name: /Interphase Generator/u,
-      pressed: false,
-    });
-    expect(generator).toHaveAttribute("aria-pressed", "false");
+    const generator = screen.getByRole("radio", { name: /Interphase Generator/u });
+    expect(generator).not.toBeChecked();
     await user.click(generator);
     expect(onCommand).toHaveBeenCalledWith(
       {
@@ -116,6 +113,8 @@ describe("ShipEditorShell", () => {
       },
       expect.any(String),
     );
+
+    expect(screen.getByRole("radio", { name: /Atomic Generator/u })).toBeEnabled();
 
     await user.click(
       screen.getByRole("button", { name: "Показать свойства Interphase Generator" }),
@@ -128,7 +127,9 @@ describe("ShipEditorShell", () => {
   it("hires escorts with bounded stepper controls", async () => {
     const user = userEvent.setup();
     const onCommand = vi.fn();
-    const escorts = group("escorts", "Escorts", 0, 4, [option("escort", "Escorts", "Escort")]);
+    const escorts = group("escorts", "Escorts", 0, 4, [
+      { ...option("escort", "Escorts", "Escort"), description: "Escort support." },
+    ]);
     render(
       <ShipEditorShell
         busy={false}
@@ -140,6 +141,9 @@ describe("ShipEditorShell", () => {
     );
 
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Показать свойства Escorts" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByLabelText("Выбрано 0")).toBeVisible();
     expect(screen.getByRole("button", { name: "Уменьшить количество Escorts" })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Увеличить количество Escorts" }));

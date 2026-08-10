@@ -668,7 +668,6 @@ function projectGroup(
           candidate.ownerInstanceId === owner.id && candidate.placementId === placementId,
       );
       const replaceableAtCapacity =
-        bounds.minimum === 1 &&
         bounds.maximum === 1 &&
         availability?.state === "unavailable" &&
         availability.reasonCodes.length > 0 &&
