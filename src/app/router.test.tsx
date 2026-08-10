@@ -482,18 +482,21 @@ describe("application routes", () => {
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Копировать Akita Demonstrator" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Удалить Akita Demonstrator" })).toBeVisible();
-    const imageSearchLinks = screen.getAllByRole("link", {
+    const profileButtons = screen.getAllByRole("button", {
+      name: "Показать профиль Akita Demonstrator",
+    });
+    expect(profileButtons).toHaveLength(2);
+    await user.click(profileButtons[1]!);
+    const profile = await screen.findByRole("dialog", { name: "Akita Demonstrator" });
+    const imageSearchLink = within(profile).getByRole("link", {
       name: "Найти изображения Akita Demonstrator в Google",
     });
-    expect(imageSearchLinks).toHaveLength(2);
-    for (const link of imageSearchLinks) {
-      expect(link).toHaveAttribute(
-        "href",
-        "https://www.google.com/search?q=Akita+Demonstrator+Dystopian+Wars&tbm=isch",
-      );
-      expect(link).toHaveAttribute("target", "_blank");
-      expect(link).toHaveAttribute("rel", "noopener noreferrer");
-    }
+    expect(imageSearchLink).toHaveAttribute(
+      "href",
+      "https://www.google.com/search?q=Akita+Demonstrator+Dystopian+Wars&tbm=isch",
+    );
+    expect(imageSearchLink).toHaveAttribute("target", "_blank");
+    expect(imageSearchLink).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it("marks a fleet element when its maximum ship count is exceeded", async () => {

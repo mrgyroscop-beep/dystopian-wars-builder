@@ -15,17 +15,25 @@ import { RuleDescription, RuleLinks, ShipCardProfile, ShipMobileProfile } from "
 
 export function ShipProfileDialog({
   faction,
+  imageSearchHref,
   model,
   name,
   onClose,
 }: {
   readonly faction: string;
+  readonly imageSearchHref?: string;
   readonly model: ShipEditorReadyReadModel;
   readonly name: string;
   readonly onClose: () => void;
 }) {
   return (
-    <InspectorDialog backgroundUrl={null} card name={name} onClose={onClose}>
+    <InspectorDialog
+      backgroundUrl={null}
+      card
+      {...(imageSearchHref ? { imageSearchHref } : {})}
+      name={name}
+      onClose={onClose}
+    >
       <ShipMobileProfile faction={faction} model={model} />
       <div className="profile-dialog__original-card">
         <ShipCardProfile faction={faction} model={model} />
@@ -86,6 +94,7 @@ function InspectorDialog({
   card = false,
   children,
   compact = false,
+  imageSearchHref,
   name,
   onClose,
 }: {
@@ -93,6 +102,7 @@ function InspectorDialog({
   readonly card?: boolean;
   readonly children: ReactNode;
   readonly compact?: boolean;
+  readonly imageSearchHref?: string;
   readonly name: string;
   readonly onClose: () => void;
 }) {
@@ -159,6 +169,18 @@ function InspectorDialog({
             <h2 id={titleId}>{name}</h2>
           </div>
           <div className="profile-dialog__header-actions">
+            {imageSearchHref ? (
+              <a
+                aria-label={`Найти изображения ${name} в Google`}
+                className="profile-dialog__image-search"
+                href={imageSearchHref}
+                rel="noopener noreferrer"
+                target="_blank"
+                title="Найти изображение в Google"
+              >
+                <CameraIcon />
+              </a>
+            ) : null}
             {card ? (
               <button
                 aria-label={
@@ -201,5 +223,14 @@ function InspectorDialog({
         type="button"
       />
     </div>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg aria-hidden="true" className="camera-icon" viewBox="0 0 24 24">
+      <path d="M3.5 7.5h4l1.4-2h6.2l1.4 2h4v11h-17Z" />
+      <circle cx="12" cy="13" r="3.25" />
+    </svg>
   );
 }

@@ -21,10 +21,12 @@ import {
   type FleetDoctrineCommand,
   type ShipEditorCommand,
   type ShipEditorReadModel,
+  type ShipEditorReadyReadModel,
 } from "../application/rosters/ship-editor";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 import { EyeIcon } from "../ui/EyeIcon";
 import { FleetDoctrinePanel } from "../ui/FleetDoctrine";
+import { ShipProfileDialog } from "../ui/ProfileDialog";
 import { ShipEditorShell } from "../ui/ShipEditorShell";
 
 const rosterIdSchema = z
@@ -46,6 +48,10 @@ type RouteState =
 
 type WorkspaceView = "catalog" | "composition" | "context";
 type ContextOrigin = { readonly view: "catalog" | "composition"; readonly elementId: string };
+type ProfilePreview = {
+  readonly name: string;
+  readonly model: ShipEditorReadyReadModel;
+};
 
 function shipImageSearchUrl(name: string) {
   const search = new URLSearchParams({ q: `${name} Dystopian Wars`, tbm: "isch" });
@@ -78,6 +84,7 @@ export function RosterWorkspaceRoute({
   const [announcement, setAnnouncement] = useState("");
   const [commandError, setCommandError] = useState<string | null>(null);
   const [issueReturnId, setIssueReturnId] = useState<string | null>(null);
+  const [profilePreview, setProfilePreview] = useState<ProfilePreview | null>(null);
   const commandInFlight = useRef(false);
   const title = state.kind === "ready" ? state.model.roster.name : "Состав флота";
   const direct = directEditorLink(location.search);
@@ -214,6 +221,14 @@ export function RosterWorkspaceRoute({
     setActiveView("context");
     if (session.editor(null, item.id))
       requestAnimationFrame(() => document.getElementById("ship-editor-title")?.focus());
+  }
+
+  function openShipProfile(name: string, editor: ShipEditorReadModel | null) {
+    if (editor?.dataState !== "ready") return;
+    setProfilePreview({
+      name,
+      model: editor,
+    });
   }
 
   async function addSelected() {
@@ -475,6 +490,7 @@ export function RosterWorkspaceRoute({
             event.dataTransfer.effectAllowed = "copy";
             event.dataTransfer.setData("application/x-dwb-ship-id", item.id);
           }}
+          onInspect={(item) => openShipProfile(item.name, session.editor(null, item.id))}
           onPreview={openPreview}
           onToggle={() => setCatalogCollapsed((current) => !current)}
           query={query}
@@ -511,6 +527,9 @@ export function RosterWorkspaceRoute({
             setActiveView("context");
             requestAnimationFrame(() => document.getElementById("ship-editor-title")?.focus());
           }}
+          onInspect={(instance) =>
+            openShipProfile(instance.name, session.editor(instance.id, instance.definitionId))
+          }
           onOpenCatalog={openCatalogForElement}
           onDrop={(definitionId, elementId) => void dropShip(definitionId, elementId)}
           onReturnToIssue={returnToIssue}
@@ -531,6 +550,15 @@ export function RosterWorkspaceRoute({
           onToggle={() => setContextCollapsed((current) => !current)}
         />
       </div>
+      {profilePreview ? (
+        <ShipProfileDialog
+          faction={model.roster.faction}
+          imageSearchHref={shipImageSearchUrl(profilePreview.name)}
+          model={profilePreview.model}
+          name={profilePreview.name}
+          onClose={() => setProfilePreview(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -543,6 +571,7 @@ function CatalogPane({
   onCategory,
   onDragEnd,
   onDragStart,
+  onInspect,
   onPreview,
   onToggle,
   query,
@@ -557,6 +586,7 @@ function CatalogPane({
   readonly onCategory: (value: FleetCategory | "all") => void;
   readonly onDragEnd: () => void;
   readonly onDragStart: (item: CatalogItemReadModel, event: DragEvent<HTMLElement>) => void;
+  readonly onInspect: (item: CatalogItemReadModel) => void;
   readonly onPreview: (item: CatalogItemReadModel) => void;
   readonly onToggle: () => void;
   readonly query: string;
@@ -655,16 +685,14 @@ function CatalogPane({
                       : "Нужно проверить"}
                 </span>
               </button>
-              <a
-                aria-label={`Найти изображения ${item.name} в Google`}
+              <button
+                aria-label={`Показать профиль ${item.name}`}
                 className="catalog-row__inspect"
-                href={shipImageSearchUrl(item.name)}
-                rel="noopener noreferrer"
-                target="_blank"
-                title="Найти изображение в Google"
+                onClick={() => onInspect(item)}
+                type="button"
               >
                 <EyeIcon />
-              </a>
+              </button>
             </div>
           ))
         ) : (
@@ -687,6 +715,7 @@ function CompositionPane({
   onDuplicate,
   onEdit,
   onFollowIssue,
+  onInspect,
   onOpenCatalog,
   onDrop,
   onReturnToIssue,
@@ -701,6 +730,7 @@ function CompositionPane({
   readonly onDuplicate: (instanceId: string, name: string) => void;
   readonly onEdit: (instance: RosterInstanceReadModel) => void;
   readonly onFollowIssue: (targetId: string, returnId: string) => void;
+  readonly onInspect: (instance: RosterInstanceReadModel) => void;
   readonly onOpenCatalog: (element: FleetElementReadModel) => void;
   readonly onDrop: (definitionId: string, elementId: string) => void;
   readonly onReturnToIssue: () => void;
@@ -897,16 +927,14 @@ function CompositionPane({
                         <span className="instance-copy">
                           <span className="instance-title">
                             <strong>{instance.name}</strong>
-                            <a
-                              aria-label={`Найти изображения ${instance.name} в Google`}
+                            <button
+                              aria-label={`Показать профиль ${instance.name}`}
                               className="instance-inspect"
-                              href={shipImageSearchUrl(instance.name)}
-                              rel="noopener noreferrer"
-                              target="_blank"
-                              title="Найти изображение в Google"
+                              onClick={() => onInspect(instance)}
+                              type="button"
                             >
                               <EyeIcon />
-                            </a>
+                            </button>
                           </span>
                           <small>
                             {instance.points} Points · {instance.victoryPoints} VPR
