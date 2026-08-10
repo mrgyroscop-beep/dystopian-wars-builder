@@ -10,6 +10,7 @@ import type {
 } from "../application/rosters/ship-editor";
 import type { WeaponProfileReadModel } from "../application/rosters/profile-rules";
 import { EyeIcon } from "./EyeIcon";
+import { useRuleTranslation } from "./GlossaryContext";
 import { OptionDescriptionDialog, WeaponProfileDialog } from "./ProfileDialog";
 
 export function ShipEditorShell({
@@ -360,14 +361,28 @@ function OptionTraitLink({
 }) {
   const trait = option.trait;
   if (option.selectedQuantity !== 1 || !trait) return null;
+  return <LocalizedOptionTraitLink onInspectOption={onInspectOption} trait={trait} />;
+}
+
+function LocalizedOptionTraitLink({
+  onInspectOption,
+  trait,
+}: {
+  readonly onInspectOption: (name: string, description: string) => void;
+  readonly trait: NonNullable<ShipEditorOptionReadModel["trait"]>;
+}) {
+  const localized = useRuleTranslation(trait.label);
+  const translation = localized.language === "ru" ? localized.translation : null;
+  const label = translation?.title ?? trait.label;
+  const description = translation?.text ?? trait.description;
   return (
     <button
-      aria-label={`Показать описание трейта ${trait.label}`}
+      aria-label={`Показать описание трейта ${label}`}
       className="editor-option__trait ship-card__trait"
-      onClick={() => onInspectOption(trait.label, trait.description)}
+      onClick={() => onInspectOption(label, description)}
       type="button"
     >
-      Трейт: {trait.label}
+      Трейт: {label}
     </button>
   );
 }

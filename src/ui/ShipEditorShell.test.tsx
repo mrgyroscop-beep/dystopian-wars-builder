@@ -7,9 +7,13 @@ import type {
   ShipEditorReadModel,
   ShipEditorReadyReadModel,
 } from "../application/rosters/ship-editor";
+import { GlossaryProvider, RuleLanguageToggle } from "./GlossaryContext";
 import { ShipEditorShell } from "./ShipEditorShell";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  window.localStorage.removeItem("dwb-rule-language");
+});
 
 describe("ShipEditorShell", () => {
   it("renders a compact summary with the configuration always open", async () => {
@@ -192,6 +196,75 @@ describe("ShipEditorShell", () => {
     );
     expect(screen.getByRole("dialog", { name: "Interphase Generator" })).toHaveTextContent(
       "cannot be targeted",
+    );
+  });
+
+  it("switches the selected generator trait between Russian and English", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("dwb-rule-language", "ru");
+    const selectedGenerator = {
+      ...option("interphase", "Interphase Generator", "Generator"),
+      selectedQuantity: 1,
+      trait: {
+        label: "Interphase Generator",
+        description: "Interphasing models cannot be targeted.",
+      },
+    };
+    render(
+      <GlossaryProvider
+        gateway={{
+          contractVersion: 1,
+          list: () =>
+            Promise.resolve([
+              {
+                id: "R1",
+                title: "Interphase Generator",
+                text: "Interphasing models cannot be targeted.",
+                factions: ["Empire"],
+                page: null,
+                translation: {
+                  id: "R1",
+                  language: "ru",
+                  sourceTitle: "Interphase Generator",
+                  title: "Межфазный генератор",
+                  text: "Модели в межфазном состоянии нельзя выбрать целью.",
+                },
+              },
+            ]),
+        }}
+      >
+        <RuleLanguageToggle />
+        <ShipEditorShell
+          busy={false}
+          model={{
+            ...editorModel("matsumoto"),
+            groups: [group("generators", "Generators", 0, 1, [selectedGenerator])],
+          }}
+          onAdd={vi.fn()}
+          onBack={vi.fn()}
+          onCommand={vi.fn()}
+        />
+      </GlossaryProvider>,
+    );
+
+    const russianLink = await screen.findByRole("button", {
+      name: "Показать описание трейта Межфазный генератор",
+    });
+    expect(russianLink).toHaveTextContent("Трейт: Межфазный генератор");
+    await user.click(russianLink);
+    expect(screen.getByRole("dialog", { name: "Межфазный генератор" })).toHaveTextContent(
+      "Модели в межфазном состоянии нельзя выбрать целью.",
+    );
+    await user.click(screen.getByRole("button", { name: "Закрыть свойства" }));
+
+    await user.click(screen.getByRole("button", { name: "EN" }));
+    const englishLink = screen.getByRole("button", {
+      name: "Показать описание трейта Interphase Generator",
+    });
+    expect(englishLink).toHaveTextContent("Трейт: Interphase Generator");
+    await user.click(englishLink);
+    expect(screen.getByRole("dialog", { name: "Interphase Generator" })).toHaveTextContent(
+      "Interphasing models cannot be targeted.",
     );
   });
 
