@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -12,7 +12,7 @@ import { ShipEditorShell } from "./ShipEditorShell";
 afterEach(cleanup);
 
 describe("ShipEditorShell", () => {
-  it("renders Preview, supports full roving tab focus and exposes Back", async () => {
+  it("renders a compact summary with the configuration always open", async () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();
     const onBack = vi.fn();
@@ -26,11 +26,11 @@ describe("ShipEditorShell", () => {
       />,
     );
 
-    expect(screen.getByText("Только чтение")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Akita Demonstrator" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Сводка корабля")).toHaveTextContent("Points350VPR9");
+    expect(screen.getByRole("region", { name: "Настройка корабля" })).toBeVisible();
     expect(screen.getAllByRole("group")).toHaveLength(6);
     const add = screen.getByRole("button", { name: "Добавить в состав" });
-    const problems = screen.getByRole("heading", { name: "Что исправить" });
-    expect(add.compareDocumentPosition(problems) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Magma Cast Generator/u })).toBeDisabled();
     expect(screen.queryByRole("radio", { name: /Fury/u })).not.toBeInTheDocument();
     await user.click(within(screen.getByRole("group", { name: /FPS 1/u })).getByRole("button"));
@@ -41,21 +41,15 @@ describe("ShipEditorShell", () => {
     await user.click(screen.getByRole("button", { name: /Назад/u }));
     expect(onBack).toHaveBeenCalledOnce();
 
-    const profile = screen.getByRole("tab", { name: "Профиль" });
-    await user.click(profile);
-    expect(screen.getByRole("heading", { name: "Профиль корабля" })).toBeInTheDocument();
-    expect(screen.getByText("Базовый профиль")).toBeInTheDocument();
-    await user.keyboard("{Home}");
-    expect(screen.getByRole("tab", { name: "Настройка" })).toHaveFocus();
-    await user.keyboard("{ArrowLeft}");
-    expect(screen.getByRole("tab", { name: "Правила" })).toHaveFocus();
-    await user.keyboard("{ArrowRight}");
-    expect(screen.getByRole("tab", { name: "Настройка" })).toHaveFocus();
-    await user.keyboard("{End}");
-    expect(screen.getByRole("tab", { name: "Правила" })).toHaveFocus();
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.queryByText("Редактирование")).not.toBeInTheDocument();
+    expect(screen.queryByText("Обязательные")).not.toBeInTheDocument();
+    expect(screen.queryByText("фиксировано")).not.toBeInTheDocument();
+    expect(screen.queryByText("Состав готов")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Что исправить" })).not.toBeInTheDocument();
   });
 
-  it("uses opaque group/placement keys, emits atomic commands and focuses a problem target", async () => {
+  it("keeps configuration commands and weapon inspection usable", async () => {
     const user = userEvent.setup();
     const onCommand = vi.fn();
     render(
@@ -82,13 +76,11 @@ describe("ShipEditorShell", () => {
     expect(screen.getByRole("dialog", { name: "Heavy Battery" })).toBeVisible();
     expect(screen.getByRole("rowheader", { name: "Heavy Battery" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Закрыть профиль" }));
-    await user.click(screen.getByRole("button", { name: /PSA: требуется выбор/u }));
-    await waitFor(() => expect(document.getElementById("ship-editor-group-unit-0")).toHaveFocus());
     expect(document.body.innerHTML).not.toMatch(/opaque-slot|DEMO-/u);
     expect(document.body.textContent).not.toMatch(/opaque-slot|DEMO-/u);
   });
 
-  it("renders variable Model quantity without duplicating fleet-level Doctrine controls", () => {
+  it("hides the Model tile even when its quantity is variable", () => {
     const onCommand = vi.fn();
     const variable = {
       ...editorModel("akita"),
@@ -110,12 +102,9 @@ describe("ShipEditorShell", () => {
       />,
     );
 
-    const quantity = screen.getByRole("spinbutton", { name: "Количество" });
-    fireEvent.change(quantity, { target: { value: "2" } });
-    expect(onCommand).toHaveBeenLastCalledWith(
-      { type: "set-model-quantity", instanceId: "model-instance", quantity: 2 },
-      expect.any(String),
-    );
+    expect(screen.queryByRole("spinbutton", { name: "Количество" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Model")).not.toBeInTheDocument();
+    expect(onCommand).not.toHaveBeenCalled();
     expect(screen.queryByText("Доктрина флота")).not.toBeInTheDocument();
   });
 
@@ -154,63 +143,6 @@ describe("ShipEditorShell", () => {
 
     expect(screen.queryByRole("heading", { name: "Доктрина флота" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Настроить доктрину" })).not.toBeInTheDocument();
-  });
-
-  it("returns from a rule to the preserved Rules tab and focus origin", async () => {
-    const user = userEvent.setup();
-    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
-    const { container } = render(
-      <div className="context-pane">
-        <ShipEditorShell
-          busy={false}
-          model={editorModel(null)}
-          onAdd={vi.fn()}
-          onBack={vi.fn()}
-          onCommand={vi.fn()}
-        />
-      </div>,
-    );
-    await user.click(screen.getByRole("tab", { name: "Правила" }));
-    const contextPane = container.querySelector<HTMLElement>(".context-pane")!;
-    contextPane.scrollTop = 120;
-    const origin = screen.getByRole("button", { name: "Открыть правило Torrent" });
-    await user.click(origin);
-    contextPane.scrollTop = 0;
-    expect(screen.getByRole("heading", { name: "Torrent" })).toHaveFocus();
-    await user.click(screen.getByRole("button", { name: /К правилам/u }));
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Открыть правило Torrent" })).toHaveFocus(),
-    );
-    expect(screen.getByRole("tab", { name: "Правила" })).toHaveAttribute("aria-selected", "true");
-    expect(contextPane.scrollTop).toBe(120);
-    expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
-  });
-
-  it("returns from a glossary rule to its preserved scroll and exact item", async () => {
-    const user = userEvent.setup();
-    vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
-    render(
-      <ShipEditorShell
-        busy={false}
-        model={editorModel(null)}
-        onAdd={vi.fn()}
-        onBack={vi.fn()}
-        onCommand={vi.fn()}
-      />,
-    );
-    await user.click(screen.getByRole("tab", { name: "Правила" }));
-    await user.click(screen.getByRole("button", { name: "Глоссарий" }));
-    const glossary = screen.getByRole("dialog", { name: "Глоссарий" });
-    glossary.scrollTop = 64;
-    const glossaryItem = within(glossary).getByRole("button", { name: /Torrent/u });
-    await user.click(glossaryItem);
-    expect(screen.getByRole("heading", { name: "Torrent" })).toHaveFocus();
-
-    await user.click(screen.getByRole("button", { name: /К правилам/u }));
-
-    await waitFor(() => expect(screen.getByRole("dialog", { name: "Глоссарий" })).toBeVisible());
-    expect(glossary.scrollTop).toBe(64);
-    await waitFor(() => expect(glossaryItem).toHaveFocus());
   });
 });
 

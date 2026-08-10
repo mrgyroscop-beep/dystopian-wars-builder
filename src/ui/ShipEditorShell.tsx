@@ -1,11 +1,4 @@
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type MutableRefObject,
-} from "react";
+import { useState } from "react";
 
 import type {
   ShipEditorCommand,
@@ -18,15 +11,6 @@ import type {
 import type { WeaponProfileReadModel } from "../application/rosters/profile-rules";
 import { EyeIcon } from "./EyeIcon";
 import { WeaponProfileDialog } from "./ProfileDialog";
-import { ProfilePanel, RuleSheet, RulesPanel } from "./ProfileRules";
-
-type EditorTab = "configuration" | "profile" | "rules";
-
-const editorTabs = [
-  ["configuration", "Настройка"],
-  ["profile", "Профиль"],
-  ["rules", "Правила"],
-] as const;
 
 export function ShipEditorShell({
   busy,
@@ -34,86 +18,17 @@ export function ShipEditorShell({
   onAdd,
   onBack,
   onCommand,
-  onOpenRule,
-  onRuleBack,
-  ruleId,
 }: {
   readonly busy: boolean;
   readonly model: ShipEditorReadModel;
   readonly onAdd: () => void;
   readonly onBack: () => void;
   readonly onCommand: (command: ShipEditorCommand, announcement: string) => void;
-  readonly onOpenRule?: (ruleId: string) => void;
-  readonly onRuleBack?: () => void;
-  readonly ruleId?: string | null;
 }) {
-  const [tab, setTab] = useState<EditorTab>(ruleId ? "rules" : "configuration");
   const [openGroupId, setOpenGroupId] = useState<ShipEditorGroupId | null>(() =>
     model.dataState === "ready" ? (model.groups[0]?.id ?? null) : null,
   );
-  const [localRuleId, setLocalRuleId] = useState<string | null>(null);
   const [inspectedWeapon, setInspectedWeapon] = useState<WeaponProfileReadModel | null>(null);
-  const ruleReturn = useRef<RuleReturn | null>(null);
-  const tabsId = useId();
-  const activeRuleId = ruleId === undefined ? localRuleId : ruleId;
-  const previousActiveRuleId = useRef<string | null>(activeRuleId);
-  const visibleTab: EditorTab = activeRuleId ? "rules" : tab;
-
-  useEffect(() => {
-    if (previousActiveRuleId.current && !activeRuleId) restoreRuleReturn(ruleReturn);
-    previousActiveRuleId.current = activeRuleId;
-  }, [activeRuleId]);
-
-  function focusGroup(groupId: ShipEditorGroupId | null) {
-    if (!groupId || model.dataState !== "ready") return;
-    setOpenGroupId(groupId);
-    requestAnimationFrame(() => {
-      const target = document.getElementById(groupDomId(model, groupId));
-      if (target && "scrollIntoView" in target) target.scrollIntoView({ block: "center" });
-      target?.focus({ preventScroll: true });
-    });
-  }
-
-  function selectTab(next: EditorTab) {
-    setTab(next);
-    document.getElementById(`${tabsId}-${next}-tab`)?.focus();
-  }
-
-  function handleTabKey(event: KeyboardEvent<HTMLButtonElement>, current: EditorTab) {
-    const currentIndex = editorTabs.findIndex(([value]) => value === current);
-    const lastIndex = editorTabs.length - 1;
-    const nextIndex =
-      event.key === "Home"
-        ? 0
-        : event.key === "End"
-          ? lastIndex
-          : event.key === "ArrowRight"
-            ? (currentIndex + 1) % editorTabs.length
-            : event.key === "ArrowLeft"
-              ? (currentIndex - 1 + editorTabs.length) % editorTabs.length
-              : null;
-    if (nextIndex === null) return;
-    event.preventDefault();
-    selectTab(editorTabs[nextIndex]![0]);
-  }
-
-  function openRule(nextRuleId: string, returnElement: HTMLElement) {
-    const scrollContainer = returnElement.closest<HTMLElement>(".context-pane");
-    ruleReturn.current = {
-      element: returnElement,
-      scrollContainer,
-      scrollTop: scrollContainer?.scrollTop ?? null,
-      scrollY: window.scrollY,
-    };
-    setTab("rules");
-    if (onOpenRule) onOpenRule(nextRuleId);
-    else setLocalRuleId(nextRuleId);
-  }
-
-  function closeRule() {
-    if (onRuleBack) onRuleBack();
-    else setLocalRuleId(null);
-  }
 
   if (model.dataState !== "ready")
     return (
@@ -125,8 +40,8 @@ export function ShipEditorShell({
               {model.title}
             </h3>
           </div>
-          <button className="editor-back" onClick={onBack} type="button">
-            ← Назад
+          <button aria-label="Назад" className="editor-back" onClick={onBack} type="button">
+            <span aria-hidden="true">←</span>
           </button>
         </header>
         <p role="status">{model.detail}</p>
@@ -137,55 +52,30 @@ export function ShipEditorShell({
     <article className="ship-editor" data-mode={model.mode} aria-labelledby="ship-editor-title">
       <div className="ship-editor__chrome">
         <header className="ship-editor__masthead">
-          <div>
+          <div className="ship-editor__identity">
             <p className="preview-category">{model.mode === "preview" ? "Preview" : "В составе"}</p>
             <h3 id="ship-editor-title" tabIndex={-1}>
               {model.name}
             </h3>
           </div>
-          <div className="ship-editor__masthead-actions">
-            <span className="editor-mode-badge">
-              {model.mode === "preview" ? "Только чтение" : "Редактирование"}
-            </span>
-            <button className="editor-back" onClick={onBack} type="button">
-              ← Назад
-            </button>
-          </div>
+          <dl className="ship-editor__summary" aria-label="Сводка корабля">
+            <div>
+              <dt>Points</dt>
+              <dd>
+                <strong>{model.totalPoints}</strong>
+              </dd>
+            </div>
+            <div>
+              <dt>VPR</dt>
+              <dd>
+                <strong>{model.victoryPoints}</strong>
+              </dd>
+            </div>
+          </dl>
+          <button aria-label="Назад" className="editor-back" onClick={onBack} type="button">
+            <span aria-hidden="true">←</span>
+          </button>
         </header>
-
-        <dl className="ship-editor__summary" aria-label="Сводка корабля">
-          <div>
-            <dt>Points</dt>
-            <dd>
-              <strong>{model.totalPoints}</strong>
-              <small>
-                {model.basePoints} база · {signed(model.optionPoints)} опции
-              </small>
-            </dd>
-          </div>
-          <div>
-            <dt>VPR</dt>
-            <dd>
-              <strong>{model.victoryPoints}</strong>
-              <small>фиксировано</small>
-            </dd>
-          </div>
-          <div data-state={model.validity}>
-            <dt>Обязательные</dt>
-            <dd>
-              <strong>
-                {model.mandatory.selected} / {model.mandatory.required}
-              </strong>
-              <small>{model.validity === "valid" ? "готово" : "нужна настройка"}</small>
-            </dd>
-          </div>
-        </dl>
-
-        <div className="ship-editor__axes" aria-label="Состояние редактора">
-          <EditorAxis label="Состав" value={model.validity} />
-          <EditorAxis label="Сохранение" value={model.persistence} />
-          <EditorAxis label="Система" value={model.system} />
-        </div>
 
         {model.mode === "preview" ? (
           <div className="preview-primary-action">
@@ -195,142 +85,38 @@ export function ShipEditorShell({
             <small>Корабль будет добавлен с минимальной базовой комплектацией.</small>
           </div>
         ) : null}
-
-        <div className="editor-tabs" role="tablist" aria-label="Раздел корабля">
-          {editorTabs.map(([value, label]) => (
-            <button
-              aria-controls={`${tabsId}-${value}`}
-              aria-selected={visibleTab === value}
-              id={`${tabsId}-${value}-tab`}
-              key={value}
-              onClick={() => setTab(value)}
-              onKeyDown={(event) => handleTabKey(event, value)}
-              role="tab"
-              tabIndex={visibleTab === value ? 0 : -1}
-              type="button"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {visibleTab === "configuration" ? (
-        <section
-          aria-labelledby={`${tabsId}-configuration-tab`}
-          className="ship-editor__configuration"
-          id={`${tabsId}-configuration`}
-          role="tabpanel"
-        >
-          <section className="model-quantity" aria-label="Количество моделей">
-            <div>
-              <strong>Model</strong>
-              <small>Структурная модель корабля</small>
-            </div>
-            {model.modelQuantity.fixed ? (
-              <span>{model.modelQuantity.value} (фиксировано)</span>
-            ) : (
-              <label>
-                <span>Количество</span>
-                <input
-                  disabled={busy || model.mode === "preview"}
-                  max={model.modelQuantity.maximum}
-                  min={model.modelQuantity.minimum}
-                  onChange={(event) =>
-                    model.modelQuantity.instanceId &&
-                    onCommand(
-                      {
-                        type: "set-model-quantity",
-                        instanceId: model.modelQuantity.instanceId,
-                        quantity: event.currentTarget.valueAsNumber,
-                      },
-                      `Model: ${event.currentTarget.valueAsNumber}.`,
-                    )
-                  }
-                  type="number"
-                  value={model.modelQuantity.value}
-                />
-              </label>
-            )}
-          </section>
-
-          <div className="editor-groups">
-            {model.groups.map((group, groupIndex) => (
-              <EditorGroup
-                busy={busy}
-                domId={`ship-editor-group-unit-${groupIndex}`}
-                group={group}
-                key={group.id}
-                model={model}
-                nameToken={`unit-${groupIndex}`}
-                onCommand={onCommand}
-                onInspectWeapon={setInspectedWeapon}
-                onToggle={() =>
-                  setOpenGroupId((current) => (current === group.id ? null : group.id))
-                }
-                open={openGroupId === group.id}
-              />
-            ))}
-          </div>
-
-          <section className="derived-breakdown" aria-labelledby={`${tabsId}-breakdown-title`}>
-            <h4 id={`${tabsId}-breakdown-title`}>Расчёт Points</h4>
-            <dl>
-              {model.breakdown.map((line) => (
-                <div key={line.label}>
-                  <dt>{line.label}</dt>
-                  <dd>{line.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-
-          {model.problems.length ? (
-            <section className="editor-problems" aria-labelledby={`${tabsId}-problems-title`}>
-              <h4 id={`${tabsId}-problems-title`}>Что исправить</h4>
-              <ul>
-                {model.problems.map((problem) => (
-                  <li key={problem.id}>
-                    <button onClick={() => focusGroup(problem.targetGroupId)} type="button">
-                      <strong>{problem.title}</strong>
-                      <span>{problem.detail}</span>
-                      <em>Перейти к {problem.targetGroupLabel} →</em>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-        </section>
-      ) : visibleTab === "profile" ? (
-        <section
-          aria-labelledby={`${tabsId}-profile-tab`}
-          className="ship-editor__profile"
-          id={`${tabsId}-profile`}
-          role="tabpanel"
-        >
-          <ProfilePanel model={model.profileRules} onInspectWeapon={setInspectedWeapon} />
-        </section>
-      ) : (
-        <section
-          aria-labelledby={`${tabsId}-rules-tab`}
-          className="ship-editor__rules"
-          id={`${tabsId}-rules`}
-          role="tabpanel"
-        >
-          <div hidden={Boolean(activeRuleId)}>
-            <RulesPanel model={model.profileRules} onOpenRule={openRule} />
-          </div>
-          {activeRuleId ? (
-            <RuleSheet
-              model={model.profileRules}
-              onBack={closeRule}
-              onOpenRule={openRule}
-              ruleId={activeRuleId}
+      <section className="ship-editor__configuration" aria-label="Настройка корабля">
+        <div className="editor-groups">
+          {model.groups.map((group, groupIndex) => (
+            <EditorGroup
+              busy={busy}
+              domId={`ship-editor-group-unit-${groupIndex}`}
+              group={group}
+              key={group.id}
+              model={model}
+              nameToken={`unit-${groupIndex}`}
+              onCommand={onCommand}
+              onInspectWeapon={setInspectedWeapon}
+              onToggle={() => setOpenGroupId((current) => (current === group.id ? null : group.id))}
+              open={openGroupId === group.id}
             />
-          ) : null}
+          ))}
+        </div>
+
+        <section className="derived-breakdown" aria-labelledby="ship-editor-breakdown-title">
+          <h4 id="ship-editor-breakdown-title">Расчёт Points</h4>
+          <dl>
+            {model.breakdown.map((line) => (
+              <div key={line.label}>
+                <dt>{line.label}</dt>
+                <dd>{line.value}</dd>
+              </div>
+            ))}
+          </dl>
         </section>
-      )}
+      </section>
       {inspectedWeapon ? (
         <WeaponProfileDialog onClose={() => setInspectedWeapon(null)} profile={inspectedWeapon} />
       ) : null}
@@ -351,12 +137,6 @@ function OptionCopy({ option }: { readonly option: ShipEditorOptionReadModel }) 
       </span>
     </span>
   );
-}
-
-function groupDomId(model: ShipEditorReadyReadModel, groupId: ShipEditorGroupId): string {
-  const unitIndex = model.groups.findIndex((group) => group.id === groupId);
-  if (unitIndex >= 0) return `ship-editor-group-unit-${unitIndex}`;
-  return "ship-editor-title";
 }
 
 function EditorGroup({
@@ -509,61 +289,4 @@ function EditorGroup({
       ) : null}
     </section>
   );
-}
-
-function signed(value: string): string {
-  return Number(value) > 0 ? `+${value}` : value;
-}
-
-function EditorAxis({ label, value }: { readonly label: string; readonly value: string }) {
-  const detail = axisLabel(value);
-  return (
-    <span data-state={value}>
-      <span aria-hidden="true" className="editor-axis__icon">
-        {axisIcon(value)}
-      </span>
-      <strong>{label}</strong>
-      <small className="editor-axis__detail">{detail}</small>
-    </span>
-  );
-}
-
-function axisIcon(value: string): string {
-  if (["valid", "saved-local", "ready"].includes(value)) return "✓";
-  if (["invalid", "save-error", "unavailable"].includes(value)) return "!";
-  return "↻";
-}
-
-function axisLabel(value: string): string {
-  const labels: Record<string, string> = {
-    valid: "готов",
-    invalid: "есть ошибки",
-    indeterminate: "не определён",
-    "saved-local": "на устройстве",
-    unsaved: "не сохранено",
-    saving: "сохраняется",
-    "save-error": "ошибка",
-    ready: "доступна",
-    unavailable: "недоступна",
-  };
-  return labels[value] ?? value;
-}
-
-interface RuleReturn {
-  readonly element: HTMLElement;
-  readonly scrollContainer: HTMLElement | null;
-  readonly scrollTop: number | null;
-  readonly scrollY: number;
-}
-
-function restoreRuleReturn(ruleReturn: MutableRefObject<RuleReturn | null>) {
-  const target = ruleReturn.current;
-  ruleReturn.current = null;
-  requestAnimationFrame(() => {
-    if (target?.scrollContainer?.isConnected && target.scrollTop !== null)
-      target.scrollContainer.scrollTop = target.scrollTop;
-    if (target?.element.isConnected) target.element.focus({ preventScroll: true });
-    else document.querySelector<HTMLElement>(".rule-list button")?.focus({ preventScroll: true });
-    if (target) window.scrollTo({ top: target.scrollY });
-  });
 }

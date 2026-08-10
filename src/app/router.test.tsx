@@ -412,6 +412,25 @@ describe("application routes", () => {
     );
   });
 
+  it("keeps roster errors in composition as accessible section controls", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/rosters/scaffold-demo");
+
+    const issues = await screen.findAllByRole("button", {
+      name: /Открыть ошибки раздела/u,
+    });
+    expect(issues.length).toBeGreaterThan(0);
+    expect(screen.queryByText("Нужен корабль")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Проблемы состава" })).not.toBeInTheDocument();
+
+    const firstIssue = issues[0]!;
+    expect(firstIssue).toHaveAttribute("aria-expanded", "false");
+    await user.click(firstIssue);
+    expect(firstIssue).toHaveAttribute("aria-expanded", "true");
+    expect(document.getElementById(firstIssue.getAttribute("aria-controls")!)).toBeVisible();
+  });
+
   it("shows doctrine as the first accordion in composition and opens its description", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();
@@ -488,7 +507,21 @@ describe("application routes", () => {
       "aria-label",
       "Лимит превышен. Выбрано 4, минимум 1, максимум 3",
     );
-    expect(screen.getByText("Превышен лимит")).toHaveClass("element-state--error");
+    const issue = screen.getByRole("button", { name: /Открыть ошибки раздела Flagship Element/u });
+    expect(issue).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Превышен лимит")).not.toBeInTheDocument();
+    await user.click(issue);
+    expect(issue).toHaveAttribute("aria-expanded", "true");
+    expect(document.getElementById(issue.getAttribute("aria-controls")!)).toHaveTextContent(
+      /лимит/u,
+    );
+
+    const compositionIssue = screen.getByRole("button", {
+      name: /Открыть общие ошибки состава/u,
+    });
+    await user.click(compositionIssue);
+    expect(compositionIssue).toHaveFocus();
+    expect(document.getElementById(compositionIssue.getAttribute("aria-controls")!)).toBeVisible();
   });
 
   it("opens the compatible catalog category from an empty fleet element", async () => {
@@ -514,17 +547,16 @@ describe("application routes", () => {
     expect(screen.getByRole("radio", { name: "Flagship Element" })).toBeChecked();
   });
 
-  it("opens a stable-ID rule deep link and focuses its heading", async () => {
+  it("normalizes a legacy rule deep link to the always-open configuration", async () => {
     renderRoute(
       "/rosters/scaffold-demo?ship=demo-ship-001&shipMode=preview&rule=synthetic-rule-torrent",
     );
 
-    const heading = await screen.findByRole("heading", { name: "Шквал" });
+    const heading = await screen.findByRole("heading", { name: "Akita Demonstrator" });
     await waitFor(() => expect(heading).toHaveFocus());
-    const visibleSource = screen
-      .getAllByText("Источник: каталог demonstration-1")
-      .find((source) => !source.closest("[hidden]"));
-    expect(visibleSource).toBeVisible();
+    expect(screen.getByRole("region", { name: "Настройка корабля" })).toBeVisible();
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Шквал" })).not.toBeInTheDocument();
   });
 
   it("focuses the ship heading after resolving a direct editor link", async () => {

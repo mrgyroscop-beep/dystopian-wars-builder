@@ -5,7 +5,7 @@ import {
   createDemonstrationFleetCatalogGateway,
   createDemonstrationWorkspaceRoster,
 } from "../../infrastructure/catalog/demonstration-fleet-catalog";
-import type { PlacementId } from "../../domain/catalog";
+import type { DomainCatalog, DomainEntity, EntityId, PlacementId } from "../../domain/catalog";
 import { createDemonstrationRosterSetupGateway } from "../../infrastructure/catalog/demonstration-roster-setup";
 import type { RosterRepository, StoredRoster } from "./create-roster";
 import {
@@ -58,8 +58,63 @@ describe("roster workspace application boundary", () => {
       ]),
     );
     expect(Object.keys(savedAfterFirstOpen.roster.instances)).toHaveLength(3);
+    expect(first!.model.problems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "REQUIRED_ELEMENT_EMPTY",
+          locationLabel: "Flagship Element",
+          targetId: "fleet-element-structure-scaffold-demo-demo-flagship",
+        }),
+        expect.objectContaining({
+          code: "REQUIRED_ELEMENT_EMPTY",
+          locationLabel: "Line Element",
+          targetId: "fleet-element-structure-scaffold-demo-demo-line",
+        }),
+      ]),
+    );
     expect(second!.model.elements).toEqual(first!.model.elements);
     expect(fixture.saveCalls).toHaveLength(firstSaveCount);
+  });
+
+  it("projects evaluator-owned element minimum problems onto their fleet section", async () => {
+    const fixture = harness();
+    const baseCatalog = createDemonstrationFleetCatalog();
+    const minimumId = "demo-flagship-minimum" as EntityId;
+    const flagship = baseCatalog.entities["demo-flagship"]!;
+    const maximum = baseCatalog.entities["demo-flagship-maximum"]!;
+    if (flagship.kind !== "BattlefleetElement" || maximum.kind !== "Constraint")
+      throw new Error("Expected demonstration fleet element constraints");
+    const minimum: DomainEntity = {
+      ...maximum,
+      id: minimumId,
+      expression: { ...maximum.expression, operator: "min", value: "1" },
+    };
+    const catalog: DomainCatalog = {
+      ...baseCatalog,
+      entities: {
+        ...baseCatalog.entities,
+        [minimumId]: minimum,
+        [flagship.id]: {
+          ...flagship,
+          constraintIds: [...flagship.constraintIds, minimumId],
+        },
+      },
+    };
+    const session = await openRosterWorkspace("scaffold-demo", {
+      ...fixture.dependencies,
+      catalogGateway: {
+        contractVersion: 1,
+        load: () => Promise.resolve(catalog),
+      },
+    });
+
+    expect(session!.model.problems).toContainEqual(
+      expect.objectContaining({
+        code: "CONSTRAINT_MIN_NOT_MET",
+        locationLabel: "Flagship Element",
+        targetId: "fleet-element-structure-scaffold-demo-demo-flagship",
+      }),
+    );
   });
 
   it("projects and saves the fleet doctrine directly on the Battlefleet root", async () => {

@@ -951,19 +951,25 @@ function projectProblems(
   elements: readonly FleetElementReadModel[],
 ): WorkspaceProblemReadModel[] {
   const problems: WorkspaceProblemReadModel[] = evaluation.problems.map((problem) => {
-    const targetId = problem.target.instanceId
-      ? `roster-instance-${safeId(problem.target.instanceId)}`
-      : "workspace-summary";
+    const targetElement = problem.target.entityId
+      ? elements.find((element) => element.definitionId === problem.target.entityId)
+      : undefined;
+    const targetId = targetElement
+      ? `fleet-element-${safeId(targetElement.id)}`
+      : problem.target.instanceId
+        ? `roster-instance-${safeId(problem.target.instanceId)}`
+        : "workspace-summary";
     return {
       id: problem.id,
       code: problem.code,
       severity: problem.severity === "warning" ? "warning" : "error",
       title: problem.severity === "indeterminate" ? "Проверка не завершена" : "Ошибка состава",
-      locationLabel: problem.target.instanceId ? "Состав" : stored.name,
+      locationLabel: targetElement?.label ?? (problem.target.instanceId ? "Состав" : stored.name),
       reason: translatedProblemReason(problem.code, problem.actual, problem.expected),
-      guidance: problem.target.instanceId
-        ? "Откройте отмеченный объект и проверьте его размещение."
-        : "Повторите проверку после обновления каталога.",
+      guidance:
+        problem.target.instanceId || targetElement
+          ? "Откройте отмеченный объект и проверьте его размещение."
+          : "Повторите проверку после обновления каталога.",
       targetId,
       dedupeKey: `evaluator:${problem.code}:${targetId}:roster`,
     };

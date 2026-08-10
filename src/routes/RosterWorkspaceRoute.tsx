@@ -110,22 +110,28 @@ export function RosterWorkspaceRoute({
   }, [dependencies, rosterId]);
 
   useEffect(() => {
+    if (!directRuleId) return;
+    const search = new URLSearchParams(location.search);
+    search.delete("rule");
+    void navigate(
+      { pathname: location.pathname, search: search.size ? `?${search.toString()}` : "" },
+      { replace: true },
+    );
+  }, [directRuleId, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
     if (!directFocusKey) {
       handledDirectFocusKey.current = null;
       return;
     }
     if (state.kind !== "ready") return;
-    if (directRuleId) {
-      handledDirectFocusKey.current = directFocusKey;
-      return;
-    }
     if (handledDirectFocusKey.current === directFocusKey) return;
     handledDirectFocusKey.current = directFocusKey;
     const frame = requestAnimationFrame(() => {
       document.getElementById("ship-editor-title")?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
-  }, [directFocusKey, directRuleId, state.kind]);
+  }, [directFocusKey, state.kind]);
 
   if (!parsedRosterId.success || state.kind === "missing") return <InvalidRoster />;
   if (state.kind === "loading") return <LoadingWorkspace />;
@@ -270,9 +276,8 @@ export function RosterWorkspaceRoute({
     setBusy(false);
   }
 
-  function followIssue(problemId: string, targetId: string) {
-    const problemIndex = model.problems.findIndex((problem) => problem.id === problemId);
-    setIssueReturnId(problemIndex >= 0 ? `workspace-issue-${problemIndex}` : null);
+  function followIssue(targetId: string, returnId: string) {
+    setIssueReturnId(returnId);
     const target = document.getElementById(targetId);
     target?.scrollIntoView({ block: "center" });
     target?.focus({ preventScroll: true });
@@ -357,7 +362,7 @@ export function RosterWorkspaceRoute({
   return (
     <div className="fleet-workspace" data-active-view={resolvedActiveView}>
       <div className="workspace-command-deck">
-        <header className="workspace-command-strip">
+        <header className="workspace-command-strip" id="workspace-summary" tabIndex={-1}>
           <div className="fleet-workspace__identity">
             <p className="eyebrow">{model.roster.faction}</p>
             <h1>{model.roster.name}</h1>
@@ -495,6 +500,7 @@ export function RosterWorkspaceRoute({
             model.catalog.find((candidate) => candidate.id === draggedDefinitionId) ?? null
           }
           model={model}
+          onFollowIssue={followIssue}
           onDoctrineCommand={(command, message) => void execute(command, message)}
           onDelete={(instanceId, name, elementId) =>
             void execute(
@@ -529,30 +535,11 @@ export function RosterWorkspaceRoute({
         <ContextPane
           busy={busy}
           collapsed={contextCollapsed}
-          model={model}
           onAdd={() => void addSelected()}
-          onFollowIssue={followIssue}
           onTarget={setSelectedTarget}
           editor={selected ? session.editor(resolvedEditorInstanceId, selected.id) : null}
           onEditorCommand={(command, message) => void execute(command, message)}
           onEditorBack={closeEditor}
-          onOpenRule={(ruleId) => {
-            if (!selected) return;
-            const search = new URLSearchParams(location.search);
-            search.set("ship", resolvedEditorInstanceId ?? selected.id);
-            search.set("shipMode", resolvedEditorInstanceId ? "instance" : "preview");
-            search.set("rule", ruleId);
-            void navigate({ pathname: location.pathname, search: `?${search.toString()}` });
-          }}
-          onRuleBack={() => {
-            const search = new URLSearchParams(location.search);
-            search.delete("rule");
-            void navigate(
-              { pathname: location.pathname, search: search.size ? `?${search.toString()}` : "" },
-              { replace: true },
-            );
-          }}
-          ruleId={direct?.ruleId ?? null}
           selected={selected}
           selectedTarget={selectedTarget}
           onToggle={() => setContextCollapsed((current) => !current)}
@@ -721,6 +708,7 @@ function CompositionPane({
   onDoctrineCommand,
   onDuplicate,
   onEdit,
+  onFollowIssue,
   onInspect,
   onOpenCatalog,
   onDrop,
@@ -735,6 +723,7 @@ function CompositionPane({
   readonly onDoctrineCommand: (command: FleetDoctrineCommand, message: string) => void;
   readonly onDuplicate: (instanceId: string, name: string) => void;
   readonly onEdit: (instance: RosterInstanceReadModel) => void;
+  readonly onFollowIssue: (targetId: string, returnId: string) => void;
   readonly onInspect: (instance: RosterInstanceReadModel) => void;
   readonly onOpenCatalog: (element: FleetElementReadModel) => void;
   readonly onDrop: (definitionId: string, elementId: string) => void;
@@ -742,12 +731,65 @@ function CompositionPane({
   readonly returnTarget: string | null;
   readonly selectedInstanceId: string | null;
 }) {
+  const [openIssueElementId, setOpenIssueElementId] = useState<string | null>(null);
+  const sectionTargets = new Set(
+    model.elements.flatMap((element) => [
+      `fleet-element-${safeId(element.id)}`,
+      ...element.instances.map((instance) => `roster-instance-${safeId(instance.id)}`),
+    ]),
+  );
+  const compositionProblems = model.problems.filter(
+    (problem) => !sectionTargets.has(problem.targetId),
+  );
+  const firstCompositionProblem = compositionProblems[0] ?? null;
+  const compositionIssueId = "composition-issue";
+
   return (
     <section className="builder-pane composition-pane" aria-labelledby="composition-title">
       <div className="builder-pane__header">
         <p className="eyebrow">Главная область</p>
-        <h2 id="composition-title">Состав</h2>
+        <div className="fleet-element__heading-row">
+          <h2 id="composition-title">Состав</h2>
+          {firstCompositionProblem ? (
+            <button
+              aria-label={`Открыть общие ошибки состава: ${firstCompositionProblem.reason}`}
+              aria-controls={`${compositionIssueId}-details`}
+              aria-expanded={openIssueElementId === compositionIssueId}
+              className="element-issue"
+              data-error-count={compositionProblems.length}
+              id={compositionIssueId}
+              onClick={() => {
+                setOpenIssueElementId((current) =>
+                  current === compositionIssueId ? null : compositionIssueId,
+                );
+                if (firstCompositionProblem.targetId !== "workspace-summary")
+                  onFollowIssue(firstCompositionProblem.targetId, compositionIssueId);
+              }}
+              title={firstCompositionProblem.reason}
+              type="button"
+            >
+              <span aria-hidden="true">!</span>
+              <span className="sr-only">{`Ошибок: ${compositionProblems.length}`}</span>
+            </button>
+          ) : null}
+        </div>
       </div>
+      {compositionProblems.length && openIssueElementId === compositionIssueId ? (
+        <div
+          className="element-issue-details composition-issue-details"
+          id={`${compositionIssueId}-details`}
+          role="status"
+        >
+          <ul>
+            {compositionProblems.map((problem) => (
+              <li key={problem.id}>
+                <strong>{problem.title}</strong>
+                <span>{problem.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="element-list">
         {model.doctrine ? (
           <FleetDoctrinePanel busy={busy} doctrine={model.doctrine} onCommand={onDoctrineCommand} />
@@ -758,12 +800,38 @@ function CompositionPane({
           );
           const isOverLimit =
             element.maximum !== null && element.instances.length > element.maximum;
-          const meetsMinimum = element.instances.length >= element.minimum;
+          const elementTargetId = `fleet-element-${safeId(element.id)}`;
+          const instanceTargetIds = new Set(
+            element.instances.map((instance) => `roster-instance-${safeId(instance.id)}`),
+          );
+          const elementProblems: readonly {
+            readonly id: string;
+            readonly title: string;
+            readonly reason: string;
+            readonly targetId: string;
+          }[] = model.problems.filter(
+            (problem) =>
+              problem.targetId === elementTargetId || instanceTargetIds.has(problem.targetId),
+          );
+          const structuralProblems =
+            isOverLimit && !elementProblems.some((problem) => problem.targetId === elementTargetId)
+              ? [
+                  {
+                    id: `maximum:${element.id}`,
+                    title: "Превышен лимит раздела",
+                    reason: `Добавлено ${element.instances.length}, максимум ${element.maximum}.`,
+                    targetId: elementTargetId,
+                  },
+                ]
+              : [];
+          const visibleElementProblems = [...elementProblems, ...structuralProblems];
+          const firstProblem = visibleElementProblems[0] ?? null;
+          const issueButtonId = `fleet-element-issue-${safeId(element.id)}`;
           return (
             <section
               className="fleet-element"
               data-drop-target={isDropTarget ? "eligible" : undefined}
-              id={`fleet-element-${safeId(element.id)}`}
+              id={elementTargetId}
               key={element.id}
               onDragOver={(event) => {
                 if (isDropTarget) event.preventDefault();
@@ -778,7 +846,35 @@ function CompositionPane({
             >
               <header>
                 <div>
-                  <h3 id={`fleet-element-title-${safeId(element.id)}`}>{element.label}</h3>
+                  <div className="fleet-element__heading-row">
+                    <h3 id={`fleet-element-title-${safeId(element.id)}`}>{element.label}</h3>
+                    {firstProblem ? (
+                      <button
+                        aria-label={`Открыть ошибки раздела ${element.label}: ${firstProblem.reason}`}
+                        aria-controls={`${issueButtonId}-details`}
+                        aria-expanded={openIssueElementId === element.id}
+                        className="element-issue"
+                        data-error-count={visibleElementProblems.length}
+                        id={issueButtonId}
+                        onClick={() => {
+                          setOpenIssueElementId((current) =>
+                            current === element.id ? null : element.id,
+                          );
+                          if (firstProblem.targetId !== elementTargetId)
+                            onFollowIssue(firstProblem.targetId, issueButtonId);
+                        }}
+                        title={firstProblem.reason}
+                        type="button"
+                      >
+                        <span aria-hidden="true">!</span>
+                        <span className="sr-only">
+                          {visibleElementProblems.length === 1
+                            ? "Одна ошибка"
+                            : `Ошибок: ${visibleElementProblems.length}`}
+                        </span>
+                      </button>
+                    ) : null}
+                  </div>
                   <p
                     aria-label={`${isOverLimit ? "Лимит превышен. " : ""}Выбрано ${element.instances.length}, минимум ${element.minimum}, максимум ${element.maximum ?? "не ограничен"}`}
                     className="fleet-element__limit"
@@ -789,17 +885,23 @@ function CompositionPane({
                     {element.maximum ?? "—"} макс.
                   </p>
                 </div>
-                <span
-                  className={
-                    meetsMinimum && !isOverLimit
-                      ? "element-state element-state--ready"
-                      : "element-state element-state--error"
-                  }
-                >
-                  <span aria-hidden="true">{meetsMinimum && !isOverLimit ? "✓" : "!"}</span>
-                  {isOverLimit ? "Превышен лимит" : meetsMinimum ? "Заполнен" : "Нужен корабль"}
-                </span>
               </header>
+              {visibleElementProblems.length && openIssueElementId === element.id ? (
+                <div
+                  className="element-issue-details"
+                  id={`${issueButtonId}-details`}
+                  role="status"
+                >
+                  <ul>
+                    {visibleElementProblems.map((problem) => (
+                      <li key={problem.id}>
+                        <strong>{problem.title}</strong>
+                        <span>{problem.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               {returnTarget ? (
                 <button className="issue-return" onClick={onReturnToIssue} type="button">
                   ← Вернуться к проблеме
@@ -894,57 +996,50 @@ function CompositionPane({
 function ContextPane({
   busy,
   collapsed,
-  model,
   onAdd,
-  onFollowIssue,
   onTarget,
   editor,
   onEditorBack,
   onEditorCommand,
-  onOpenRule,
-  onRuleBack,
-  ruleId,
   selected,
   selectedTarget,
   onToggle,
 }: {
   readonly busy: boolean;
   readonly collapsed: boolean;
-  readonly model: RosterWorkspaceReadModel;
   readonly onAdd: () => void;
-  readonly onFollowIssue: (problemId: string, targetId: string) => void;
   readonly onTarget: (value: string) => void;
   readonly editor: ShipEditorReadModel | null;
   readonly onEditorBack: () => void;
   readonly onEditorCommand: (command: ShipEditorCommand, message: string) => void;
-  readonly onOpenRule: (ruleId: string) => void;
-  readonly onRuleBack: () => void;
-  readonly ruleId: string | null;
   readonly selected: CatalogItemReadModel | null;
   readonly selectedTarget: string;
   readonly onToggle: () => void;
 }) {
   return (
     <aside
+      aria-label={editor ? "Инспектор корабля" : undefined}
+      aria-labelledby={editor ? undefined : "context-title"}
       className="builder-pane context-pane"
-      aria-labelledby="context-title"
       data-collapsed={collapsed}
     >
-      <div className="builder-pane__header">
-        <div className="builder-pane__title">
-          <p className="eyebrow">Корабль и проблемы</p>
-          <h2 id="context-title">Инспектор</h2>
+      {editor ? null : (
+        <div className="builder-pane__header">
+          <div className="builder-pane__title">
+            <p className="eyebrow">Корабль и проблемы</p>
+            <h2 id="context-title">Инспектор</h2>
+          </div>
+          <button
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? "Развернуть инспектор" : "Свернуть инспектор"}
+            className="pane-toggle"
+            onClick={onToggle}
+            type="button"
+          >
+            <span aria-hidden="true">{collapsed ? "←" : "→"}</span>
+          </button>
         </div>
-        <button
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? "Развернуть инспектор" : "Свернуть инспектор"}
-          className="pane-toggle"
-          onClick={onToggle}
-          type="button"
-        >
-          <span aria-hidden="true">{collapsed ? "←" : "→"}</span>
-        </button>
-      </div>
+      )}
       {editor ? (
         <ShipEditorShell
           busy={busy}
@@ -952,9 +1047,6 @@ function ContextPane({
           onAdd={onAdd}
           onBack={onEditorBack}
           onCommand={onEditorCommand}
-          onOpenRule={onOpenRule}
-          onRuleBack={onRuleBack}
-          ruleId={ruleId}
         />
       ) : selected ? (
         <article className="catalog-preview">
@@ -1031,45 +1123,6 @@ function ContextPane({
           <p>Просмотр не меняет состав, очки или сохранённую копию.</p>
         </div>
       )}
-
-      <section className="problem-center" aria-labelledby="problem-center-title">
-        <header>
-          <h3 id="problem-center-title">Проблемы состава</h3>
-          <span>
-            {model.summary.errorCount} ошибок · {model.summary.warningCount} предупреждений
-          </span>
-        </header>
-        {model.problems.length ? (
-          <ul>
-            {model.problems.map((problem, problemIndex) => (
-              <li key={problem.id}>
-                <button
-                  id={`workspace-issue-${problemIndex}`}
-                  onClick={() => onFollowIssue(problem.id, problem.targetId)}
-                  type="button"
-                >
-                  <span className="problem-severity" aria-hidden="true">
-                    !
-                  </span>
-                  <span>
-                    <strong>{problem.title}</strong>
-                    <small>
-                      {problem.locationLabel} · {problem.reason}
-                    </small>
-                    <em>{problem.guidance}</em>
-                  </span>
-                  <b aria-hidden="true">→</b>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="problem-empty">
-            <span aria-hidden="true">✓</span>
-            <p>Проверяемых проблем нет.</p>
-          </div>
-        )}
-      </section>
     </aside>
   );
 }
