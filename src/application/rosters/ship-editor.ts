@@ -35,6 +35,10 @@ export interface ShipEditorOptionReadModel {
   readonly reason: string | null;
   readonly description?: string | null;
   readonly profile?: WeaponProfileReadModel | null;
+  readonly trait?: {
+    readonly description: string;
+    readonly label: string;
+  } | null;
 }
 
 export interface ShipEditorGroupReadModel {
@@ -697,6 +701,7 @@ function projectGroup(
                 availabilityReason(availability?.reasonCodes ?? [])),
           description: optionDescription(catalog, definition ?? null),
           profile: projectWeaponDefinition(catalog, definition ?? null),
+          trait: optionTrait(catalog, definition ?? null),
         },
       ];
     }),
@@ -737,6 +742,7 @@ function projectStandaloneGroup(
         reason: null,
         description: optionDescription(catalog, definition ?? null),
         profile: projectWeaponDefinition(catalog, definition ?? null),
+        trait: optionTrait(catalog, definition ?? null),
       },
     ],
   };
@@ -752,6 +758,22 @@ function optionDescription(catalog: DomainCatalog, definition: DomainEntity | nu
     }),
   ].filter((value, index, values) => Boolean(value) && values.indexOf(value) === index);
   return descriptions.length ? descriptions.join("\n\n") : null;
+}
+
+function optionTrait(
+  catalog: DomainCatalog,
+  definition: DomainEntity | null,
+): NonNullable<ShipEditorOptionReadModel["trait"]> | null {
+  if (!definition || !/\bGenerator(?: \(\d+\))?$/u.test(definition.label.plainText)) return null;
+  const label = definition.label.plainText.replace(/ \(\d+\)$/u, "");
+  const rule = Object.values(catalog.entities).find(
+    (candidate) =>
+      candidate.kind === "Rule" &&
+      candidate.label.plainText === label &&
+      candidate.description?.plainText.trim(),
+  );
+  const description = rule?.description?.plainText.trim();
+  return rule && description ? { description, label: rule.label.plainText } : null;
 }
 
 interface FleetDoctrineCandidate {

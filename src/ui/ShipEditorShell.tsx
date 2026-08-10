@@ -102,10 +102,7 @@ export function ShipEditorShell({
               model={model}
               nameToken={`unit-${groupIndex}`}
               onCommand={onCommand}
-              onInspectOption={(option) =>
-                option.description &&
-                setInspectedOption({ description: option.description, name: option.label })
-              }
+              onInspectOption={(name, description) => setInspectedOption({ description, name })}
               onInspectWeapon={setInspectedWeapon}
               onToggle={() => setOpenGroupId((current) => (current === group.id ? null : group.id))}
               open={openGroupId === group.id}
@@ -172,7 +169,7 @@ function EditorGroup({
   readonly model: ShipEditorReadyReadModel;
   readonly nameToken: string;
   readonly onCommand: (command: ShipEditorCommand, announcement: string) => void;
-  readonly onInspectOption: (option: ShipEditorOptionReadModel) => void;
+  readonly onInspectOption: (name: string, description: string) => void;
   readonly onInspectWeapon: (profile: WeaponProfileReadModel) => void;
   readonly onToggle: () => void;
   readonly open: boolean;
@@ -255,6 +252,7 @@ function EditorGroup({
                   onInspectWeapon={onInspectWeapon}
                   option={option}
                 />
+                <OptionTraitLink onInspectOption={onInspectOption} option={option} />
               </div>
             ) : (
               <div
@@ -332,19 +330,44 @@ function OptionInspect({
   onInspectWeapon,
   option,
 }: {
-  readonly onInspectOption: (option: ShipEditorOptionReadModel) => void;
+  readonly onInspectOption: (name: string, description: string) => void;
   readonly onInspectWeapon: (profile: WeaponProfileReadModel) => void;
   readonly option: ShipEditorOptionReadModel;
 }) {
-  if (!option.profile && !option.description) return null;
+  if (option.trait || (!option.profile && !option.description)) return null;
   return (
     <button
       aria-label={`Показать свойства ${option.label}`}
       className="option-inspect"
-      onClick={() => (option.profile ? onInspectWeapon(option.profile) : onInspectOption(option))}
+      onClick={() =>
+        option.profile
+          ? onInspectWeapon(option.profile)
+          : option.description && onInspectOption(option.label, option.description)
+      }
       type="button"
     >
       <EyeIcon />
+    </button>
+  );
+}
+
+function OptionTraitLink({
+  onInspectOption,
+  option,
+}: {
+  readonly onInspectOption: (name: string, description: string) => void;
+  readonly option: ShipEditorOptionReadModel;
+}) {
+  const trait = option.trait;
+  if (option.selectedQuantity !== 1 || !trait) return null;
+  return (
+    <button
+      aria-label={`Показать описание трейта ${trait.label}`}
+      className="editor-option__trait ship-card__trait"
+      onClick={() => onInspectOption(trait.label, trait.description)}
+      type="button"
+    >
+      Трейт: {trait.label}
     </button>
   );
 }

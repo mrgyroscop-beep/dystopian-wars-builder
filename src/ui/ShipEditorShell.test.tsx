@@ -159,6 +159,42 @@ describe("ShipEditorShell", () => {
     );
   });
 
+  it("shows the selected generator trait as a popup link", async () => {
+    const user = userEvent.setup();
+    const selectedGenerator = {
+      ...option("interphase", "Interphase Generator", "Generator"),
+      selectedQuantity: 1,
+      trait: {
+        label: "Interphase Generator",
+        description: "Interphasing models cannot be targeted.",
+      },
+    };
+    render(
+      <ShipEditorShell
+        busy={false}
+        model={{
+          ...editorModel("matsumoto"),
+          groups: [group("generators", "Generators", 0, 1, [selectedGenerator])],
+        }}
+        onAdd={vi.fn()}
+        onBack={vi.fn()}
+        onCommand={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Показать свойства Interphase Generator" }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", {
+        name: "Показать описание трейта Interphase Generator",
+      }),
+    );
+    expect(screen.getByRole("dialog", { name: "Interphase Generator" })).toHaveTextContent(
+      "cannot be targeted",
+    );
+  });
+
   it("hides the Model tile even when its quantity is variable", () => {
     const onCommand = vi.fn();
     const variable = {

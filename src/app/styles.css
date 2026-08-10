@@ -5753,6 +5753,13 @@ button.button {
   flex: 0 0 auto;
 }
 
+.editor-option__trait {
+  min-height: 2.75rem;
+  flex: 0 1 auto;
+  padding-inline: 0.2rem;
+  text-align: left;
+}
+
 .editor-problems {
   padding: 0.75rem;
   color: var(--error-text);
@@ -6945,6 +6952,24 @@ button.button {
 
 .main-content--workspace .context-pane:has(.ship-editor) {
   max-height: none;
+}
+
+@media (max-width: 70rem) {
+  .main-content--workspace .context-pane .editor-option:has(.editor-option__trait) {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .main-content--workspace
+    .context-pane
+    .editor-option:has(.editor-option__trait)
+    .editor-option__choice {
+    flex-basis: 100%;
+  }
+
+  .main-content--workspace .context-pane .editor-option__trait {
+    margin-left: 2rem;
+  }
 }
 
 @media (min-width: 47.9375rem) and (max-width: 70rem) {

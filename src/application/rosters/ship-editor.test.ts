@@ -411,6 +411,10 @@ describe("catalog-driven ship editor application boundary", () => {
       "ownership",
     );
     const shieldLabel = toSafePresentation("Shield Generator");
+    const ruleTemplate = entityByLabel(fixture.catalog, "Torrent");
+    const shieldRuleSourceId = sourceNodeId("test", "rule", "shield-generator");
+    const shieldRuleId = entityId(shieldRuleSourceId);
+    const shieldDescription = toSafePresentation("Shield Generator protects its unit.");
     const catalog: DomainCatalog = {
       ...fixture.catalog,
       entities: {
@@ -429,6 +433,24 @@ describe("catalog-driven ship editor application boundary", () => {
             ...repairCrane.identity,
             canonicalId: shieldId,
             sourceNodeId: shieldSourceId,
+          },
+        },
+        [shieldRuleId]: {
+          ...ruleTemplate,
+          id: shieldRuleId,
+          kind: "Rule",
+          label: shieldLabel,
+          description: shieldDescription,
+          labels: {
+            ...ruleTemplate.labels,
+            canonicalLabel: shieldLabel.plainText,
+            fallbackLabel: shieldLabel.plainText,
+            sourceLabel: shieldLabel.plainText,
+          },
+          identity: {
+            ...ruleTemplate.identity,
+            canonicalId: shieldRuleId,
+            sourceNodeId: shieldRuleSourceId,
           },
         },
       },
@@ -471,6 +493,10 @@ describe("catalog-driven ship editor application boundary", () => {
     expect(option(model, "Attachments", "Shield Generator")).toMatchObject({
       availability: "available",
       reason: null,
+      trait: {
+        label: "Shield Generator",
+        description: "Shield Generator protects its unit.",
+      },
     });
 
     snapshot = applyShipEditorCommand(
