@@ -23,10 +23,12 @@ import {
   type ShipEditorReadModel,
   type ShipEditorReadyReadModel,
 } from "../application/rosters/ship-editor";
+import { orbatCardFor } from "../app/orbatCards";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 import { EyeIcon } from "../ui/EyeIcon";
 import { FleetDoctrinePanel } from "../ui/FleetDoctrine";
-import { ShipProfileDialog } from "../ui/ProfileDialog";
+import { OrbatPageIcon } from "../ui/OrbatPageIcon";
+import { ShipOrbatPageDialog, ShipProfileDialog } from "../ui/ProfileDialog";
 import { ShipEditorShell } from "../ui/ShipEditorShell";
 
 const rosterIdSchema = z
@@ -52,6 +54,7 @@ type ProfilePreview = {
   readonly name: string;
   readonly model: ShipEditorReadyReadModel;
 };
+type OrbatPreview = { readonly imageUrl: string; readonly name: string };
 
 function shipImageSearchUrl(name: string) {
   const search = new URLSearchParams({ q: `${name} Dystopian Wars`, tbm: "isch" });
@@ -85,6 +88,7 @@ export function RosterWorkspaceRoute({
   const [commandError, setCommandError] = useState<string | null>(null);
   const [issueReturnId, setIssueReturnId] = useState<string | null>(null);
   const [profilePreview, setProfilePreview] = useState<ProfilePreview | null>(null);
+  const [orbatPreview, setOrbatPreview] = useState<OrbatPreview | null>(null);
   const commandInFlight = useRef(false);
   const title = state.kind === "ready" ? state.model.roster.name : "Состав флота";
   const direct = directEditorLink(location.search);
@@ -225,10 +229,16 @@ export function RosterWorkspaceRoute({
 
   function openShipProfile(name: string, editor: ShipEditorReadModel | null) {
     if (editor?.dataState !== "ready") return;
+    setOrbatPreview(null);
     setProfilePreview({
       name,
       model: editor,
     });
+  }
+
+  function openShipOrbat(name: string, imageUrl: string) {
+    setProfilePreview(null);
+    setOrbatPreview({ imageUrl, name });
   }
 
   async function addSelected() {
@@ -482,6 +492,7 @@ export function RosterWorkspaceRoute({
           category={category}
           collapsed={catalogCollapsed}
           draggedId={draggedDefinitionId}
+          faction={model.roster.faction}
           filtered={filtered}
           onCategory={setCategory}
           onDragEnd={() => setDraggedDefinitionId(null)}
@@ -491,6 +502,7 @@ export function RosterWorkspaceRoute({
             event.dataTransfer.setData("application/x-dwb-ship-id", item.id);
           }}
           onInspect={(item) => openShipProfile(item.name, session.editor(null, item.id))}
+          onOpenOrbat={(name, imageUrl) => openShipOrbat(name, imageUrl)}
           onPreview={openPreview}
           onToggle={() => setCatalogCollapsed((current) => !current)}
           query={query}
@@ -530,6 +542,7 @@ export function RosterWorkspaceRoute({
           onInspect={(instance) =>
             openShipProfile(instance.name, session.editor(instance.id, instance.definitionId))
           }
+          onOpenOrbat={(name, imageUrl) => openShipOrbat(name, imageUrl)}
           onOpenCatalog={openCatalogForElement}
           onDrop={(definitionId, elementId) => void dropShip(definitionId, elementId)}
           onReturnToIssue={returnToIssue}
@@ -559,6 +572,13 @@ export function RosterWorkspaceRoute({
           onClose={() => setProfilePreview(null)}
         />
       ) : null}
+      {orbatPreview ? (
+        <ShipOrbatPageDialog
+          imageUrl={orbatPreview.imageUrl}
+          name={orbatPreview.name}
+          onClose={() => setOrbatPreview(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -567,11 +587,13 @@ function CatalogPane({
   category,
   collapsed,
   draggedId,
+  faction,
   filtered,
   onCategory,
   onDragEnd,
   onDragStart,
   onInspect,
+  onOpenOrbat,
   onPreview,
   onToggle,
   query,
@@ -582,11 +604,13 @@ function CatalogPane({
   readonly category: FleetCategory | "all";
   readonly collapsed: boolean;
   readonly draggedId: string | null;
+  readonly faction: string;
   readonly filtered: readonly CatalogItemReadModel[];
   readonly onCategory: (value: FleetCategory | "all") => void;
   readonly onDragEnd: () => void;
   readonly onDragStart: (item: CatalogItemReadModel, event: DragEvent<HTMLElement>) => void;
   readonly onInspect: (item: CatalogItemReadModel) => void;
+  readonly onOpenOrbat: (name: string, imageUrl: string) => void;
   readonly onPreview: (item: CatalogItemReadModel) => void;
   readonly onToggle: () => void;
   readonly query: string;
@@ -647,54 +671,69 @@ function CatalogPane({
       </p>
       <div className="catalog-list" aria-label="Результаты каталога">
         {filtered.length ? (
-          filtered.map((item) => (
-            <div
-              className="catalog-row"
-              data-availability={item.availability.state}
-              data-dragging={draggedId === item.id ? "true" : undefined}
-              draggable={item.availability.state === "available"}
-              key={item.id}
-              onDragEnd={onDragEnd}
-              onDragStart={(event) => onDragStart(item, event)}
-            >
-              <button
-                aria-pressed={selectedId === item.id}
-                className="catalog-row__select"
-                id={`catalog-item-${safeId(item.id)}`}
-                onClick={() => onPreview(item)}
-                type="button"
+          filtered.map((item) => {
+            const orbatPageUrl = orbatCardFor(faction, item.name);
+            return (
+              <div
+                className="catalog-row"
+                data-availability={item.availability.state}
+                data-dragging={draggedId === item.id ? "true" : undefined}
+                draggable={item.availability.state === "available"}
+                key={item.id}
+                onDragEnd={onDragEnd}
+                onDragStart={(event) => onDragStart(item, event)}
               >
-                <span className="catalog-row__name">
-                  <strong>{item.name}</strong>
-                  <small>
-                    {item.category} · {item.platform}
-                  </small>
-                </span>
-                <span className="catalog-row__cost">
-                  <b>{item.points} P</b>
-                  <small>{item.victoryPoints} VPR</small>
-                </span>
-                <span className="catalog-row__state">
-                  <span aria-hidden="true">
-                    {item.availability.state === "available" ? "○" : "!"}
+                <button
+                  aria-pressed={selectedId === item.id}
+                  className="catalog-row__select"
+                  id={`catalog-item-${safeId(item.id)}`}
+                  onClick={() => onPreview(item)}
+                  type="button"
+                >
+                  <span className="catalog-row__name">
+                    <strong>{item.name}</strong>
+                    <small>
+                      {item.category} · {item.platform}
+                    </small>
                   </span>
-                  {item.availability.state === "available"
-                    ? "Доступен"
-                    : item.availability.state === "unavailable"
-                      ? "Недоступен"
-                      : "Нужно проверить"}
-                </span>
-              </button>
-              <button
-                aria-label={`Показать профиль ${item.name}`}
-                className="catalog-row__inspect"
-                onClick={() => onInspect(item)}
-                type="button"
-              >
-                <EyeIcon />
-              </button>
-            </div>
-          ))
+                  <span className="catalog-row__cost">
+                    <b>{item.points} P</b>
+                    <small>{item.victoryPoints} VPR</small>
+                  </span>
+                  <span className="catalog-row__state">
+                    <span aria-hidden="true">
+                      {item.availability.state === "available" ? "○" : "!"}
+                    </span>
+                    {item.availability.state === "available"
+                      ? "Доступен"
+                      : item.availability.state === "unavailable"
+                        ? "Недоступен"
+                        : "Нужно проверить"}
+                  </span>
+                </button>
+                <div className="catalog-row__actions">
+                  <button
+                    aria-label={`Показать профиль ${item.name}`}
+                    className="catalog-row__inspect"
+                    onClick={() => onInspect(item)}
+                    type="button"
+                  >
+                    <EyeIcon />
+                  </button>
+                  {orbatPageUrl ? (
+                    <button
+                      aria-label={`Показать страницу ORBAT ${item.name}`}
+                      className="catalog-row__orbat"
+                      onClick={() => onOpenOrbat(item.name, orbatPageUrl)}
+                      type="button"
+                    >
+                      <OrbatPageIcon />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })
         ) : (
           <div className="no-results" data-state="no-results">
             <strong>Ничего не найдено</strong>
@@ -716,6 +755,7 @@ function CompositionPane({
   onEdit,
   onFollowIssue,
   onInspect,
+  onOpenOrbat,
   onOpenCatalog,
   onDrop,
   onReturnToIssue,
@@ -731,6 +771,7 @@ function CompositionPane({
   readonly onEdit: (instance: RosterInstanceReadModel) => void;
   readonly onFollowIssue: (targetId: string, returnId: string) => void;
   readonly onInspect: (instance: RosterInstanceReadModel) => void;
+  readonly onOpenOrbat: (name: string, imageUrl: string) => void;
   readonly onOpenCatalog: (element: FleetElementReadModel) => void;
   readonly onDrop: (definitionId: string, elementId: string) => void;
   readonly onReturnToIssue: () => void;
@@ -917,6 +958,7 @@ function CompositionPane({
                 <ul className="roster-instance-list">
                   {element.instances.map((instance) => {
                     const loadout = instance.loadout;
+                    const orbatPageUrl = orbatCardFor(model.roster.faction, instance.name);
                     return (
                       <li
                         aria-current={selectedInstanceId === instance.id ? "true" : undefined}
@@ -935,6 +977,16 @@ function CompositionPane({
                             >
                               <EyeIcon />
                             </button>
+                            {orbatPageUrl ? (
+                              <button
+                                aria-label={`Показать страницу ORBAT ${instance.name}`}
+                                className="instance-orbat"
+                                onClick={() => onOpenOrbat(instance.name, orbatPageUrl)}
+                                type="button"
+                              >
+                                <OrbatPageIcon />
+                              </button>
+                            ) : null}
                           </span>
                           <small>
                             {instance.points} Points · {instance.victoryPoints} VPR

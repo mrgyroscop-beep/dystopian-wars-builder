@@ -11,11 +11,18 @@ const factionSlugs: Readonly<Record<string, string>> = {
   union: "union",
 };
 
+const fixtureAliases: Readonly<Record<string, Record<string, string> | undefined>> = {
+  empire: {
+    akitademonstrator: "/orbat-cards/empire/23.webp",
+  },
+};
+
 export function orbatCardFor(faction: string, shipName: string): string | null {
   const slug = factionSlugs[compact(faction)];
   if (!slug) return null;
   const cards = manifest.cards as Record<string, Record<string, string> | undefined>;
-  return cards[slug]?.[compact(shipName)] ?? null;
+  const key = compact(shipName);
+  return cards[slug]?.[key] ?? fixtureAliases[slug]?.[key] ?? null;
 }
 
 function compact(value: string): string {

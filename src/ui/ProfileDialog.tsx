@@ -10,7 +10,6 @@ import {
 
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
 import type { RuleReadModel, WeaponProfileReadModel } from "../application/rosters/profile-rules";
-import { orbatCardFor } from "../app/orbatCards";
 import { WeaponProfiles } from "./ProfileRules";
 import { RuleDescription, RuleLinks, ShipCardProfile, ShipMobileProfile } from "./ShipCardProfile";
 
@@ -27,29 +26,47 @@ export function ShipProfileDialog({
   readonly name: string;
   readonly onClose: () => void;
 }) {
-  const orbatPageUrl = orbatCardFor(faction, name);
-
   return (
     <InspectorDialog
       backgroundUrl={null}
       card
+      cardToggle
       {...(imageSearchHref ? { imageSearchHref } : {})}
       name={name}
       onClose={onClose}
     >
       <ShipMobileProfile faction={faction} model={model} />
       <div className="profile-dialog__original-card">
-        {orbatPageUrl ? (
-          <img
-            alt={`Полная страница ORBAT для ${name}: таблица характеристик и изображение корабля`}
-            className="profile-dialog__orbat-page"
-            decoding="async"
-            src={orbatPageUrl}
-          />
-        ) : (
-          <ShipCardProfile faction={faction} model={model} />
-        )}
+        <ShipCardProfile faction={faction} model={model} />
       </div>
+    </InspectorDialog>
+  );
+}
+
+export function ShipOrbatPageDialog({
+  imageUrl,
+  name,
+  onClose,
+}: {
+  readonly imageUrl: string;
+  readonly name: string;
+  readonly onClose: () => void;
+}) {
+  return (
+    <InspectorDialog
+      backgroundUrl={null}
+      card
+      closeLabel="Закрыть страницу ORBAT"
+      eyebrow="Страница ORBAT"
+      name={name}
+      onClose={onClose}
+    >
+      <img
+        alt={`Полная страница ORBAT для ${name}: таблица характеристик и изображение корабля`}
+        className="profile-dialog__orbat-page"
+        decoding="async"
+        src={imageUrl}
+      />
     </InspectorDialog>
   );
 }
@@ -131,6 +148,7 @@ export function OptionDescriptionDialog({
 function InspectorDialog({
   backgroundUrl,
   card = false,
+  cardToggle = false,
   children,
   closeLabel = "Закрыть профиль",
   compact = false,
@@ -141,6 +159,7 @@ function InspectorDialog({
 }: {
   readonly backgroundUrl: string | null;
   readonly card?: boolean;
+  readonly cardToggle?: boolean;
   readonly children: ReactNode;
   readonly closeLabel?: string;
   readonly compact?: boolean;
@@ -152,7 +171,7 @@ function InspectorDialog({
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
-  const [cardView, setCardView] = useState<"profile" | "original">("original");
+  const [cardView, setCardView] = useState<"profile" | "original">("profile");
 
   useEffect(() => {
     returnFocus.current =
@@ -191,7 +210,7 @@ function InspectorDialog({
         aria-modal="true"
         className="profile-dialog"
         data-card={card ? "true" : undefined}
-        data-card-view={card ? cardView : undefined}
+        data-card-view={cardToggle ? cardView : undefined}
         data-compact={compact ? "true" : undefined}
         onKeyDown={handleKeyDown}
         open
@@ -224,10 +243,12 @@ function InspectorDialog({
                 <CameraIcon />
               </a>
             ) : null}
-            {card ? (
+            {cardToggle ? (
               <button
                 aria-label={
-                  cardView === "profile" ? "Показать страницу ORBAT" : "Показать мобильный профиль"
+                  cardView === "profile"
+                    ? "Показать оригинальную карточку"
+                    : "Показать мобильный профиль"
                 }
                 className="profile-dialog__view-toggle"
                 onClick={() =>
@@ -235,7 +256,7 @@ function InspectorDialog({
                 }
                 type="button"
               >
-                {cardView === "profile" ? "Страница ORBAT" : "Профиль"}
+                {cardView === "profile" ? "Оригинал" : "Профиль"}
               </button>
             ) : null}
             <button

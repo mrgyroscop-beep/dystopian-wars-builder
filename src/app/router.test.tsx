@@ -486,8 +486,15 @@ describe("application routes", () => {
       name: "Показать профиль Akita Demonstrator",
     });
     expect(profileButtons).toHaveLength(2);
+    const orbatButtons = screen.getAllByRole("button", {
+      name: "Показать страницу ORBAT Akita Demonstrator",
+    });
+    expect(orbatButtons).toHaveLength(2);
     await user.click(profileButtons[1]!);
     const profile = await screen.findByRole("dialog", { name: "Akita Demonstrator" });
+    expect(
+      within(profile).getByRole("article", { name: "Карточка Akita Demonstrator" }),
+    ).toBeInTheDocument();
     const imageSearchLink = within(profile).getByRole("link", {
       name: "Найти изображения Akita Demonstrator в Google",
     });
@@ -497,6 +504,13 @@ describe("application routes", () => {
     );
     expect(imageSearchLink).toHaveAttribute("target", "_blank");
     expect(imageSearchLink).toHaveAttribute("rel", "noopener noreferrer");
+    await user.click(within(profile).getByRole("button", { name: "Закрыть профиль" }));
+
+    await user.click(orbatButtons[1]!);
+    const orbatPage = await screen.findByRole("img", {
+      name: /Полная страница ORBAT для Akita Demonstrator/u,
+    });
+    expect(orbatPage).toHaveAttribute("src", "/orbat-cards/empire/23.webp");
   });
 
   it("marks a fleet element when its maximum ship count is exceeded", async () => {
