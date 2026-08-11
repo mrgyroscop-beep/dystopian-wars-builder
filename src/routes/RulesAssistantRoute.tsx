@@ -9,9 +9,9 @@ import type {
 } from "../application/assistant/rules-assistant-contract";
 
 const suggestions = [
+  "Как происходит абордаж?",
   "Как работает правило All-Around?",
   "Что даёт свойство Ablative Armour?",
-  "Когда модель может использовать Escorts?",
 ];
 
 interface ChatEntry extends AssistantMessage {
@@ -78,8 +78,8 @@ export function RulesAssistantPanel({
         <p className="eyebrow">Помощник адмирала</p>
         <h2>Старпом</h2>
         <p className="page-lead">
-          Задайте вопрос по Dystopian Wars 4.0. Ответ строится по опубликованному каталогу правил и
-          содержит ссылки на использованные выдержки.
+          Задайте вопрос по Dystopian Wars 4.0. Старпом сопоставит связанные правила, разложит
+          процедуру по шагам и привяжет каждый вывод к опубликованной выдержке.
         </p>
       </header>
 
@@ -112,7 +112,9 @@ export function RulesAssistantPanel({
                 <div className="assistant-empty">
                   <span aria-hidden="true">⚓</span>
                   <h2>Чем помочь, адмирал {user.displayName}?</h2>
-                  <p>Лучше всего задавать один конкретный вопрос о правиле или свойстве модели.</p>
+                  <p>
+                    Можно спросить не только о названии правила, но и о порядке действий в игре.
+                  </p>
                   <div className="assistant-suggestions">
                     {suggestions.map((suggestion) => (
                       <button
@@ -163,7 +165,8 @@ export function RulesAssistantPanel({
                 </p>
               ) : null}
               <small>
-                До 5 вопросов в минуту. Ответ помощника стоит сверить с официальным документом.
+                До 5 вопросов в минуту. Если источников не хватит, Старпом не будет додумывать
+                ответ.
               </small>
             </form>
           </section>

@@ -3,7 +3,7 @@ import { applyD1Migrations, type D1Migration } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { healthResponseSchema } from "../src/application/health/health-contract";
-import { retrieveSources } from "./assistant";
+import { retrieveSources, validateGroundedAnswer } from "./assistant";
 import { sha256 } from "./http";
 import { resolveReferenceDocument } from "./reference-pdf";
 
@@ -201,6 +201,26 @@ describe("Worker API", () => {
     expect(retrieveSources("Эскорт")[0]).toMatchObject({ title: "Escort" });
     expect(retrieveSources("Torpdeo")[0]).toMatchObject({ title: "Torpedo" });
     expect(retrieveSources("фывапролдж")).toEqual([]);
+  });
+
+  it("retrieves the core boarding procedure without unrelated ship exceptions", () => {
+    expect(retrieveSources("Как происходит абордаж?").map(({ title }) => title)).toEqual([
+      "Boarding",
+      "Boarding Parties",
+    ]);
+  });
+
+  it("rejects uncited rule claims and references to sources that were not retrieved", () => {
+    expect(
+      validateGroundedAnswer(
+        "Краткий ответ\nАбордаж разрешается по четырём шагам. [S1]\n\n2. Важные условия и ограничения:\nНужна Boarding Parties. [S1, S2]",
+        2,
+      ),
+    ).toEqual({ valid: true });
+    expect(validateGroundedAnswer("Абордаж всегда успешен.", 2)).toMatchObject({ valid: false });
+    expect(validateGroundedAnswer("Абордаж всегда успешен. [S3]", 2)).toMatchObject({
+      valid: false,
+    });
   });
 
   it("publishes the text glossary with stored Russian translations", async () => {
