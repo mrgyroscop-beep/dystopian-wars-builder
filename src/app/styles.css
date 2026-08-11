@@ -3688,9 +3688,84 @@ button.button {
   background: #18323b;
 }
 
-.reference-pdf__toolbar span {
+.reference-pdf__status {
   font-weight: 900;
   font-variant-numeric: tabular-nums;
+}
+
+.reference-pdf__page-jump {
+  display: inline-flex;
+  min-height: 2.35rem;
+  align-items: center;
+  gap: 0.38rem;
+  color: #f5f2e9;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.reference-pdf__page-jump label {
+  display: block;
+}
+
+.reference-pdf__page-jump input {
+  width: 3.4rem;
+  min-height: 2.35rem;
+  padding: 0.3rem 0.45rem;
+  color: #fffaf0;
+  font: inherit;
+  text-align: center;
+  background: rgb(255 255 255 / 9%);
+  border: 1px solid rgb(245 242 233 / 58%);
+  border-radius: 0.2rem;
+  caret-color: #f0a074;
+}
+
+.reference-pdf__page-jump input:focus-visible {
+  background: rgb(255 255 255 / 15%);
+  border-color: #f0a074;
+  outline: 2px solid #f0a074;
+  outline-offset: 2px;
+}
+
+.reference-pdf__page-jump > span[aria-hidden="true"] {
+  color: #9fb1b2;
+}
+
+.reference-pdf__page-jump strong {
+  min-width: 2ch;
+}
+
+.reference-pdf__page-jump button {
+  display: grid;
+  width: 2.35rem;
+  min-width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  place-items: center;
+  color: #132c34;
+  background: #f0a074;
+  border: 1px solid #ffd6bd;
+  border-radius: 0.2rem;
+  cursor: pointer;
+}
+
+.reference-pdf__page-jump button:hover:not(:disabled) {
+  background: #ffc39e;
+}
+
+.reference-pdf__page-jump button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.reference-pdf__page-jump-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .reference-pdf__toolbar small {
@@ -3880,9 +3955,17 @@ button.button {
   }
 
   .reference-pdf__toolbar {
-    align-items: flex-start;
+    align-items: center;
     min-height: auto;
     padding: 0.65rem 0.85rem;
+  }
+
+  .reference-pdf__page-jump {
+    gap: 0.3rem;
+  }
+
+  .reference-pdf__page-jump input {
+    width: 3rem;
   }
 
   .reference-pdf__toolbar small {
