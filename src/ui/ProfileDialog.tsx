@@ -10,6 +10,7 @@ import {
 
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
 import type { RuleReadModel, WeaponProfileReadModel } from "../application/rosters/profile-rules";
+import { orbatCardFor } from "../app/orbatCards";
 import { WeaponProfiles } from "./ProfileRules";
 import { RuleDescription, RuleLinks, ShipCardProfile, ShipMobileProfile } from "./ShipCardProfile";
 
@@ -26,6 +27,8 @@ export function ShipProfileDialog({
   readonly name: string;
   readonly onClose: () => void;
 }) {
+  const orbatPageUrl = orbatCardFor(faction, name);
+
   return (
     <InspectorDialog
       backgroundUrl={null}
@@ -36,7 +39,16 @@ export function ShipProfileDialog({
     >
       <ShipMobileProfile faction={faction} model={model} />
       <div className="profile-dialog__original-card">
-        <ShipCardProfile faction={faction} model={model} />
+        {orbatPageUrl ? (
+          <img
+            alt={`Полная страница ORBAT для ${name}: таблица характеристик и изображение корабля`}
+            className="profile-dialog__orbat-page"
+            decoding="async"
+            src={orbatPageUrl}
+          />
+        ) : (
+          <ShipCardProfile faction={faction} model={model} />
+        )}
       </div>
     </InspectorDialog>
   );
@@ -140,7 +152,7 @@ function InspectorDialog({
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
-  const [cardView, setCardView] = useState<"profile" | "original">("profile");
+  const [cardView, setCardView] = useState<"profile" | "original">("original");
 
   useEffect(() => {
     returnFocus.current =
@@ -225,7 +237,7 @@ function InspectorDialog({
                 }
                 type="button"
               >
-                {cardView === "profile" ? "Оригинал" : "Профиль"}
+                {cardView === "profile" ? "Страница ORBAT" : "Профиль"}
               </button>
             ) : null}
             <button

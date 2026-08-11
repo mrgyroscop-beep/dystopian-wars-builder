@@ -4540,6 +4540,15 @@ button.button {
   display: block;
 }
 
+.profile-dialog__orbat-page {
+  display: block;
+  width: min(100%, 77.5rem);
+  height: auto;
+  margin-inline: auto;
+  background: #f3eee6;
+  box-shadow: 0 16px 44px rgb(0 0 0 / 34%);
+}
+
 .ship-card {
   position: relative;
   isolation: isolate;

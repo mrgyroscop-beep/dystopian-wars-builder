@@ -111,12 +111,12 @@ def render_pages(
         "-l",
         str(max(pages)),
         "-scale-to-x",
-        "720",
+        "1240",
         "-scale-to-y",
         "-1",
         "-jpeg",
         "-jpegopt",
-        "quality=72",
+        "quality=90",
         str(ascii_pdf),
         str(prefix),
     ]
@@ -126,8 +126,7 @@ def render_pages(
         if page not in pages:
             continue
         with Image.open(image_path) as image:
-            crop = image.crop((0, 0, image.width, round(image.height * 0.64)))
-            crop.save(output / f"{page}.webp", "WEBP", quality=68, method=6)
+            image.save(output / f"{page}.webp", "WEBP", quality=86, method=6)
 
 
 def download(url: str, target: Path, refresh: bool) -> None:
@@ -140,7 +139,7 @@ def download(url: str, target: Path, refresh: bool) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Publish lightweight ORBAT profile backgrounds.")
+    parser = argparse.ArgumentParser(description="Publish complete ORBAT profile pages.")
     parser.add_argument("--refresh", action="store_true", help="Download the current PDFs again.")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
