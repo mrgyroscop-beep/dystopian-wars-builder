@@ -23,6 +23,10 @@ const tabs: readonly { readonly id: CampaignTab; readonly label: string }[] = [
   { id: "empire", label: "Флот Империи" },
 ];
 
+const campaignShipImages: Readonly<Record<string, string | undefined>> = {
+  pembroke: "/campaign/ships/hms-pembroke.webp",
+};
+
 export function CampaignRoute() {
   const params = useParams<{ scenarioId?: string; tab?: string }>();
   const scenario = campaignScenario(params.scenarioId);
@@ -259,10 +263,24 @@ function FleetUnitCard({
   readonly unit: CampaignFleetUnit;
 }) {
   const profile = campaignProfile(unit.profileId);
+  const shipImage = campaignShipImages[unit.profileId];
   const traits = [...profile.properties, ...profile.systems].join(", ");
+  const unitNumber = String(index + 1).padStart(2, "0");
   return (
-    <li className="campaign-unit-card">
-      <span className="campaign-unit-card__number">{String(index + 1).padStart(2, "0")}</span>
+    <li className={`campaign-unit-card${shipImage ? " campaign-unit-card--with-ship" : ""}`}>
+      {shipImage ? (
+        <div className="campaign-unit-card__ship">
+          <img
+            alt={`${profile.role} ${profile.name}`}
+            decoding="async"
+            loading="lazy"
+            src={shipImage}
+          />
+          <span className="campaign-unit-card__number">{unitNumber}</span>
+        </div>
+      ) : (
+        <span className="campaign-unit-card__number">{unitNumber}</span>
+      )}
       <div className="campaign-unit-card__body">
         <p>{profile.role}</p>
         <h4>{profile.name}</h4>
