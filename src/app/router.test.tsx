@@ -345,6 +345,26 @@ describe("application routes", () => {
       "page",
     );
     expect(screen.getByText("6")).toBeVisible();
+
+    const imageButton = screen.getByRole("button", {
+      name: "Открыть увеличенное изображение HMIS Strikakulam",
+    });
+    expect(
+      within(imageButton).getByRole("img", { name: "Sabre Command Cruiser HMIS Strikakulam" }),
+    ).toBeVisible();
+
+    await user.click(imageButton);
+    const imageDialog = await screen.findByRole("dialog", { name: "HMIS Strikakulam" });
+    expect(
+      within(imageDialog).getByRole("img", {
+        name: "Увеличенное изображение HMIS Strikakulam",
+      }),
+    ).toHaveAttribute("src", "/campaign/ships/hmis-strikakulam.webp");
+
+    await user.click(
+      within(imageDialog).getByRole("button", { name: "Закрыть изображение корабля" }),
+    );
+    expect(imageButton).toHaveFocus();
   });
 
   it("keeps campaign traits clickable in the fleet and detailed profile", async () => {

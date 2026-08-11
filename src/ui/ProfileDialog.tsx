@@ -71,6 +71,37 @@ export function ShipOrbatPageDialog({
   );
 }
 
+export function ShipImageDialog({
+  imageUrl,
+  name,
+  onClose,
+}: {
+  readonly imageUrl: string;
+  readonly name: string;
+  readonly onClose: () => void;
+}) {
+  return (
+    <InspectorDialog
+      backgroundUrl={null}
+      card
+      closeLabel="Закрыть изображение корабля"
+      contentLabel="Увеличенное изображение корабля"
+      eyebrow="Изображение корабля"
+      name={name}
+      onClose={onClose}
+    >
+      <div className="profile-dialog__ship-image-stage">
+        <img
+          alt={`Увеличенное изображение ${name}`}
+          className="profile-dialog__ship-image"
+          decoding="async"
+          src={imageUrl}
+        />
+      </div>
+    </InspectorDialog>
+  );
+}
+
 export function WeaponProfileDialog({
   profile,
   onClose,
@@ -152,6 +183,7 @@ function InspectorDialog({
   children,
   closeLabel = "Закрыть профиль",
   compact = false,
+  contentLabel,
   eyebrow = "Профиль ORBAT",
   imageSearchHref,
   name,
@@ -163,6 +195,7 @@ function InspectorDialog({
   readonly children: ReactNode;
   readonly closeLabel?: string;
   readonly compact?: boolean;
+  readonly contentLabel?: string;
   readonly eyebrow?: string;
   readonly imageSearchHref?: string;
   readonly name: string;
@@ -270,7 +303,7 @@ function InspectorDialog({
           </div>
         </header>
         <div
-          aria-label={card ? "Профиль корабля" : undefined}
+          aria-label={contentLabel ?? (card ? "Профиль корабля" : undefined)}
           className="profile-dialog__content"
           role={card ? "region" : undefined}
           tabIndex={card ? 0 : undefined}

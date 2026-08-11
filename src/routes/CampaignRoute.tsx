@@ -15,7 +15,7 @@ import {
   type CampaignTab,
 } from "../campaign/campaignData";
 import { campaignShipImage } from "../campaign/campaignShipImages";
-import { ShipProfileDialog } from "../ui/ProfileDialog";
+import { ShipImageDialog, ShipProfileDialog } from "../ui/ProfileDialog";
 import { RuleDescription, RuleLinks } from "../ui/ShipCardProfile";
 
 const tabs: readonly { readonly id: CampaignTab; readonly label: string }[] = [
@@ -28,8 +28,11 @@ export function CampaignRoute() {
   const params = useParams<{ scenarioId?: string; tab?: string }>();
   const scenario = campaignScenario(params.scenarioId);
   const tab = isCampaignTab(params.tab) ? params.tab : "mission";
+  const [imageUnit, setImageUnit] = useState<CampaignFleetUnit | null>(null);
   const [profileUnit, setProfileUnit] = useState<CampaignFleetUnit | null>(null);
   const profile = profileUnit ? campaignProfileModel(profileUnit) : null;
+  const imageProfile = imageUnit ? campaignProfile(imageUnit.profileId) : null;
+  const imageUrl = imageUnit ? campaignShipImage(imageUnit.profileId) : null;
   useDocumentTitle(`Кампания · Акт ${scenario.act}`);
 
   return (
@@ -107,6 +110,7 @@ export function CampaignRoute() {
         ) : (
           <FleetPanel
             faction={tab === "crown" ? "Crown" : "Empire"}
+            onOpenImage={setImageUnit}
             onOpenProfile={setProfileUnit}
             units={tab === "crown" ? scenario.crown : scenario.empire}
           />
@@ -119,6 +123,14 @@ export function CampaignRoute() {
           model={profile.model}
           name={profile.model.name}
           onClose={() => setProfileUnit(null)}
+        />
+      ) : null}
+
+      {imageProfile && imageUrl ? (
+        <ShipImageDialog
+          imageUrl={imageUrl}
+          name={imageProfile.name}
+          onClose={() => setImageUnit(null)}
         />
       ) : null}
     </div>
@@ -204,10 +216,12 @@ function BattleMap({ scenario }: { readonly scenario: CampaignScenario }) {
 
 function FleetPanel({
   faction,
+  onOpenImage,
   onOpenProfile,
   units,
 }: {
   readonly faction: CampaignFaction;
+  readonly onOpenImage: (unit: CampaignFleetUnit) => void;
   readonly onOpenProfile: (unit: CampaignFleetUnit) => void;
   readonly units: readonly CampaignFleetUnit[];
 }) {
@@ -240,6 +254,7 @@ function FleetPanel({
         {units.map((unit, index) => (
           <FleetUnitCard
             key={`${unit.profileId}:${index}`}
+            onOpenImage={() => onOpenImage(unit)}
             onOpen={() => onOpenProfile(unit)}
             unit={unit}
           />
@@ -251,9 +266,11 @@ function FleetPanel({
 
 function FleetUnitCard({
   onOpen,
+  onOpenImage,
   unit,
 }: {
   readonly onOpen: () => void;
+  readonly onOpenImage: () => void;
   readonly unit: CampaignFleetUnit;
 }) {
   const profile = campaignProfile(unit.profileId);
@@ -262,14 +279,19 @@ function FleetUnitCard({
   return (
     <li className={`campaign-unit-card${shipImage ? " campaign-unit-card--with-ship" : ""}`}>
       {shipImage ? (
-        <div className="campaign-unit-card__ship">
+        <button
+          aria-label={`Открыть увеличенное изображение ${profile.name}`}
+          className="campaign-unit-card__ship"
+          onClick={onOpenImage}
+          type="button"
+        >
           <img
             alt={`${profile.role} ${profile.name}`}
             decoding="async"
             loading="lazy"
             src={shipImage}
           />
-        </div>
+        </button>
       ) : null}
       <div className="campaign-unit-card__body">
         <p>{profile.role}</p>

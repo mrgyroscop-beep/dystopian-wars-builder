@@ -1751,9 +1751,15 @@ button.button {
 .campaign-unit-card__ship {
   position: relative;
   display: grid;
+  width: 100%;
   min-width: 0;
   min-height: 5.5rem;
   place-items: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0.25rem;
+  cursor: zoom-in;
   isolation: isolate;
 }
 
@@ -1775,6 +1781,12 @@ button.button {
   max-height: 5.75rem;
   object-fit: contain;
   filter: drop-shadow(0 0.3rem 0.22rem rgb(20 40 44 / 20%));
+  transition: transform 140ms ease-out;
+}
+
+.campaign-unit-card__ship:hover img,
+.campaign-unit-card__ship:focus-visible img {
+  transform: scale(1.045);
 }
 
 .campaign-unit-card__body {
@@ -4695,6 +4707,23 @@ button.button {
   margin-inline: auto;
   background: #f3eee6;
   box-shadow: 0 16px 44px rgb(0 0 0 / 34%);
+}
+
+.profile-dialog__ship-image-stage {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 3rem);
+  background: radial-gradient(circle, rgb(255 255 255 / 9%), transparent 56%);
+}
+
+.profile-dialog__ship-image {
+  display: block;
+  width: min(100%, 50rem);
+  height: auto;
+  max-height: calc(100dvh - 6.5rem);
+  object-fit: contain;
+  filter: drop-shadow(0 1.5rem 1.6rem rgb(0 0 0 / 40%));
 }
 
 .ship-card {
