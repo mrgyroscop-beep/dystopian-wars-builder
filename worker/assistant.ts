@@ -99,7 +99,7 @@ assistantRoutes.post("/ask", async (context) => {
   const user = await requireSessionUser(context);
   await enforceAssistantRateLimit(context, user.id);
   const input = assistantRequestSchema.parse(await readBoundedJson(context));
-  const sources = retrieveSources(input.question);
+  const sources = retrieveConversationSources(input.question, input.history);
   if (sources.length === 0) {
     context.header("Cache-Control", "no-store");
     return context.json({
@@ -195,6 +195,18 @@ export function retrieveSources(question: string) {
     .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title));
   if (ranked.length === 0) return [];
   return ranked.slice(0, MAX_SOURCES);
+}
+
+export function retrieveConversationSources(
+  question: string,
+  history: readonly { role: "user" | "assistant"; content: string }[],
+) {
+  const directSources = retrieveSources(question);
+  if (directSources.length > 0) return directSources;
+
+  const previousUserQuestion = history.findLast((message) => message.role === "user")?.content;
+  if (!previousUserQuestion) return [];
+  return retrieveSources(`${previousUserQuestion}\n${question}`);
 }
 
 export function validateGroundedAnswer(

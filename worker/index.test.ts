@@ -3,7 +3,7 @@ import { applyD1Migrations, type D1Migration } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { healthResponseSchema } from "../src/application/health/health-contract";
-import { retrieveSources, validateGroundedAnswer } from "./assistant";
+import { retrieveConversationSources, retrieveSources, validateGroundedAnswer } from "./assistant";
 import { sha256 } from "./http";
 import { resolveReferenceDocument } from "./reference-pdf";
 
@@ -208,6 +208,24 @@ describe("Worker API", () => {
       "Boarding",
       "Boarding Parties",
     ]);
+  });
+
+  it("inherits the last user topic for a vague follow-up without trusting the prior answer", () => {
+    const history = [
+      { role: "user" as const, content: "Как происходит абордаж?" },
+      { role: "assistant" as const, content: "Используй Torpedo и десять кубиков." },
+    ];
+
+    expect(
+      retrieveConversationSources("какие параметры брать для кубовки", history).map(
+        ({ title }) => title,
+      ),
+    ).toEqual(["Boarding", "Boarding Parties"]);
+    const newTopicTitles = retrieveConversationSources("Как работает Torpedo?", history).map(
+      ({ title }) => title,
+    );
+    expect(newTopicTitles[0]).toBe("Torpedo");
+    expect(newTopicTitles).not.toContain("Boarding");
   });
 
   it("rejects uncited rule claims and references to sources that were not retrieved", () => {
