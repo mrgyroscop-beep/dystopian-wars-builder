@@ -3,7 +3,13 @@ import { applyD1Migrations, type D1Migration } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { healthResponseSchema } from "../src/application/health/health-contract";
-import { retrieveConversationSources, retrieveSources, validateGroundedAnswer } from "./assistant";
+import {
+  buildGroundedMessages,
+  formatRuleTextForModel,
+  retrieveConversationSources,
+  retrieveSources,
+  validateGroundedAnswer,
+} from "./assistant";
 import { sha256 } from "./http";
 import { resolveReferenceDocument } from "./reference-pdf";
 
@@ -226,6 +232,32 @@ describe("Worker API", () => {
     );
     expect(newTopicTitles[0]).toBe("Torpedo");
     expect(newTopicTitles).not.toContain("Boarding");
+  });
+
+  it("uses prior user questions as topic context without replaying generated answers", () => {
+    const messages = buildGroundedMessages(
+      "Какие параметры берем для определения количества кубов",
+      [
+        { role: "user", content: "Как происходит абордаж?" },
+        { role: "assistant", content: "Неподтверждённый прошлый ответ." },
+      ],
+      "[S1] Boarding\nAuthoritative source text.",
+    );
+
+    expect(messages).toHaveLength(2);
+    expect(messages[1]?.content).toContain("Как происходит абордаж?");
+    expect(messages[1]?.content).not.toContain("Неподтверждённый прошлый ответ.");
+    expect(messages[1]?.content).toContain("[S1] Boarding");
+  });
+
+  it("separates procedural sections before sending rule text to the model", () => {
+    expect(
+      formatRuleTextForModel(
+        "When resolving: 3. MAKE THE ACTION ROLL The active Admiral rolls. Action Pool Each model adds dice. Resistance Pool Start with Defences. Success Threshold The Target's Crew rating.",
+      ),
+    ).toBe(
+      "When resolving:\n3. MAKE THE ACTION ROLL\nThe active Admiral rolls.\nAction Pool: Each model adds dice.\nResistance Pool: Start with Defences.\nSuccess Threshold: The Target's Crew rating.",
+    );
   });
 
   it("rejects uncited rule claims and references to sources that were not retrieved", () => {
