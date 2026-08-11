@@ -689,6 +689,7 @@ test("keeps the generated profile on the eye and opens ORBAT separately", async 
   expect(mobile.scrollWidth).toBeLessThanOrEqual(mobile.clientWidth + 1);
 
   await page.getByRole("button", { name: "Закрыть профиль" }).click();
+  await page.setViewportSize({ width: 1380, height: 960 });
   await page.getByRole("button", { name: "Показать страницу ORBAT Akita Demonstrator" }).click();
   const orbatDialog = page.getByRole("dialog", { name: "Akita Demonstrator" });
   const orbatPage = orbatDialog.getByRole("img", {
@@ -696,6 +697,43 @@ test("keeps the generated profile on the eye and opens ORBAT separately", async 
   });
   await expect(orbatPage).toBeVisible();
   await expect(orbatPage).toHaveAttribute("src", "/orbat-cards/empire/23.webp");
+  await orbatPage.evaluate((image) => {
+    if (image instanceof HTMLImageElement && !image.complete)
+      return new Promise<void>((resolve) =>
+        image.addEventListener("load", () => resolve(), { once: true }),
+      );
+  });
+
+  const orbatViewport = orbatDialog.getByRole("region", { name: "Профиль корабля" });
+  await orbatViewport.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  const close = orbatDialog.getByRole("button", { name: "Закрыть страницу ORBAT" });
+  const closeMetrics = await close.evaluate((button) => {
+    const dialog = button.closest("dialog");
+    const viewport = dialog?.querySelector<HTMLElement>(".profile-dialog__content");
+    const icon = button.querySelector<SVGElement>(".profile-dialog__close-icon");
+    const buttonBox = button.getBoundingClientRect();
+    const iconBox = icon?.getBoundingClientRect();
+    return {
+      dialogScrollTop: dialog?.scrollTop ?? -1,
+      dialogScrolls: (dialog?.scrollHeight ?? 0) !== (dialog?.clientHeight ?? 0),
+      viewportScrollTop: viewport?.scrollTop ?? -1,
+      centerOffsetX: iconBox
+        ? Math.abs(buttonBox.left + buttonBox.width / 2 - (iconBox.left + iconBox.width / 2))
+        : 99,
+      centerOffsetY: iconBox
+        ? Math.abs(buttonBox.top + buttonBox.height / 2 - (iconBox.top + iconBox.height / 2))
+        : 99,
+    };
+  });
+  expect(closeMetrics.dialogScrollTop).toBe(0);
+  expect(closeMetrics.dialogScrolls).toBe(false);
+  expect(closeMetrics.viewportScrollTop).toBeGreaterThan(0);
+  expect(closeMetrics.centerOffsetX).toBeLessThanOrEqual(0.5);
+  expect(closeMetrics.centerOffsetY).toBeLessThanOrEqual(0.5);
+  await close.click();
+  await expect(orbatDialog).toHaveCount(0);
 });
 
 test("supports Arrow keys, Home and End in editor tabs", async ({ page }) => {

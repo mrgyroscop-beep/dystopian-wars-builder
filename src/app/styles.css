@@ -4404,14 +4404,21 @@ button.button {
 }
 
 .profile-dialog[data-card="true"] {
+  display: grid;
   width: min(90rem, calc(100dvw - 2rem));
   max-width: calc(100dvw - 2rem);
+  height: calc(100dvh - 2rem);
   min-width: 0;
+  grid-template-rows: auto minmax(0, 1fr);
   background: #101a1f;
   border-color: rgb(255 255 255 / 32%);
+  overflow: hidden;
 }
 
 .profile-dialog[data-card="true"] .profile-dialog__header {
+  position: relative;
+  z-index: 2;
+  top: auto;
   padding-block: 0.55rem;
   color: #f7f0df;
   background: rgb(9 24 30 / 96%);
@@ -4428,8 +4435,14 @@ button.button {
 }
 
 .profile-dialog[data-card="true"] .profile-dialog__content {
+  min-width: 0;
+  min-height: 0;
   padding: 0.75rem;
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .profile-dialog__background,
@@ -4510,7 +4523,17 @@ button.button {
 }
 
 .profile-dialog__close {
-  font-size: 1.7rem;
+  line-height: 0;
+}
+
+.profile-dialog__close-icon {
+  display: block;
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2.2;
 }
 
 .camera-icon {
