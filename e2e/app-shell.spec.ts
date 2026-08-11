@@ -668,7 +668,7 @@ test("keeps the editable mobile chrome within thirty percent of the viewport", a
   expect(fixedHeight).toBeLessThanOrEqual(viewport.height * 0.3);
 });
 
-test("opens a readable mobile ship profile and keeps the original card available", async ({
+test("opens the full ORBAT page on mobile and keeps the readable profile available", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -680,6 +680,19 @@ test("opens a readable mobile ship profile and keeps the original card available
 
   const dialog = page.getByRole("dialog", { name: "Akita Demonstrator" });
   const viewport = page.getByRole("region", { name: "Профиль корабля" });
+  await expect(dialog).toHaveAttribute("data-card-view", "original");
+  const orbatPage = page.getByRole("img", {
+    name: /Полная страница ORBAT для Akita Demonstrator/u,
+  });
+  await expect(orbatPage).toBeVisible();
+  await expect(orbatPage).toHaveAttribute("src", "/orbat-cards/empire/23.webp");
+  const original = await viewport.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(original.scrollWidth).toBeLessThanOrEqual(original.clientWidth + 1);
+
+  await page.getByRole("button", { name: "Показать мобильный профиль" }).click();
   await expect(dialog).toHaveAttribute("data-card-view", "profile");
   await expect(
     page.getByRole("article", { name: "Мобильный профиль Akita Demonstrator" }),
@@ -689,15 +702,6 @@ test("opens a readable mobile ship profile and keeps the original card available
     scrollWidth: element.scrollWidth,
   }));
   expect(mobile.scrollWidth).toBeLessThanOrEqual(mobile.clientWidth + 1);
-
-  await page.getByRole("button", { name: "Показать оригинальную карточку" }).click();
-  await expect(dialog).toHaveAttribute("data-card-view", "original");
-  await expect(page.getByRole("article", { name: "Карточка Akita Demonstrator" })).toBeVisible();
-  const original = await viewport.evaluate((element) => ({
-    clientWidth: element.clientWidth,
-    scrollWidth: element.scrollWidth,
-  }));
-  expect(original.scrollWidth).toBeLessThanOrEqual(original.clientWidth + 1);
 });
 
 test("supports Arrow keys, Home and End in editor tabs", async ({ page }) => {

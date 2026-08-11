@@ -227,9 +227,7 @@ function InspectorDialog({
             {card ? (
               <button
                 aria-label={
-                  cardView === "profile"
-                    ? "Показать оригинальную карточку"
-                    : "Показать мобильный профиль"
+                  cardView === "profile" ? "Показать страницу ORBAT" : "Показать мобильный профиль"
                 }
                 className="profile-dialog__view-toggle"
                 onClick={() =>
