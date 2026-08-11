@@ -14,6 +14,7 @@ import {
   type CampaignScenario,
   type CampaignTab,
 } from "../campaign/campaignData";
+import { campaignShipImage } from "../campaign/campaignShipImages";
 import { ShipProfileDialog } from "../ui/ProfileDialog";
 import { RuleDescription, RuleLinks } from "../ui/ShipCardProfile";
 
@@ -22,10 +23,6 @@ const tabs: readonly { readonly id: CampaignTab; readonly label: string }[] = [
   { id: "crown", label: "Флот Короны" },
   { id: "empire", label: "Флот Империи" },
 ];
-
-const campaignShipImages: Readonly<Record<string, string | undefined>> = {
-  pembroke: "/campaign/ships/hms-pembroke.webp",
-};
 
 export function CampaignRoute() {
   const params = useParams<{ scenarioId?: string; tab?: string }>();
@@ -242,7 +239,6 @@ function FleetPanel({
       <ol className="campaign-fleet-list">
         {units.map((unit, index) => (
           <FleetUnitCard
-            index={index}
             key={`${unit.profileId}:${index}`}
             onOpen={() => onOpenProfile(unit)}
             unit={unit}
@@ -254,18 +250,15 @@ function FleetPanel({
 }
 
 function FleetUnitCard({
-  index,
   onOpen,
   unit,
 }: {
-  readonly index: number;
   readonly onOpen: () => void;
   readonly unit: CampaignFleetUnit;
 }) {
   const profile = campaignProfile(unit.profileId);
-  const shipImage = campaignShipImages[unit.profileId];
+  const shipImage = campaignShipImage(unit.profileId);
   const traits = [...profile.properties, ...profile.systems].join(", ");
-  const unitNumber = String(index + 1).padStart(2, "0");
   return (
     <li className={`campaign-unit-card${shipImage ? " campaign-unit-card--with-ship" : ""}`}>
       {shipImage ? (
@@ -276,11 +269,8 @@ function FleetUnitCard({
             loading="lazy"
             src={shipImage}
           />
-          <span className="campaign-unit-card__number">{unitNumber}</span>
         </div>
-      ) : (
-        <span className="campaign-unit-card__number">{unitNumber}</span>
-      )}
+      ) : null}
       <div className="campaign-unit-card__body">
         <p>{profile.role}</p>
         <h4>{profile.name}</h4>

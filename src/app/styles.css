@@ -1732,7 +1732,7 @@ button.button {
 
 .campaign-unit-card {
   display: grid;
-  grid-template-columns: 3.3rem minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 1rem;
   min-width: 0;
@@ -1775,33 +1775,6 @@ button.button {
   max-height: 5.75rem;
   object-fit: contain;
   filter: drop-shadow(0 0.3rem 0.22rem rgb(20 40 44 / 20%));
-}
-
-.campaign-unit-card__ship .campaign-unit-card__number {
-  position: absolute;
-  bottom: -0.1rem;
-  left: -0.1rem;
-  width: 2rem;
-  height: 2rem;
-  border: 2px solid #ffffff;
-  box-shadow: 0 0.2rem 0.45rem rgb(19 44 50 / 18%);
-  font-size: 0.72rem;
-}
-
-.campaign-unit-card__number {
-  display: grid;
-  width: 2.7rem;
-  height: 2.7rem;
-  place-items: center;
-  color: #f8f0dc;
-  background: #173b46;
-  border-radius: 50%;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1rem;
-}
-
-.campaign-fleet[data-faction="empire"] .campaign-unit-card__number {
-  background: #8a2630;
 }
 
 .campaign-unit-card__body {
@@ -2022,7 +1995,7 @@ button.button {
   }
 
   .campaign-unit-card {
-    grid-template-columns: 2.55rem minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.7rem;
     padding: 0.75rem;
   }
@@ -2037,11 +2010,6 @@ button.button {
 
   .campaign-unit-card__ship img {
     max-height: 4.8rem;
-  }
-
-  .campaign-unit-card__number {
-    width: 2.3rem;
-    height: 2.3rem;
   }
 
   .campaign-unit-card__open {

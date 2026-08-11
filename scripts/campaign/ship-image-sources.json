@@ -1,0 +1,121 @@
+{
+  "sources": {
+    "crown": {
+      "path": "tmp/pdfs/crown.pdf",
+      "sha256": "c2152353cab585ffc537b0c9822ff163b2dfe5345eb9dce92c4c9b106fee172d",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02a.pdf"
+    },
+    "empire": {
+      "path": "tmp/pdfs/empire-4.01.pdf",
+      "sha256": "1ecca809a0c2fc4366036de40f5decba6c2c405f052323e37ab41fff80008cad",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01_W.pdf"
+    }
+  },
+  "ships": [
+    {
+      "profileId": "strikakulam",
+      "source": "crown",
+      "page": 28,
+      "imageIndex": 8,
+      "output": "hmis-strikakulam.webp"
+    },
+    {
+      "profileId": "pembroke",
+      "source": "crown",
+      "page": 31,
+      "imageIndex": 8,
+      "output": "hms-pembroke.webp"
+    },
+    {
+      "profileId": "crows",
+      "source": "crown",
+      "page": 40,
+      "imageIndex": 8,
+      "output": "the-crows.webp"
+    },
+    {
+      "profileId": "kamarupa",
+      "source": "crown",
+      "page": 42,
+      "imageIndex": 8,
+      "output": "kamarupa-squadron.webp"
+    },
+    {
+      "profileId": "tulwar",
+      "source": "crown",
+      "page": 43,
+      "imageIndex": 8,
+      "output": "patrol-group-tulwar.webp"
+    },
+    {
+      "profileId": "skua",
+      "source": "crown",
+      "page": 45,
+      "imageIndex": 8,
+      "output": "skua-squadron.webp"
+    },
+    {
+      "profileId": "chaudharys-revenge",
+      "source": "crown",
+      "page": 60,
+      "imageIndex": 8,
+      "output": "chaudharys-revenge.webp"
+    },
+    {
+      "profileId": "nagato",
+      "source": "empire",
+      "page": 31,
+      "imageIndex": 7,
+      "output": "the-nagato.webp"
+    },
+    {
+      "profileId": "buredo",
+      "source": "empire",
+      "page": 41,
+      "imageIndex": 7,
+      "output": "the-buredo.webp"
+    },
+    {
+      "profileId": "taiyo-furea",
+      "source": "empire",
+      "page": 44,
+      "imageIndex": 7,
+      "output": "taiyo-furea.webp"
+    },
+    {
+      "profileId": "shinsei",
+      "source": "empire",
+      "page": 51,
+      "imageIndex": 7,
+      "output": "the-shinsei.webp"
+    },
+    {
+      "profileId": "diyu-huo",
+      "source": "empire",
+      "page": 55,
+      "imageIndex": 7,
+      "output": "diyu-huo.webp"
+    },
+    {
+      "profileId": "bunya",
+      "source": "empire",
+      "page": 57,
+      "imageIndex": 7,
+      "output": "bunya-automata.webp"
+    },
+    {
+      "profileId": "ssang",
+      "source": "empire",
+      "page": 67,
+      "imageIndex": 7,
+      "output": "ssang.webp"
+    },
+    {
+      "profileId": "sentosa",
+      "source": "empire",
+      "page": 79,
+      "imageIndex": 7,
+      "output": "the-sentosa.webp"
+    }
+  ]
+}
