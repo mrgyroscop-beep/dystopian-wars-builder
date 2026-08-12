@@ -652,14 +652,6 @@ h3 {
   transform: translateY(-2px);
 }
 
-.ship-catalog-heading__emblem {
-  display: block;
-  flex: 0 0 auto;
-  background-repeat: no-repeat;
-  border: 2px solid var(--faction-accent);
-  border-radius: 50%;
-}
-
 .faction-emblem {
   display: block;
   flex: 0 0 4.25rem;
@@ -706,11 +698,7 @@ h3 {
 }
 
 .ship-catalog-heading__emblem {
-  width: 4.1rem;
-  height: 4.1rem;
-  background-position: center top;
-  background-size: 100% auto;
-  box-shadow: 0 0 0 2px rgb(255 255 255 / 88%);
+  flex-basis: 4.25rem;
 }
 
 .ship-catalog-heading h1 {

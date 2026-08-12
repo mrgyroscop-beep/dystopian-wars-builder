@@ -198,7 +198,6 @@ function ShipCatalog({
       />
     );
 
-  const template = orbatTemplateFor(state.session.faction.label);
   return (
     <div className="section-stack ship-library ship-library--catalog">
       <div className="ship-library__back-row">
@@ -207,10 +206,9 @@ function ShipCatalog({
         </Link>
       </div>
       <header className="ship-catalog-heading">
-        <span
-          aria-hidden="true"
+        <FactionEmblem
           className="ship-catalog-heading__emblem"
-          style={{ backgroundImage: `url(${template.imageUrl})`, borderColor: template.accent }}
+          faction={state.session.faction.label}
         />
         <div>
           <p className="eyebrow">Энциклопедия кораблей</p>
