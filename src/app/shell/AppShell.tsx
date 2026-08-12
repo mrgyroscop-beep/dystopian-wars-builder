@@ -5,6 +5,7 @@ import type { AuthGateway, AuthUser } from "../../application/auth/auth-contract
 import type { GlossaryGateway } from "../../application/glossary/glossary-contract";
 import { GlossaryProvider, RuleLanguageToggle } from "../../ui/GlossaryContext";
 import { AUTH_SESSION_CHANGED_EVENT } from "../authSessionEvents";
+import { version as appVersion } from "../../../package.json";
 
 const navigationItems = [
   { to: "/", label: "Флоты", end: true },
@@ -121,7 +122,7 @@ function AppShellContent({ authGateway }: { readonly authGateway: AuthGateway })
 
       {isRosterWorkspace ? null : (
         <footer className="site-footer">
-          <p>Dystopian Wars 4.0 · локальные флоты доступны без регистрации</p>
+          <p>Dystopian Wars 4.0 · версия {appVersion} · локальные флоты доступны без регистрации</p>
         </footer>
       )}
     </div>
