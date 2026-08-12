@@ -1373,7 +1373,8 @@ button.button {
 .critical-picker button {
   display: grid;
   width: 6.2rem;
-  min-height: 5.3rem;
+  min-height: 7.1rem;
+  padding: 0.5rem;
   place-content: center;
   gap: 0.35rem;
   color: var(--battle-ink);
@@ -1386,24 +1387,53 @@ button.button {
 .critical-picker button:not(:disabled) {
   cursor: pointer;
 }
-.critical-key b,
-.critical-picker b {
-  color: var(--battle-brass);
-  font-family: Georgia, serif;
-  font-size: 1.35rem;
+.critical-face {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
 }
-.critical-key span,
-.critical-picker span {
+.critical-face__image {
+  display: grid;
+  width: 3.8rem;
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 38%, rgb(255 255 255 / 8%), transparent 68%), #081d23;
+  border: 1px solid rgb(203 183 119 / 45%);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 38%);
+}
+.critical-face__image img {
+  display: block;
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+  filter: drop-shadow(0 0.22rem 0.18rem rgb(0 0 0 / 55%));
+}
+.critical-face__label {
+  min-height: 1.45rem;
+  color: var(--battle-ink);
   font-size: 0.58rem;
   font-weight: 900;
+  line-height: 1.18;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 .critical-key__empty {
   color: rgb(233 227 209 / 35%);
+  border-style: dashed;
+}
+.critical-key__empty b {
   font-family: Georgia, serif;
   font-size: 2rem;
-  border-style: dashed;
+  font-weight: 400;
+}
+.critical-key__empty small {
+  max-width: 5rem;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  text-transform: uppercase;
 }
 .critical-picker {
   display: grid;
@@ -1413,15 +1443,16 @@ button.button {
 }
 .critical-picker button {
   width: 100%;
-  min-height: 4rem;
+  min-height: 6.7rem;
   padding: 0.4rem;
 }
 .critical-picker button:hover:not(:disabled) {
-  color: #07191f;
-  background: var(--battle-brass);
+  background: rgb(203 183 119 / 16%);
+  border-color: var(--battle-brass);
 }
-.critical-picker button:hover:not(:disabled) b {
-  color: inherit;
+.critical-picker button:hover:not(:disabled) .critical-face__image {
+  transform: translateY(-0.08rem);
+  border-color: var(--battle-brass);
 }
 
 .battle-empty,
@@ -1497,11 +1528,16 @@ button.button {
   grid-column: 1 / -1;
 }
 .battle-room-key .critical-key > button {
-  width: 4.3rem;
-  min-height: 3.6rem;
+  width: 5.2rem;
+  min-height: 5.3rem;
+  padding: 0.3rem;
 }
-.battle-room-key .critical-key b {
-  font-size: 1rem;
+.battle-room-key .critical-face__image {
+  width: 2.8rem;
+}
+.battle-room-key .critical-face__label {
+  min-height: 1.1rem;
+  font-size: 0.48rem;
 }
 .battle-room-key > button,
 .battle-command-actions button {
@@ -1694,6 +1730,31 @@ button.button {
   gap: 0.6rem;
   padding: 0.75rem;
   border-top: 1px solid var(--battle-line);
+}
+.battle-ship__profile {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.8rem;
+  padding: 0.65rem 0.8rem;
+  color: var(--battle-brass);
+  text-align: left;
+  background: rgb(203 183 119 / 7%);
+  border: 1px solid var(--battle-line);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.battle-ship__profile:hover {
+  color: var(--battle-deep);
+  background: var(--battle-brass);
+}
+.battle-ship__profile b {
+  font-family: Georgia, serif;
+  font-size: 1.2rem;
 }
 .battle-counter {
   display: flex;

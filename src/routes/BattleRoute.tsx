@@ -14,9 +14,15 @@ import {
   type ShipBattleState,
 } from "../application/battle/battle-contract";
 import type { RosterLibraryRepository } from "../application/rosters/roster-library";
+import {
+  isShipEditorDefinition,
+  projectShipEditor,
+  type ShipEditorReadyReadModel,
+} from "../application/rosters/ship-editor";
 import type { RosterCatalogGateway } from "../application/rosters/workspace";
 import type { StoredRoster } from "../application/rosters/create-roster";
 import type { DomainCatalog } from "../domain/catalog";
+import { ShipProfileDialog } from "../ui/ProfileDialog";
 
 const activeBattleKey = "dwb.battle.active.v1";
 const emptyShipState: ShipBattleState = {
@@ -31,18 +37,49 @@ const emptyShipState: ShipBattleState = {
 
 const criticals: Record<
   CriticalEffectId,
-  { readonly label: string; readonly short: string; readonly mark: string }
+  {
+    readonly image: string;
+    readonly label: string;
+    readonly short: string;
+    readonly mark: string;
+  }
 > = {
-  breach: { label: "Пробоина", short: "Breach", mark: "BR" },
+  breach: {
+    image: "/battle/critical-dice/breach.webp",
+    label: "Пробоина",
+    short: "Breach",
+    mark: "BR",
+  },
   "structural-failure": {
+    image: "/battle/critical-dice/structural-failure.webp",
     label: "Разрушение конструкции",
     short: "Structural Failure",
     mark: "SF",
   },
-  hazard: { label: "Авария", short: "Hazard", mark: "HZ" },
-  "shredded-defences": { label: "Разрушенная защита", short: "Shredded Defences", mark: "SD" },
-  "navigation-lock": { label: "Блокировка навигации", short: "Navigation Lock", mark: "NL" },
-  "system-failure": { label: "Отказ систем", short: "System Failure", mark: "SY" },
+  hazard: {
+    image: "/battle/critical-dice/hazard.webp",
+    label: "Авария",
+    short: "Hazard",
+    mark: "HZ",
+  },
+  "shredded-defences": {
+    image: "/battle/critical-dice/shredded-defences.webp",
+    label: "Разрушенная защита",
+    short: "Shredded Defences",
+    mark: "SD",
+  },
+  "navigation-lock": {
+    image: "/battle/critical-dice/navigation-lock.webp",
+    label: "Блокировка навигации",
+    short: "Navigation Lock",
+    mark: "NL",
+  },
+  "system-failure": {
+    image: "/battle/critical-dice/system-failure.webp",
+    label: "Отказ систем",
+    short: "System Failure",
+    mark: "SY",
+  },
 };
 
 export interface BattleRouteDependencies {
@@ -484,6 +521,7 @@ function FleetLedger({
   readonly side: BattleSide;
 }) {
   const [catalog, setCatalog] = useState<DomainCatalog | null>(null);
+  const [profile, setProfile] = useState<ShipEditorReadyReadModel | null>(null);
   useEffect(() => {
     if (!player) return;
     let activeRequest = true;
@@ -502,37 +540,62 @@ function FleetLedger({
         <p>Соперник войдёт по ключу комнаты.</p>
       </section>
     );
-  const units = catalog ? rosterUnits(player.roster as unknown as StoredRoster, catalog) : [];
+  const storedRoster = player.roster as unknown as StoredRoster;
+  const units = catalog ? rosterUnits(storedRoster, catalog) : [];
   return (
-    <section className={`fleet-ledger${active ? " fleet-ledger--active" : ""}`}>
-      <header>
-        <div>
-          <p className="eyebrow">Адмирал {side === "host" ? "I" : "II"}</p>
-          <h2>{player.displayName}</h2>
-          <p>
-            {player.roster.name} · {player.roster.faction.label}
-          </p>
-        </div>
-        <span className={player.ready ? "ready" : ""}>{player.ready ? "Готов" : "Сбор"}</span>
-      </header>
-      {!catalog ? (
-        <p className="fleet-ledger__loading">Поднимаем корабельные ведомости…</p>
-      ) : units.length === 0 ? (
-        <p className="fleet-ledger__loading">В ростере нет кораблей.</p>
-      ) : (
-        <div className="battle-ship-list">
-          {units.map((unit) => (
-            <ShipTracker
-              editable={editable}
-              key={unit.id}
-              label={unit.label}
-              onChange={(next) => onShip(unit.id, next)}
-              state={player.shipState[unit.id] ?? emptyShipState}
-            />
-          ))}
-        </div>
-      )}
-    </section>
+    <>
+      <section className={`fleet-ledger${active ? " fleet-ledger--active" : ""}`}>
+        <header>
+          <div>
+            <p className="eyebrow">Адмирал {side === "host" ? "I" : "II"}</p>
+            <h2>{player.displayName}</h2>
+            <p>
+              {player.roster.name} · {player.roster.faction.label}
+            </p>
+          </div>
+          <span className={player.ready ? "ready" : ""}>{player.ready ? "Готов" : "Сбор"}</span>
+        </header>
+        {!catalog ? (
+          <p className="fleet-ledger__loading">Поднимаем корабельные ведомости…</p>
+        ) : units.length === 0 ? (
+          <p className="fleet-ledger__loading">В ростере нет кораблей.</p>
+        ) : (
+          <div className="battle-ship-list">
+            {units.map((unit) => (
+              <ShipTracker
+                editable={editable}
+                key={unit.id}
+                label={unit.label}
+                onChange={(next) => onShip(unit.id, next)}
+                {...(unit.profileAvailable
+                  ? {
+                      onOpenProfile: () => {
+                        const projected = projectShipEditor(
+                          storedRoster.roster,
+                          catalog,
+                          unit.id,
+                          unit.definitionId,
+                          "saved-local",
+                        );
+                        if (projected.dataState === "ready") setProfile(projected);
+                      },
+                    }
+                  : {})}
+                state={player.shipState[unit.id] ?? emptyShipState}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+      {profile ? (
+        <ShipProfileDialog
+          faction={player.roster.faction.label}
+          model={profile}
+          name={profile.name}
+          onClose={() => setProfile(null)}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -540,11 +603,13 @@ function ShipTracker({
   editable,
   label,
   onChange,
+  onOpenProfile,
   state,
 }: {
   readonly editable: boolean;
   readonly label: string;
   readonly onChange: (state: ShipBattleState) => void;
+  readonly onOpenProfile?: () => void;
   readonly state: ShipBattleState;
 }) {
   const totalCriticals = Object.values(state.criticals).reduce((total, value) => total + value, 0);
@@ -574,6 +639,12 @@ function ShipTracker({
         </span>
       </summary>
       <div className="battle-ship__controls">
+        {onOpenProfile ? (
+          <button className="battle-ship__profile" onClick={onOpenProfile} type="button">
+            <span>Профиль и выбранные пушки</span>
+            <b aria-hidden="true">→</b>
+          </button>
+        ) : null}
         <Counter
           disabled={!editable}
           label="Damage"
@@ -692,12 +763,12 @@ function KeySequence({
             title={onRemove ? "Убрать грань" : criticals[effect].label}
             type="button"
           >
-            <b>{criticals[effect].mark}</b>
-            <span>{criticals[effect].short}</span>
+            <CriticalFace effect={effect} />
           </button>
         ) : (
           <span className="critical-key__empty" key={index}>
-            ?
+            <b aria-hidden="true">?</b>
+            <small>Выберите грань</small>
           </span>
         );
       })}
@@ -722,11 +793,22 @@ function CriticalPicker({
           title={criticals[effect].label}
           type="button"
         >
-          <b>{criticals[effect].mark}</b>
-          <span>{criticals[effect].short}</span>
+          <CriticalFace effect={effect} />
         </button>
       ))}
     </div>
+  );
+}
+
+function CriticalFace({ effect }: { readonly effect: CriticalEffectId }) {
+  const face = criticals[effect];
+  return (
+    <span className="critical-face">
+      <span className="critical-face__image">
+        <img alt="" decoding="async" src={face.image} />
+      </span>
+      <span className="critical-face__label">{face.short}</span>
+    </span>
   );
 }
 
@@ -774,8 +856,10 @@ function rosterUnits(roster: StoredRoster, catalog: DomainCatalog) {
   return Object.values(roster.roster.instances)
     .filter((instance) => catalog.entities[instance.definitionId]?.kind === "Unit")
     .map((instance) => ({
+      definitionId: instance.definitionId,
       id: instance.id,
       label: `${catalog.entities[instance.definitionId]?.label.plainText || "Корабль"}${instance.quantity > 1 ? ` ×${instance.quantity}` : ""}`,
+      profileAvailable: isShipEditorDefinition(catalog, instance.definitionId),
     }));
 }
 
