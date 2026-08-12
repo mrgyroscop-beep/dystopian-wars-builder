@@ -1,0 +1,779 @@
+{
+  "images": {
+    "alliance": {
+      "columbiaheavybattleship": {
+        "imageIndex": 7,
+        "url": "/ships/alliance/18.webp"
+      },
+      "concordatcommandcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/alliance/19.webp"
+      },
+      "couronnegrandcarrier": {
+        "imageIndex": 7,
+        "url": "/ships/alliance/20.webp"
+      },
+      "gothamassaultcarrier": {
+        "imageIndex": 7,
+        "url": "/ships/alliance/21.webp"
+      },
+      "larepubliquelegendaryskyfortress": {
+        "imageIndex": 7,
+        "url": "/ships/alliance/22.webp"
+      },
+      "magentalevantbattlecruiser": {
+        "imageIndex": 7,
+        "url": "/ships/alliance/23.webp"
+      },
+      "marsheavybattleship": {
+        "imageIndex": 7,
+        "url": "/ships/alliance/24.webp"
+      },
+      "minervaassaultcarrier": {
+        "imageIndex": 7,
+        "url": "/ships/alliance/25.webp"
+      },
+      "oriflammegrandbattlecruiser": {
+        "imageIndex": 7,
+        "url": "/ships/alliance/26.webp"
+      },
+      "saintmichellevantbattlecarrier": {
+        "imageIndex": 7,
+        "url": "/ships/alliance/27.webp"
+      },
+      "charlemagneheavycruiser": {
+        "imageIndex": 7,
+        "url": "/ships/alliance/30.webp"
+      },
+      "chevaliercruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/31.webp"
+      },
+      "gettysburgheavymonitor": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/32.webp"
+      },
+      "gladiusstrikecruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/33.webp"
+      },
+      "lyonlevantheavycruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/34.webp"
+      },
+      "saratogaassaultcruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/35.webp"
+      },
+      "salvadorbattlecruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/36.webp"
+      },
+      "spathaattackcruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/37.webp"
+      },
+      "bretteurdestroyer": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/38.webp"
+      },
+      "cestuszebek": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/39.webp"
+      },
+      "ecuyerefrigate": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/40.webp"
+      },
+      "honneurlevantdestroyer": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/41.webp"
+      },
+      "picardylittoralmonitor": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/42.webp"
+      },
+      "pugiodestroyer": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/43.webp"
+      },
+      "pilummonitor": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/44.webp"
+      },
+      "springfieldcorvette": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/45.webp"
+      },
+      "franciscobattlecruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/46.webp"
+      },
+      "furieuxlevantgrandcorvette": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/47.webp"
+      },
+      "jupitersupportcarrier": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/48.webp"
+      },
+      "marseillelevantbombercarrier": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/49.webp"
+      },
+      "scorpioartillerycruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/51.webp"
+      },
+      "sumterlandingship": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/52.webp"
+      },
+      "auxiliafastcruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/55.webp"
+      },
+      "chasseurlevantstrikecruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/56.webp"
+      },
+      "loirelightcruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/57.webp"
+      },
+      "sagittahuntersubmarine": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/58.webp"
+      },
+      "sireneattacksubmarine": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/59.webp"
+      },
+      "almalevantsupportcruiser": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/60.webp"
+      },
+      "europagrandconveyor": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/62.webp"
+      },
+      "gasconylevantmerchantman": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/63.webp"
+      },
+      "hermessupplyfreighter": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/64.webp"
+      },
+      "providencemerchantman": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/65.webp"
+      },
+      "titanmassconveyor": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/66.webp"
+      },
+      "vulcanrepairship": {
+        "imageIndex": 6,
+        "url": "/ships/alliance/67.webp"
+      }
+    },
+    "commonwealth": {},
+    "crown": {
+      "adventurergrandindiaman": {
+        "imageIndex": 8,
+        "url": "/ships/crown/18.webp"
+      },
+      "avalonskyfortress": {
+        "imageIndex": 8,
+        "url": "/ships/crown/19.webp"
+      },
+      "britanniaheavybattleship": {
+        "imageIndex": 8,
+        "url": "/ships/crown/20.webp"
+      },
+      "camelothighguardian": {
+        "imageIndex": 8,
+        "url": "/ships/crown/21.webp"
+      },
+      "gangesbattlecruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/22.webp"
+      },
+      "glorianadreadnought": {
+        "imageIndex": 8,
+        "url": "/ships/crown/23.webp"
+      },
+      "hmcstillochgalt": {
+        "imageIndex": 8,
+        "url": "/ships/crown/24.webp"
+      },
+      "thenautiluslegendaryprivateer": {
+        "imageIndex": 8,
+        "url": "/ships/crown/25.webp"
+      },
+      "palashiindiaman": {
+        "imageIndex": 8,
+        "url": "/ships/crown/26.webp"
+      },
+      "protecteursubmersiblecarrier": {
+        "imageIndex": 8,
+        "url": "/ships/crown/27.webp"
+      },
+      "sabrecommandcruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/28.webp"
+      },
+      "toronto": {
+        "imageIndex": 8,
+        "url": "/ships/crown/29.webp"
+      },
+      "victoryheavycarrier": {
+        "imageIndex": 8,
+        "url": "/ships/crown/30.webp"
+      },
+      "albioncruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/31.webp"
+      },
+      "bonaventurecruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/32.webp"
+      },
+      "induscruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/33.webp"
+      },
+      "ladyragnellheavysubmarine": {
+        "imageIndex": 8,
+        "url": "/ships/crown/34.webp"
+      },
+      "lancelotheavycruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/35.webp"
+      },
+      "nagarajacruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/36.webp"
+      },
+      "newfoundlandcruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/37.webp"
+      },
+      "prydainwarrotor": {
+        "imageIndex": 8,
+        "url": "/ships/crown/38.webp"
+      },
+      "bediveremonitor": {
+        "imageIndex": 8,
+        "url": "/ships/crown/39.webp"
+      },
+      "caliburnfrigate": {
+        "imageIndex": 8,
+        "url": "/ships/crown/40.webp"
+      },
+      "devakimonitor": {
+        "imageIndex": 8,
+        "url": "/ships/crown/41.webp"
+      },
+      "excaliburheavydestroyer": {
+        "imageIndex": 8,
+        "url": "/ships/crown/42.webp"
+      },
+      "gharialhovercraft": {
+        "imageIndex": 8,
+        "url": "/ships/crown/43.webp"
+      },
+      "godavaricruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/44.webp"
+      },
+      "inuitstrikerotor": {
+        "imageIndex": 8,
+        "url": "/ships/crown/45.webp"
+      },
+      "pictonlightpatrolcruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/46.webp"
+      },
+      "secacefastdestroyer": {
+        "imageIndex": 8,
+        "url": "/ships/crown/47.webp"
+      },
+      "tintagelbattlerotor": {
+        "imageIndex": 8,
+        "url": "/ships/crown/48.webp"
+      },
+      "agincourtbombardmentcruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/49.webp"
+      },
+      "athelstanflakcruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/50.webp"
+      },
+      "ceylonguardianplatform": {
+        "imageIndex": 8,
+        "url": "/ships/crown/51.webp"
+      },
+      "defenceplatformrossclass": {
+        "imageIndex": 8,
+        "url": "/ships/crown/52.webp"
+      },
+      "grailbombardmentcruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/53.webp"
+      },
+      "guineveresubmarine": {
+        "imageIndex": 8,
+        "url": "/ships/crown/54.webp"
+      },
+      "halifaxshieldcruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/55.webp"
+      },
+      "heavyplatformdublinclass": {
+        "imageIndex": 8,
+        "url": "/ships/crown/56.webp"
+      },
+      "hotspursupportcarrier": {
+        "imageIndex": 8,
+        "url": "/ships/crown/57.webp"
+      },
+      "igrainesupportcruiser": {
+        "imageIndex": 8,
+        "url": "/ships/crown/58.webp"
+      },
+      "laudinebombardmentsubmarine": {
+        "imageIndex": 8,
+        "url": "/ships/crown/59.webp"
+      },
+      "vivienneflaksubmarine": {
+        "imageIndex": 8,
+        "url": "/ships/crown/60.webp"
+      },
+      "isoldetorpedosubmarine": {
+        "imageIndex": 8,
+        "url": "/ships/crown/61.webp"
+      },
+      "morganaassaultsubmarine": {
+        "imageIndex": 8,
+        "url": "/ships/crown/62.webp"
+      },
+      "orcahuntersubmarine": {
+        "imageIndex": 8,
+        "url": "/ships/crown/63.webp"
+      },
+      "saxonscoutrotor": {
+        "imageIndex": 8,
+        "url": "/ships/crown/64.webp"
+      },
+      "europagrandconveyor": {
+        "imageIndex": 8,
+        "url": "/ships/crown/66.webp"
+      },
+      "hermessupplyfreighter": {
+        "imageIndex": 8,
+        "url": "/ships/crown/67.webp"
+      }
+    },
+    "empire": {
+      "akitasuperbattleship": {
+        "imageIndex": 7,
+        "url": "/ships/empire/23.webp"
+      },
+      "ergunbattleship": {
+        "imageIndex": 7,
+        "url": "/ships/empire/24.webp"
+      },
+      "hachimancarrier": {
+        "imageIndex": 7,
+        "url": "/ships/empire/25.webp"
+      },
+      "heilongbattleship": {
+        "imageIndex": 7,
+        "url": "/ships/empire/26.webp"
+      },
+      "kongoheavybattleship": {
+        "imageIndex": 7,
+        "url": "/ships/empire/27.webp"
+      },
+      "matsumotogeneratorship": {
+        "imageIndex": 7,
+        "url": "/ships/empire/28.webp"
+      },
+      "narakabattleship": {
+        "imageIndex": 7,
+        "url": "/ships/empire/29.webp"
+      },
+      "ningjingbattleship": {
+        "imageIndex": 7,
+        "url": "/ships/empire/30.webp"
+      },
+      "onicommandcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/31.webp"
+      },
+      "tianlongdraconiccolossus": {
+        "imageIndex": 7,
+        "url": "/ships/empire/32.webp"
+      },
+      "yangtzecommandship": {
+        "imageIndex": 7,
+        "url": "/ships/empire/33.webp"
+      },
+      "zhanmadaoskyfortress": {
+        "imageIndex": 7,
+        "url": "/ships/empire/34.webp"
+      },
+      "daolightcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/36.webp"
+      },
+      "diyuimmolationcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/37.webp"
+      },
+      "hokkaidoheavycruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/38.webp"
+      },
+      "jiancruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/39.webp"
+      },
+      "meruheavycruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/40.webp"
+      },
+      "osakacruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/41.webp"
+      },
+      "qiangcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/42.webp"
+      },
+      "ryujinsubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/empire/43.webp"
+      },
+      "sakataheavydestroyer": {
+        "imageIndex": 7,
+        "url": "/ships/empire/44.webp"
+      },
+      "gangcheoridraconiccolossus": {
+        "imageIndex": 7,
+        "url": "/ships/empire/45.webp"
+      },
+      "gongdestroyer": {
+        "imageIndex": 7,
+        "url": "/ships/empire/46.webp"
+      },
+      "hexiehoverzebek": {
+        "imageIndex": 7,
+        "url": "/ships/empire/47.webp"
+      },
+      "honshulightcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/48.webp"
+      },
+      "kanagawaheavymonitor": {
+        "imageIndex": 7,
+        "url": "/ships/empire/49.webp"
+      },
+      "kansaitorpedosubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/empire/50.webp"
+      },
+      "kiyohimedraconiccolossus": {
+        "imageIndex": 7,
+        "url": "/ships/empire/51.webp"
+      },
+      "kyotofastfrigate": {
+        "imageIndex": 7,
+        "url": "/ships/empire/52.webp"
+      },
+      "miyagiadvancedmonitor": {
+        "imageIndex": 7,
+        "url": "/ships/empire/53.webp"
+      },
+      "shanghaifrigate": {
+        "imageIndex": 7,
+        "url": "/ships/empire/54.webp"
+      },
+      "shenlongdraconiccolossus": {
+        "imageIndex": 7,
+        "url": "/ships/empire/55.webp"
+      },
+      "wusongmonitor": {
+        "imageIndex": 7,
+        "url": "/ships/empire/56.webp"
+      },
+      "bangpae": {
+        "imageIndex": 7,
+        "url": "/ships/empire/57.webp"
+      },
+      "bangpaeexplosiveautomata": {
+        "imageIndex": 7,
+        "url": "/ships/empire/57.webp"
+      },
+      "hwanunggeneratoraircruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/60.webp"
+      },
+      "kaijuikacolossus": {
+        "imageIndex": 7,
+        "url": "/ships/empire/62.webp"
+      },
+      "koromodakoattacksubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/empire/63.webp"
+      },
+      "mekongassaultcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/64.webp"
+      },
+      "ofukoroikacolossus": {
+        "imageIndex": 7,
+        "url": "/ships/empire/65.webp"
+      },
+      "qianshaoskykeep": {
+        "imageIndex": 7,
+        "url": "/ships/empire/66.webp"
+      },
+      "sanshinjudgementaircruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/67.webp"
+      },
+      "yamaguchiadvancedcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/68.webp"
+      },
+      "yanshifirebase": {
+        "imageIndex": 7,
+        "url": "/ships/empire/69.webp"
+      },
+      "yaojibombardmentcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/empire/70.webp"
+      },
+      "ziweiskybastion": {
+        "imageIndex": 7,
+        "url": "/ships/empire/71.webp"
+      },
+      "chubusubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/empire/72.webp"
+      },
+      "hobakbeolassaultrotor": {
+        "imageIndex": 7,
+        "url": "/ships/empire/73.webp"
+      },
+      "umibozuattacksubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/empire/74.webp"
+      },
+      "hermessupplyfreighter": {
+        "imageIndex": 7,
+        "url": "/ships/empire/76.webp"
+      },
+      "lantaumerchantman": {
+        "imageIndex": 7,
+        "url": "/ships/empire/77.webp"
+      },
+      "titanmassconveyer": {
+        "imageIndex": 7,
+        "url": "/ships/empire/79.webp"
+      },
+      "wuhanrepairship": {
+        "imageIndex": 7,
+        "url": "/ships/empire/80.webp"
+      }
+    },
+    "enlightened": {},
+    "imperium": {},
+    "sultanate": {},
+    "union": {}
+  },
+  "missing": {
+    "alliance": [],
+    "commonwealth": [
+      "alexayevekranoplanheavytransport",
+      "borodinobattleship",
+      "khodynkaheavyskycruiser",
+      "khyzhakattacksubmarine",
+      "krasnayaheavyskydrill",
+      "kutsovcruiser",
+      "morozkoheavycryocruiser",
+      "moskvaheavybattleship",
+      "mozhayskifleetcarrier",
+      "murmanskmobilestronghold",
+      "norilskheavycruiser",
+      "prezidiumcommandship",
+      "rikhterartillerydreadnought",
+      "tobolskmobilestronghold",
+      "tunguskaskycruiser",
+      "voivodeheavyairship",
+      "zamiecskyfortress"
+    ],
+    "crown": [],
+    "empire": [],
+    "enlightened": [
+      "adamskisaucer",
+      "agoracommandcruiser",
+      "archimedesvaultship",
+      "aronnaxvermiformacolossus",
+      "chateletdronecarrier",
+      "chionesubnauticalexplorer",
+      "claudiusmerchantman",
+      "copernicusheavycruiser",
+      "daedalustethership",
+      "defenceplatformleibnizclass",
+      "descartescontrolship",
+      "diogenessubmarine",
+      "endymiondyadrotors",
+      "euclidscoutsaucer",
+      "euripidessubmarine",
+      "heavyplatformbellerophonclass",
+      "hermessupplyfreighter",
+      "hypatiageneratorship",
+      "icarusaeronauticfabricator",
+      "keplerbattlecruiser",
+      "ketosmyriapodacolossus",
+      "loewfastexplorer",
+      "lotanmyriapodacolossus",
+      "lovelacecruiser",
+      "merianautomatafrigate",
+      "nansenexplorer",
+      "newtoncruiser",
+      "origenlatheship",
+      "pliniussupportcarrier",
+      "praxillasubmarine",
+      "pytheussaucer",
+      "quintilianbombardmentcruiser",
+      "supplyplatformdaimlerclass",
+      "tacitusassaultcruiser",
+      "thuleskyfortress",
+      "titanmassconveyer",
+      "valtarsaucer",
+      "vesaliuscetaceansurgicalship",
+      "xenophonbattlecruiser",
+      "zumeenacapacitorship"
+    ],
+    "imperium": [
+      "asgardrotortethership",
+      "icemaidendreadnoughtsupercarrier",
+      "kaiserheavybattleship",
+      "koniggeneratorship",
+      "maximilianaeriallinebreaker",
+      "ragnarokheavyreaver",
+      "starkimperiumskyfortress",
+      "tempelhoffleetcarrier",
+      "zeppelinaerialdreadnought"
+    ],
+    "sultanate": [
+      "abydoshoverstronghold",
+      "alsaqrskybarque",
+      "anatoliaheavybattlecruiser",
+      "aydinsupplyship",
+      "bayezidgrandcruiser",
+      "carolusdestroyer",
+      "celikdestroyer",
+      "chaskavitruviancolossus",
+      "constantinoplesupportcarrier",
+      "defenceplatformjebelclass",
+      "europagrandconveyor",
+      "hashashinfastskimmer",
+      "hermessupplyfreighter",
+      "hirkaskycutter",
+      "iskandarcruiser",
+      "izmirmonitor",
+      "kadeshbarragebattlecruiser",
+      "khartoumheavybattleskimmer",
+      "konyamaintenanceship",
+      "kopeshscoutskimmer",
+      "lesathexemplarcruiser",
+      "lyceumaerialdreadnought",
+      "mandjetheavyskimmer",
+      "mehmedcommandcruiser",
+      "mesektetskimmer",
+      "mihrimahflechettecruiser",
+      "moreaminelayer",
+      "nasrskyship",
+      "nemrutbattlecruiser",
+      "osirisbattleskimmer",
+      "pharoshoverdreadnought",
+      "qualorvitruviancolossus",
+      "retajportalship",
+      "sabahbarrageskimmer",
+      "sadrazamheavycruiser",
+      "sobekskimmer",
+      "suleimanfleetcarrier",
+      "supplyplatformbenghaziclass",
+      "tanisbattlecarrier",
+      "temirfrigate",
+      "titanmassconveyor",
+      "topkapicarrier"
+    ],
+    "union": [
+      "americaspecialoperationsvessel",
+      "chicagocruiser",
+      "columbiaheavybattleship",
+      "constellationairship",
+      "constitutionbattleship",
+      "custodianaircruiser",
+      "destinyskyfortress",
+      "discoveryarccruiser",
+      "enterpriseheavycarrier",
+      "excelsiorheavyaircruiser",
+      "gothamassaultcarrier",
+      "independencebattlecruiser",
+      "libertybattlecarrier",
+      "senatorcommandcruiser",
+      "ventureassaultaircruiser"
+    ]
+  },
+  "sources": {
+    "alliance": {
+      "mappedCards": 44,
+      "sha256": "24684d1aaa5a23fb92669f50dff8fe1d7cd719ef387e4aeb0aaa5f1611b3f5fa",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01-Beta_W.pdf"
+    },
+    "commonwealth": {
+      "mappedCards": 17,
+      "sha256": "c10fcdf945deac3f4dcdc2660b17864862fa1201dfa7182fd3d5f869a1bfe995",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-400a_W.pdf"
+    },
+    "crown": {
+      "mappedCards": 49,
+      "sha256": "c2152353cab585ffc537b0c9822ff163b2dfe5345eb9dce92c4c9b106fee172d",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02a.pdf"
+    },
+    "empire": {
+      "mappedCards": 53,
+      "sha256": "1ecca809a0c2fc4366036de40f5decba6c2c405f052323e37ab41fff80008cad",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01_W.pdf"
+    },
+    "enlightened": {
+      "mappedCards": 40,
+      "sha256": "fdc368efb7fd64f44d58319db40cc46daab47fee66ae52b9d1b41b91d3f3c621",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01-Beta2_W.pdf"
+    },
+    "imperium": {
+      "mappedCards": 9,
+      "sha256": "e6746e0f4939006e92e0dac4ffbe9aee5edb43eacf7ebbd27deb839d4046de05",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Imperium-400b_W.pdf"
+    },
+    "sultanate": {
+      "mappedCards": 42,
+      "sha256": "362cc06ab94e5b5650f136e743bd6f91b46b4431c424cf04186ef4bc4cfa35b6",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Sultanate-4.01_W.pdf"
+    },
+    "union": {
+      "mappedCards": 15,
+      "sha256": "f89137474fe1e7b88cd300c0f621fe2e0523aa19690508352cc30576389a4afd",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Union-4.00a_W.pdf"
+    }
+  }
+}

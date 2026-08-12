@@ -27,6 +27,7 @@ import type { RosterCatalogGateway } from "../application/rosters/workspace";
 import type { StoredRoster } from "../application/rosters/create-roster";
 import type { DomainCatalog } from "../domain/catalog";
 import { ShipProfileDialog } from "../ui/ProfileDialog";
+import { ShipArtwork } from "../ui/ShipArtwork";
 
 const activeBattleKey = "dwb.battle.active.v1";
 const emptyShipState: ShipBattleState = {
@@ -586,6 +587,7 @@ function FleetLedger({
             {units.map((unit) => (
               <ShipTracker
                 editable={editable}
+                faction={player.roster.faction.label}
                 key={unit.id}
                 label={unit.label}
                 onChange={(next) => onShip(unit.id, next)}
@@ -625,6 +627,7 @@ function FleetLedger({
 
 function ShipTracker({
   editable,
+  faction,
   label,
   onChange,
   onOpenProfile,
@@ -632,6 +635,7 @@ function ShipTracker({
   state,
 }: {
   readonly editable: boolean;
+  readonly faction: string;
   readonly label: string;
   readonly onChange: (state: ShipBattleState) => void;
   readonly onOpenProfile?: () => void;
@@ -643,9 +647,7 @@ function ShipTracker({
   return (
     <details className={`battle-ship${state.destroyed ? " is-destroyed" : ""}`}>
       <summary>
-        <span className="battle-ship__mark" aria-hidden="true">
-          ◆
-        </span>
+        <ShipArtwork faction={faction} name={label} />
         <span>
           <strong>{label}</strong>
           <small>

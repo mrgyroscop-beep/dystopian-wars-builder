@@ -91,7 +91,9 @@ describe("battle ship profiles", () => {
     ).toHaveLength(3);
 
     const shipName = await screen.findByText("Akita Demonstrator");
-    await user.click(shipName.closest("summary")!);
+    const shipSummary = shipName.closest("summary")!;
+    expect(shipSummary.querySelector(".ship-artwork__silhouette")).toBeInTheDocument();
+    await user.click(shipSummary);
     expect(screen.queryByRole("button", { name: "Увеличить Damage" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Увеличить Disorder" })).not.toBeInTheDocument();
 
