@@ -12,7 +12,7 @@
   "workers_dev": true,
   "preview_urls": true,
   "vars": {
-    "APP_VERSION": "0.2.4",
+    "APP_VERSION": "0.2.5",
     "CATALOG_VERSION": "not-imported",
     "COMMIT_SHA": "0000000000000000000000000000000000000000",
     "DEPLOYMENT_ENV": "local",
