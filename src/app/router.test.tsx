@@ -192,7 +192,7 @@ describe("application routes", () => {
     expect(screen.getByRole("navigation", { name: "Основная навигация" })).toBeVisible();
     expect(screen.getByRole("main")).toBeVisible();
     expect(screen.getByRole("contentinfo")).toHaveTextContent(
-      "Dystopian Wars 4.0 · версия 0.2.7 · локальные флоты доступны без регистрации",
+      "Dystopian Wars 4.0 · версия 0.2.8 · локальные флоты доступны без регистрации",
     );
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Флоты" })).toHaveAttribute("aria-current", "page");
@@ -247,7 +247,11 @@ describe("application routes", () => {
 
     await user.click(screen.getByRole("link", { name: "Просмотреть корабли" }));
     expect(await screen.findByRole("heading", { name: "Выберите фракцию" })).toBeVisible();
-    await user.click(screen.getByRole("link", { name: /Empire/u }));
+    const empireLink = screen.getByRole("link", { name: /Empire/u });
+    expect(empireLink.querySelector(".faction-emblem")).toHaveStyle({
+      backgroundImage: 'url("/orbat-templates/empire.webp")',
+    });
+    await user.click(empireLink);
 
     expect(await screen.findByRole("heading", { name: "Корабли Empire" })).toBeVisible();
     expect(

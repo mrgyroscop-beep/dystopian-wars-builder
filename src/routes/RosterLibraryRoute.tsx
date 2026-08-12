@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "reac
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 
-import { orbatTemplateFor } from "../app/orbatTemplates";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 import type { StoredRoster } from "../application/rosters/create-roster";
 import {
@@ -14,6 +13,7 @@ import {
   type RosterLibraryDependencies,
 } from "../application/rosters/roster-library";
 import { EyeIcon } from "../ui/EyeIcon";
+import { FactionEmblem } from "../ui/FactionEmblem";
 import { fixtureStates, StatePanel, type FixtureState } from "../ui/StatePanel";
 
 const fixtureStateSchema = z.enum(fixtureStates);
@@ -187,7 +187,10 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
           {state.rosters.map((roster) => (
             <li className="roster-card" key={roster.id}>
               <div className="roster-card__identity">
-                <FactionEmblem faction={roster.faction.label} />
+                <FactionEmblem
+                  className="roster-card__faction-emblem"
+                  faction={roster.faction.label}
+                />
                 <div className="roster-card__summary">
                   {editingId === roster.id ? (
                     <form
@@ -288,17 +291,6 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
         </ul>
       )}
     </div>
-  );
-}
-
-function FactionEmblem({ faction }: { faction: string }) {
-  const template = orbatTemplateFor(faction);
-  return (
-    <span
-      aria-hidden="true"
-      className="roster-card__faction-emblem"
-      style={{ backgroundImage: `url(${template.imageUrl})`, borderColor: template.accent }}
-    />
   );
 }
 

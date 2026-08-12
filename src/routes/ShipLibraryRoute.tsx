@@ -16,6 +16,7 @@ import {
 import { fleetCategories, type FleetCategory } from "../application/rosters/workspace";
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
 import { EyeIcon } from "../ui/EyeIcon";
+import { FactionEmblem } from "../ui/FactionEmblem";
 import { OrbatPageIcon } from "../ui/OrbatPageIcon";
 import { ShipArtwork } from "../ui/ShipArtwork";
 import { ShipOrbatPageDialog, ShipProfileDialog } from "../ui/ProfileDialog";
@@ -104,11 +105,7 @@ function FactionGallery({ dependencies }: { readonly dependencies: ShipLibraryDe
           return (
             <li key={faction.id} style={{ "--faction-accent": template.accent } as CSSProperties}>
               <Link to={`/ships/${encodeURIComponent(faction.id)}`}>
-                <span
-                  aria-hidden="true"
-                  className="ship-faction-grid__emblem"
-                  style={{ backgroundImage: `url(${template.imageUrl})` }}
-                />
+                <FactionEmblem className="ship-faction-grid__emblem" faction={faction.label} />
                 <span className="ship-faction-grid__name">{faction.label}</span>
                 <span className="ship-faction-grid__count">{faction.shipCount} кораблей</span>
                 <span className="ship-faction-grid__open">Открыть каталог →</span>
