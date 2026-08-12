@@ -31,9 +31,11 @@ const statFields = [
 export function ShipCardProfile({
   faction,
   model,
+  selectedLoadout = false,
 }: {
   readonly faction: string;
   readonly model: ShipEditorReadyReadModel;
+  readonly selectedLoadout?: boolean;
 }) {
   const [activeRule, setActiveRule] = useState<{
     readonly display: string;
@@ -50,21 +52,7 @@ export function ShipCardProfile({
       ?.rows.filter((row) => isUsefulValue(row.label)) ?? [];
   const systems = linkedTextEntries(baseSystems, configuredSystems);
   const weapons = uniqueWeapons(model.profileRules.weapons);
-  const hardpointOptions = uniqueWeapons(
-    model.groups.flatMap((group) =>
-      group.options.flatMap((option) =>
-        option.profile
-          ? [
-              {
-                ...option.profile,
-                hardpointWeight:
-                  option.profile.hardpointWeight ?? hardpointWeightFromLabel(group.label),
-              },
-            ]
-          : [],
-      ),
-    ),
-  );
+  const hardpointOptions = selectedLoadout ? [] : availableHardpointOptions(model);
   const rowCount = weapons.length + hardpointOptions.length;
   const tags = uniqueText(model.card?.tags ?? [model.card?.nation, model.card?.platform]);
   const role = shortRole(model.card?.role);
@@ -99,7 +87,11 @@ export function ShipCardProfile({
         </div>
         <div>
           <dt>Escorts</dt>
-          <dd>{groupLimit(model, ["escort"])}</dd>
+          <dd>
+            {selectedLoadout
+              ? selectedGroupQuantity(model, ["escort"])
+              : groupLimit(model, ["escort"])}
+          </dd>
         </div>
         <div>
           <dt>Generator hardpoints</dt>
@@ -187,9 +179,11 @@ export function ShipCardProfile({
 export function ShipMobileProfile({
   faction,
   model,
+  selectedLoadout = false,
 }: {
   readonly faction: string;
   readonly model: ShipEditorReadyReadModel;
+  readonly selectedLoadout?: boolean;
 }) {
   const [activeRule, setActiveRule] = useState<{
     readonly display: string;
@@ -206,21 +200,7 @@ export function ShipMobileProfile({
       ?.rows.filter((row) => isUsefulValue(row.label)) ?? [];
   const systems = linkedTextEntries(baseSystems, configuredSystems);
   const weapons = uniqueWeapons(model.profileRules.weapons);
-  const hardpointOptions = uniqueWeapons(
-    model.groups.flatMap((group) =>
-      group.options.flatMap((option) =>
-        option.profile
-          ? [
-              {
-                ...option.profile,
-                hardpointWeight:
-                  option.profile.hardpointWeight ?? hardpointWeightFromLabel(group.label),
-              },
-            ]
-          : [],
-      ),
-    ),
-  );
+  const hardpointOptions = selectedLoadout ? [] : availableHardpointOptions(model);
   const tags = uniqueText(model.card?.tags ?? [model.card?.nation, model.card?.platform]);
 
   return (
@@ -248,7 +228,11 @@ export function ShipMobileProfile({
         </div>
         <div>
           <dt>Escorts</dt>
-          <dd>{groupLimit(model, ["escort"])}</dd>
+          <dd>
+            {selectedLoadout
+              ? selectedGroupQuantity(model, ["escort"])
+              : groupLimit(model, ["escort"])}
+          </dd>
         </div>
         <div>
           <dt>Gen HP</dt>
@@ -738,6 +722,40 @@ function groupLimit(model: ShipEditorReadyReadModel, aliases: readonly string[])
   return group.minimum === group.maximum
     ? String(group.maximum)
     : `${group.minimum}–${group.maximum}`;
+}
+
+function selectedGroupQuantity(
+  model: ShipEditorReadyReadModel,
+  aliases: readonly string[],
+): string {
+  const group = matchingGroup(model, aliases);
+  if (!group) return "—";
+  return String(group.options.reduce((total, option) => total + option.selectedQuantity, 0));
+}
+
+function matchingGroup(model: ShipEditorReadyReadModel, aliases: readonly string[]) {
+  return model.groups.find((candidate) => {
+    const label = normalizeLabel(candidate.label);
+    return aliases.some((alias) => label.includes(normalizeLabel(alias)));
+  });
+}
+
+function availableHardpointOptions(model: ShipEditorReadyReadModel) {
+  return uniqueWeapons(
+    model.groups.flatMap((group) =>
+      group.options.flatMap((option) =>
+        option.profile
+          ? [
+              {
+                ...option.profile,
+                hardpointWeight:
+                  option.profile.hardpointWeight ?? hardpointWeightFromLabel(group.label),
+              },
+            ]
+          : [],
+      ),
+    ),
+  );
 }
 
 function uniqueWeapons(weapons: readonly WeaponProfileReadModel[]): WeaponProfileReadModel[] {

@@ -88,6 +88,15 @@ describe("battle ship profiles", () => {
     const dialog = await screen.findByRole("dialog", { name: "Akita Demonstrator" });
     expect(within(dialog).getAllByText("Heavy Battery")[0]).toBeVisible();
     expect(within(dialog).getAllByText("Torpedo Battery")[0]).toBeVisible();
+    expect(within(dialog).queryByText("Sealed Experimental Array")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Rocket Battery")).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("heading", { name: /Опции хардпоинтов|Hardpoint options/u }),
+    ).not.toBeInTheDocument();
+    const mobileProfile = within(dialog).getByRole("article", {
+      name: "Мобильный профиль Akita Demonstrator",
+    });
+    expect(within(mobileProfile).getByText("Escorts").closest("div")).toHaveTextContent("3");
   });
 });
 
@@ -152,6 +161,23 @@ function configuredRoster(): StoredRoster {
       createId,
     );
   }
+
+  const projected = projectShipEditor(snapshot, catalog, unit.id, unit.definitionId, "saved-local");
+  if (projected.dataState !== "ready") throw new Error(projected.detail);
+  const escorts = projected.groups.find((candidate) => candidate.label === "Escorts")!;
+  const escort = escorts.options.find((candidate) => candidate.label === "Tanuki Escort")!;
+  snapshot = applyShipEditorCommand(
+    snapshot,
+    catalog,
+    {
+      type: "set-choice-quantity",
+      instanceId: unit.id,
+      groupId: escorts.id,
+      optionId: escort.id,
+      quantity: 3,
+    },
+    createId,
+  );
 
   return { ...createDemonstrationWorkspaceRoster("battle-profile-test"), roster: snapshot };
 }

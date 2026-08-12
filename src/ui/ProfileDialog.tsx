@@ -19,12 +19,14 @@ export function ShipProfileDialog({
   model,
   name,
   onClose,
+  selectedLoadout = false,
 }: {
   readonly faction: string;
   readonly imageSearchHref?: string;
   readonly model: ShipEditorReadyReadModel;
   readonly name: string;
   readonly onClose: () => void;
+  readonly selectedLoadout?: boolean;
 }) {
   return (
     <InspectorDialog
@@ -35,9 +37,9 @@ export function ShipProfileDialog({
       name={name}
       onClose={onClose}
     >
-      <ShipMobileProfile faction={faction} model={model} />
+      <ShipMobileProfile faction={faction} model={model} selectedLoadout={selectedLoadout} />
       <div className="profile-dialog__original-card">
-        <ShipCardProfile faction={faction} model={model} />
+        <ShipCardProfile faction={faction} model={model} selectedLoadout={selectedLoadout} />
       </div>
     </InspectorDialog>
   );

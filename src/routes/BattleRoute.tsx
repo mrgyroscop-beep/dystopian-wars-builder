@@ -593,6 +593,7 @@ function FleetLedger({
           model={profile}
           name={profile.name}
           onClose={() => setProfile(null)}
+          selectedLoadout
         />
       ) : null}
     </>
