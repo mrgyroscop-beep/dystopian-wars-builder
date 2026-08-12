@@ -163,6 +163,8 @@ export interface RosterWorkspaceSession {
   editor(instanceId: string | null, definitionId: string | null): ShipEditorReadModel | null;
   execute(command: RosterWorkspaceCommand): Promise<RosterWorkspaceReadModel>;
   executeDetailed(command: RosterWorkspaceCommand): Promise<RosterWorkspaceExecution>;
+  rename(name: string): RosterWorkspaceReadModel;
+  save(): Promise<RosterWorkspaceReadModel>;
   retrySave(): Promise<RosterWorkspaceReadModel>;
 }
 
@@ -182,7 +184,8 @@ export class WorkspaceCommandError extends Error {
       | "TARGET_REQUIRED"
       | "UNKNOWN_TARGET"
       | "UNKNOWN_INSTANCE"
-      | "UNKNOWN_BATTLEFLEET",
+      | "UNKNOWN_BATTLEFLEET"
+      | "INVALID_NAME",
     message: string,
   ) {
     super(message);
@@ -262,11 +265,15 @@ class WorkspaceSession implements RosterWorkspaceSession {
     await this.persist(prepared, true);
   }
 
-  async execute(command: RosterWorkspaceCommand): Promise<RosterWorkspaceReadModel> {
-    return (await this.executeDetailed(command)).model;
+  execute(command: RosterWorkspaceCommand): Promise<RosterWorkspaceReadModel> {
+    return this.executeDetailed(command).then((execution) => execution.model);
   }
 
-  async executeDetailed(command: RosterWorkspaceCommand): Promise<RosterWorkspaceExecution> {
+  executeDetailed(command: RosterWorkspaceCommand): Promise<RosterWorkspaceExecution> {
+    return Promise.resolve().then(() => this.executeNow(command));
+  }
+
+  private executeNow(command: RosterWorkspaceCommand): RosterWorkspaceExecution {
     if (command.type === "change-battlefleet") {
       const battlefleet = battlefleetsFor(this.current, this.setup).find(
         (candidate) => candidate.id === command.battlefleetId,
@@ -284,7 +291,7 @@ class WorkspaceSession implements RosterWorkspaceSession {
       );
       const candidate = { ...changed.roster, updatedAt: this.dependencies.now() };
       return {
-        model: await this.persist(candidate, true),
+        model: this.stage(candidate, true),
         createdInstanceId: null,
         battlefleetChange: {
           preservedShipCount: changed.preservedShipCount,
@@ -305,13 +312,28 @@ class WorkspaceSession implements RosterWorkspaceSession {
       updatedAt: this.dependencies.now(),
     };
     return {
-      model: await this.persist(candidate),
+      model: this.stage(candidate),
       createdInstanceId: result.createdInstanceId,
       battlefleetChange: null,
     };
   }
 
-  async retrySave(): Promise<RosterWorkspaceReadModel> {
+  rename(name: string): RosterWorkspaceReadModel {
+    const normalized = name.normalize("NFC").trim();
+    if (!normalized || normalized.length > 80)
+      throw new WorkspaceCommandError(
+        "INVALID_NAME",
+        "Название флота должно содержать от 1 до 80 символов.",
+      );
+    if (normalized === this.current.name) return this.currentModel;
+    return this.stage({
+      ...this.current,
+      name: normalized,
+      updatedAt: this.dependencies.now(),
+    });
+  }
+
+  async save(): Promise<RosterWorkspaceReadModel> {
     this.persistence = "saving";
     this.currentModel = withPersistence(this.currentModel, this.persistence);
     try {
@@ -321,6 +343,23 @@ class WorkspaceSession implements RosterWorkspaceSession {
       this.persistence = "save-error";
     }
     this.currentModel = withPersistence(this.currentModel, this.persistence);
+    return this.currentModel;
+  }
+
+  async retrySave(): Promise<RosterWorkspaceReadModel> {
+    return this.save();
+  }
+
+  private stage(candidate: StoredRoster, rebuildCatalog = false): RosterWorkspaceReadModel {
+    this.current = candidate;
+    this.persistence = "unsaved";
+    this.currentModel = projectWorkspace(
+      candidate,
+      this.catalog,
+      this.setup,
+      this.persistence,
+      rebuildCatalog ? undefined : this.currentModel.catalog,
+    );
     return this.currentModel;
   }
 

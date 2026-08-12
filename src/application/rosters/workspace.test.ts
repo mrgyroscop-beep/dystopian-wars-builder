@@ -11,8 +11,8 @@ import type { RosterRepository, StoredRoster } from "./create-roster";
 import {
   filterCatalogItems,
   openRosterWorkspace,
+  WorkspaceCommandError,
   type RosterWorkspaceDependencies,
-  type WorkspaceCommandError,
 } from "./workspace";
 
 describe("roster workspace application boundary", () => {
@@ -141,6 +141,8 @@ describe("roster workspace application boundary", () => {
     });
 
     expect(selected.doctrine!.groups[0]!.options[0]!.selectedQuantity).toBe(1);
+    expect(selected.summary.persistence).toBe("unsaved");
+    await session.save();
     const reopened = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
     expect(reopened.model.doctrine!.groups[0]!.options[0]!.selectedQuantity).toBe(1);
   });
@@ -182,6 +184,7 @@ describe("roster workspace application boundary", () => {
     };
     const session = (await openRosterWorkspace("scaffold-demo", dependencies))!;
     await session.execute({ type: "add", definitionId: "demo-ship-001" });
+    await session.save();
 
     const stored = fixture.saved.get("scaffold-demo")!;
     const directSelection = Object.values(stored.roster.instances).find(
@@ -234,10 +237,10 @@ describe("roster workspace application boundary", () => {
     expect(added.summary).toMatchObject({
       points: "350",
       victoryPoints: "9",
-      persistence: "saved-local",
+      persistence: "unsaved",
     });
     expect(added.catalog).toBe(catalog);
-    expect(initialSnapshot).not.toEqual(fixture.saved.get("scaffold-demo")!.roster);
+    expect(initialSnapshot).toEqual(fixture.saved.get("scaffold-demo")!.roster);
     const flagship = added.elements.find((element) => element.definitionId === "demo-flagship")!;
     expect(flagship.instances[0]).toMatchObject({
       id: "instance-1",
@@ -263,8 +266,11 @@ describe("roster workspace application boundary", () => {
       afterDelete.elements.flatMap((element) => element.instances).map((item) => item.id),
     ).toEqual(["instance-2"]);
 
+    const saved = await session.save();
+    expect(saved.summary.persistence).toBe("saved-local");
+    expect(initialSnapshot).not.toEqual(fixture.saved.get("scaffold-demo")!.roster);
     const reopened = await openRosterWorkspace("scaffold-demo", fixture.dependencies);
-    expect(reopened!.model).toEqual(afterDelete);
+    expect(reopened!.model).toEqual(saved);
   });
 
   it("requires an explicit Element for multiple targets and fails closed for unavailable records", async () => {
@@ -296,20 +302,41 @@ describe("roster workspace application boundary", () => {
     } satisfies Partial<WorkspaceCommandError>);
   });
 
-  it("keeps the evaluated candidate in memory after save failure and supports Retry", async () => {
+  it("keeps an explicit-save candidate in memory after failure and supports Retry", async () => {
     const fixture = harness(["unsaved-1", "unsaved-model-1"]);
     fixture.failSave.value = true;
     const session = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
 
     const unsaved = await session.execute({ type: "add", definitionId: "demo-ship-001" });
-    expect(unsaved.summary.persistence).toBe("save-error");
+    expect(unsaved.summary.persistence).toBe("unsaved");
     expect(unsaved.summary.points).toBe("350");
     expect(unsaved.elements.flatMap((element) => element.instances)).toHaveLength(1);
+    expect(fixture.saved.get("scaffold-demo")).toBeUndefined();
+
+    const failed = await session.save();
+    expect(failed.summary.persistence).toBe("save-error");
 
     fixture.failSave.value = false;
     const saved = await session.retrySave();
     expect(saved.summary.persistence).toBe("saved-local");
     expect(fixture.saved.get("scaffold-demo")!.roster.instances["unsaved-1"]).toBeDefined();
+  });
+
+  it("renames the fleet as a draft and persists the name only on explicit save", async () => {
+    const fixture = harness([]);
+    const session = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
+    const storedName = fixture.saved.get("scaffold-demo")!.name;
+
+    const renamed = session.rename("  Северный дозор  ");
+
+    expect(renamed.roster.name).toBe("Северный дозор");
+    expect(renamed.summary.persistence).toBe("unsaved");
+    expect(fixture.saved.get("scaffold-demo")!.name).toBe(storedName);
+
+    const saved = await session.save();
+    expect(saved.summary.persistence).toBe("saved-local");
+    expect(fixture.saved.get("scaffold-demo")!.name).toBe("Северный дозор");
+    expect(() => session.rename("   ")).toThrowError(WorkspaceCommandError);
   });
 
   it("keeps the composition unit card equal to editor and workspace totals", async () => {
@@ -421,6 +448,7 @@ describe("roster workspace application boundary", () => {
       quantity: 4,
     });
     await session.execute({ type: "duplicate", instanceId: original.id });
+    await session.save();
 
     const snapshot = fixture.saved.get("scaffold-demo")!.roster;
     const units = Object.values(snapshot.instances).filter(
@@ -486,13 +514,15 @@ describe("roster workspace application boundary", () => {
       instances: [expect.objectContaining({ id: "line-ship", definitionId: "demo-ship-002" })],
     });
     expect(execution.model.summary).toMatchObject({ points: "55", victoryPoints: "2" });
+    expect(execution.model.summary.persistence).toBe("unsaved");
+    const saved = await session.save();
     expect(fixture.saved.get("scaffold-demo")!).toMatchObject({
       battlefleet: { id: "demo-empire-line-squadron", label: "Line Squadron" },
       requiredElements: [{ id: "demo-line", label: "Line Element", minimum: 1 }],
     });
 
     const reopened = await openRosterWorkspace("scaffold-demo", fixture.dependencies);
-    expect(reopened!.model).toEqual(execution.model);
+    expect(reopened!.model).toEqual(saved);
   });
 
   it("opens, targets, saves and reloads a Crown Vanguard roster created by KAN-33", async () => {
@@ -520,14 +550,15 @@ describe("roster workspace application boundary", () => {
     expect(added.summary).toMatchObject({
       points: "350",
       victoryPoints: "9",
-      persistence: "saved-local",
+      persistence: "unsaved",
     });
     expect(
       added.elements.find((element) => element.definitionId === "demo-command")!.instances,
     ).toContainEqual(expect.objectContaining({ id: "crown-ship-1", definitionId: asterion.id }));
 
+    const saved = await session!.save();
     const reopened = await openRosterWorkspace(crown.id, dependencies);
-    expect(reopened!.model).toEqual(added);
+    expect(reopened!.model).toEqual(saved);
     expect(Object.keys(fixture.saved.get(crown.id)!.roster.instances)).toHaveLength(9);
   });
 });

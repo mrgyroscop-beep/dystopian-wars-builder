@@ -7675,8 +7675,15 @@ button.button {
 .fleet-workspace__identity {
   display: grid;
   min-width: 0;
+  grid-template-columns: minmax(8rem, 1fr) auto;
+  align-items: center;
   align-content: center;
+  gap: clamp(0.65rem, 2vw, 2rem);
   padding: 0.65rem 1rem;
+}
+
+.fleet-workspace__identity-copy {
+  min-width: 0;
 }
 
 .main-content--workspace .fleet-workspace__identity h1 {
@@ -7687,6 +7694,56 @@ button.button {
   line-height: 1.08;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.main-content--workspace .fleet-workspace__identity h1 input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  font: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-overflow: ellipsis;
+}
+
+.main-content--workspace .fleet-workspace__identity h1 input:hover {
+  border-bottom-color: var(--border-strong);
+}
+
+.main-content--workspace .fleet-workspace__identity h1 input:focus-visible {
+  border-bottom-color: var(--brand);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--brand) 24%, transparent);
+  outline: 0;
+}
+
+.workspace-save-button {
+  min-width: 7.5rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 1rem;
+  color: var(--surface);
+  background: var(--brand);
+  border: 1px solid var(--brand);
+  font-size: 0.76rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workspace-save-button:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.workspace-save-button:disabled {
+  color: var(--text-secondary);
+  background: var(--canvas);
+  border-color: var(--border);
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .main-content--workspace .fleet-workspace__identity .eyebrow,
@@ -7996,11 +8053,20 @@ button.button {
   }
 
   .main-content--workspace .fleet-workspace__identity {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.4rem;
     padding: 0.45rem 0.6rem;
   }
 
   .main-content--workspace .fleet-workspace__identity h1 {
     font-size: clamp(0.95rem, 4.5vw, 1.15rem);
+  }
+
+  .main-content--workspace .workspace-save-button {
+    min-width: 0;
+    min-height: 2.35rem;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.62rem;
   }
 
   .main-content--workspace .fleet-workspace__identity .eyebrow,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 
 import {
@@ -86,6 +86,7 @@ export function RosterWorkspaceRoute({
   const [busy, setBusy] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [commandError, setCommandError] = useState<string | null>(null);
+  const [rosterName, setRosterName] = useState("");
   const [issueReturnId, setIssueReturnId] = useState<string | null>(null);
   const [profilePreview, setProfilePreview] = useState<ProfilePreview | null>(null);
   const [orbatPreview, setOrbatPreview] = useState<OrbatPreview | null>(null);
@@ -97,6 +98,15 @@ export function RosterWorkspaceRoute({
   const directShipId = direct?.shipId ?? null;
   const directFocusKey = directMode && directShipId ? `${directMode}:${directShipId}` : null;
   const handledDirectFocusKey = useRef<string | null>(null);
+  const normalizedRosterName = rosterName.normalize("NFC").trim();
+  const hasUnsavedChanges =
+    state.kind === "ready" &&
+    (state.model.summary.persistence !== "saved-local" ||
+      normalizedRosterName !== state.model.roster.name);
+  const navigationBlocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname,
+  );
   useDocumentTitle(title);
 
   useEffect(() => {
@@ -104,10 +114,12 @@ export function RosterWorkspaceRoute({
     if (!rosterId) return () => undefined;
     void openRosterWorkspace(rosterId, dependencies).then(
       (session) => {
-        if (active)
+        if (active) {
           setState(
             session ? { kind: "ready", session, model: session.model } : { kind: "missing" },
           );
+          if (session) setRosterName(session.model.roster.name);
+        }
       },
       () => {
         if (active) setState({ kind: "error" });
@@ -117,6 +129,25 @@ export function RosterWorkspaceRoute({
       active = false;
     };
   }, [dependencies, rosterId]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (navigationBlocker.state !== "blocked") return;
+    if (window.confirm("Есть несохранённые изменения. Выйти без сохранения?")) {
+      navigationBlocker.proceed();
+    } else {
+      navigationBlocker.reset();
+    }
+  }, [navigationBlocker]);
 
   useEffect(() => {
     if (!directRuleId) return;
@@ -279,16 +310,29 @@ export function RosterWorkspaceRoute({
     if (result) setActiveView("composition");
   }
 
-  async function retrySave() {
+  async function saveChanges() {
+    if (commandInFlight.current || !hasUnsavedChanges) return;
     setBusy(true);
-    const next = await session.retrySave();
-    setState({ kind: "ready", session, model: next });
-    setAnnouncement(
-      next.summary.persistence === "saved-local"
-        ? "Состав сохранён на устройстве."
-        : "Повторное сохранение не удалось; изменения остаются в памяти.",
-    );
-    setBusy(false);
+    setCommandError(null);
+    try {
+      session.rename(rosterName);
+      const saving = session.save();
+      setState({ kind: "ready", session, model: session.model });
+      const next = await saving;
+      setState({ kind: "ready", session, model: next });
+      if (next.summary.persistence === "saved-local") setRosterName(next.roster.name);
+      setAnnouncement(
+        next.summary.persistence === "saved-local"
+          ? "Состав сохранён на устройстве."
+          : "Сохранение не удалось; изменения остаются в памяти.",
+      );
+    } catch (error) {
+      setCommandError(
+        error instanceof WorkspaceCommandError ? error.message : "Не удалось сохранить состав.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   function followIssue(targetId: string, returnId: string) {
@@ -379,8 +423,26 @@ export function RosterWorkspaceRoute({
       <div className="workspace-command-deck">
         <header className="workspace-command-strip" id="workspace-summary" tabIndex={-1}>
           <div className="fleet-workspace__identity">
-            <p className="eyebrow">{model.roster.faction}</p>
-            <h1>{model.roster.name}</h1>
+            <div className="fleet-workspace__identity-copy">
+              <p className="eyebrow">{model.roster.faction}</p>
+              <h1 aria-label={rosterName}>
+                <input
+                  aria-label="Название флота"
+                  maxLength={80}
+                  onChange={(event) => setRosterName(event.target.value)}
+                  spellCheck={false}
+                  value={rosterName}
+                />
+              </h1>
+            </div>
+            <button
+              className="workspace-save-button"
+              disabled={!hasUnsavedChanges || busy || model.summary.persistence === "saving"}
+              onClick={() => void saveChanges()}
+              type="button"
+            >
+              {model.summary.persistence === "saving" ? "Сохраняем…" : "Сохранить"}
+            </button>
           </div>
           <dl className="workspace-command-metrics" aria-label="Параметры флота">
             <div>
@@ -422,7 +484,7 @@ export function RosterWorkspaceRoute({
             <button
               className="button button--secondary"
               disabled={busy}
-              onClick={() => void retrySave()}
+              onClick={() => void saveChanges()}
               type="button"
             >
               Повторить

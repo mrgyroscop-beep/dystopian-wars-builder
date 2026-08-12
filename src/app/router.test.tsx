@@ -80,6 +80,7 @@ afterEach(() => {
   cleanup();
   window.localStorage.removeItem("dwb-rule-language");
   storedRosters.clear();
+  rosterRepository.save.mockClear();
 });
 const testDependencies = {
   authGateway: {
@@ -174,7 +175,7 @@ function renderRoute(path: string) {
   const testRouter = createMemoryRouter(createAppRoutes(testDependencies), {
     initialEntries: [path],
   });
-  return render(<RouterProvider router={testRouter} />);
+  return { ...render(<RouterProvider router={testRouter} />), router: testRouter };
 }
 
 describe("application routes", () => {
@@ -438,6 +439,49 @@ describe("application routes", () => {
       "aria-label",
       "Выбрано 0, минимум 1, максимум 6",
     );
+  });
+
+  it("enables explicit save for a renamed fleet and persists only after the click", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/rosters/scaffold-demo");
+
+    const name = await screen.findByRole("textbox", { name: "Название флота" });
+    const save = screen.getByRole("button", { name: "Сохранить" });
+    expect(name).toHaveValue("Учебная эскадра");
+    expect(save).toBeDisabled();
+    expect(rosterRepository.save).toHaveBeenCalledTimes(1);
+
+    await user.clear(name);
+    await user.type(name, "Северный дозор");
+
+    expect(save).toBeEnabled();
+    expect(rosterRepository.save).toHaveBeenCalledTimes(1);
+    await user.click(save);
+
+    await waitFor(() => expect(save).toBeDisabled());
+    expect(rosterRepository.save).toHaveBeenCalledTimes(2);
+    expect(storedRosters.get("scaffold-demo")?.name).toBe("Северный дозор");
+  });
+
+  it("warns before leaving a fleet with unsaved changes", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const { router } = renderRoute("/rosters/scaffold-demo");
+    const name = await screen.findByRole("textbox", { name: "Название флота" });
+
+    await user.type(name, " — черновик");
+    const beforeUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(beforeUnload);
+    expect(beforeUnload.defaultPrevented).toBe(true);
+
+    await router.navigate("/");
+    await waitFor(() =>
+      expect(confirm).toHaveBeenCalledWith("Есть несохранённые изменения. Выйти без сохранения?"),
+    );
+    expect(router.state.location.pathname).toBe("/rosters/scaffold-demo");
+    confirm.mockRestore();
   });
 
   it("keeps roster errors in composition as accessible section controls", async () => {
