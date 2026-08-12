@@ -80,9 +80,12 @@ async function loadFactionCatalog(
   const asset = manifest.factions[factionId];
   if (!asset) throw new Error("Requested faction catalog is not published");
   const compressed = await fetchBinary(`${baseUrl}/${asset.path}`);
-  if (compressed.byteLength !== asset.bytes)
+  const alreadyDecoded = compressed.byteLength === asset.decodedBytes;
+  if (!alreadyDecoded && compressed.byteLength !== asset.bytes)
     throw new Error("Faction catalog size does not match its manifest");
-  const contents = await decompressGzip(compressed);
+  const contents = alreadyDecoded
+    ? new TextDecoder().decode(compressed)
+    : await decompressGzip(compressed);
   if (new TextEncoder().encode(contents).byteLength !== asset.decodedBytes)
     throw new Error("Decoded faction catalog size does not match its manifest");
   if ((await sha256(contents)) !== asset.sha256)

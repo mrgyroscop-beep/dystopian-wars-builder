@@ -161,6 +161,10 @@ const testDependencies = {
     createId: () => crypto.randomUUID(),
     now: () => "2026-08-02T10:00:00.000Z",
   },
+  shipLibrary: {
+    setupGateway: rosterCreation.setupGateway,
+    catalogGateway: createDemonstrationFleetCatalogGateway(),
+  },
   rosterWorkspace: {
     setupGateway: rosterCreation.setupGateway,
     catalogGateway: createDemonstrationFleetCatalogGateway(),
@@ -188,7 +192,7 @@ describe("application routes", () => {
     expect(screen.getByRole("navigation", { name: "Основная навигация" })).toBeVisible();
     expect(screen.getByRole("main")).toBeVisible();
     expect(screen.getByRole("contentinfo")).toHaveTextContent(
-      "Dystopian Wars 4.0 · версия 0.2.6 · локальные флоты доступны без регистрации",
+      "Dystopian Wars 4.0 · версия 0.2.7 · локальные флоты доступны без регистрации",
     );
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Флоты" })).toHaveAttribute("aria-current", "page");
@@ -234,6 +238,28 @@ describe("application routes", () => {
 
     await waitFor(() => expect(rosterRepository.remove).toHaveBeenCalledWith(saved.id));
     expect(screen.queryByRole("heading", { name: saved.name })).not.toBeInTheDocument();
+  });
+
+  it("opens the ship encyclopedia from the fleet library and exposes profile and ORBAT icons", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/");
+
+    await user.click(screen.getByRole("link", { name: "Просмотреть корабли" }));
+    expect(await screen.findByRole("heading", { name: "Выберите фракцию" })).toBeVisible();
+    await user.click(screen.getByRole("link", { name: /Empire/u }));
+
+    expect(await screen.findByRole("heading", { name: "Корабли Empire" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Показать профиль Akita Demonstrator" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Показать страницу ORBAT Akita Demonstrator" }),
+    ).toBeVisible();
+    expect(screen.getByLabelText("Цена")).toHaveValue("ascending");
+
+    await user.click(screen.getByRole("button", { name: "Показать профиль Akita Demonstrator" }));
+    expect(await screen.findByRole("dialog", { name: "Akita Demonstrator" })).toBeVisible();
   });
 
   it("shows the saved roster faction emblem", async () => {

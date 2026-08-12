@@ -39,6 +39,10 @@ const router = createAppRouter({
     createId,
     now,
   },
+  shipLibrary: {
+    setupGateway: publishedCatalog.setupGateway,
+    catalogGateway: publishedCatalog.catalogGateway,
+  },
   rosterWorkspace: {
     setupGateway: publishedCatalog.setupGateway,
     catalogGateway: publishedCatalog.catalogGateway,

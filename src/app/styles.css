@@ -561,6 +561,456 @@ h3 {
   gap: 0.65rem;
 }
 
+.roster-library__ships {
+  color: var(--info-text);
+  border-color: var(--info-text);
+}
+
+.roster-library__ships .eye-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-right: 0.45rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.7;
+}
+
+/* The ship encyclopedia keeps the library's restrained naval-editorial language. */
+.ship-library {
+  --library-dark: #102930;
+  --library-gold: #d0b96d;
+}
+
+.ship-library__back-row {
+  margin-bottom: -0.5rem;
+}
+
+.ship-library__heading {
+  display: flex;
+  max-width: none;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.ship-library__heading .page-lead {
+  max-width: 34rem;
+  margin: 0;
+  text-align: right;
+}
+
+.ship-faction-grid {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  list-style: none;
+}
+
+.ship-faction-grid li {
+  min-width: 0;
+}
+
+.ship-faction-grid a {
+  position: relative;
+  display: flex;
+  min-height: 14.5rem;
+  padding: 1.4rem;
+  overflow: hidden;
+  flex-direction: column;
+  color: var(--ink);
+  background: rgb(255 255 255 / 88%);
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  box-shadow: 0 8px 24px rgb(20 38 45 / 5%);
+  text-decoration: none;
+  transition:
+    border-color var(--motion-medium),
+    box-shadow var(--motion-medium),
+    transform var(--motion-medium);
+}
+
+.ship-faction-grid a::after {
+  position: absolute;
+  right: -2.8rem;
+  bottom: -3.5rem;
+  width: 8rem;
+  height: 8rem;
+  content: "";
+  background: color-mix(in srgb, var(--faction-accent) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--faction-accent) 28%, transparent);
+  border-radius: 50%;
+}
+
+.ship-faction-grid a:hover {
+  color: var(--ink);
+  border-color: var(--faction-accent);
+  box-shadow: 0 14px 32px rgb(20 38 45 / 11%);
+  transform: translateY(-2px);
+}
+
+.ship-faction-grid__emblem,
+.ship-catalog-heading__emblem {
+  display: block;
+  width: 3.75rem;
+  height: 3.75rem;
+  flex: 0 0 auto;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  border: 2px solid var(--faction-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 88%);
+}
+
+.ship-faction-grid__name {
+  margin-top: 1.15rem;
+  color: #075d78;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.4rem, 2vw, 1.75rem);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.24em;
+}
+
+.ship-faction-grid__count {
+  margin-top: 0.65rem;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
+.ship-faction-grid__open {
+  z-index: 1;
+  margin-top: auto;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.ship-catalog-heading {
+  display: grid;
+  align-items: center;
+  grid-template-columns: auto minmax(0, auto) auto 1fr;
+  gap: 1rem;
+}
+
+.ship-catalog-heading__emblem {
+  width: 4.1rem;
+  height: 4.1rem;
+}
+
+.ship-catalog-heading h1 {
+  margin-top: 0.2rem;
+}
+
+.ship-catalog-heading__return {
+  justify-self: end;
+}
+
+.ship-library-filters {
+  display: grid;
+  padding: 0.9rem;
+  grid-template-columns: minmax(18rem, 1fr) minmax(12rem, 16rem) minmax(12rem, 16rem);
+  gap: 0.7rem;
+  background: rgb(255 255 255 / 87%);
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  box-shadow: 0 8px 22px rgb(20 38 45 / 5%);
+}
+
+.ship-library-filters label {
+  display: grid;
+  gap: 0.32rem;
+  color: var(--ink-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ship-library-filters input,
+.ship-library-filters select {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.65rem 0.75rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  border-radius: 0.3rem;
+  font-weight: 650;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.ship-library-results {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: -0.35rem 0 -0.45rem;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+}
+
+.ship-library-results p {
+  margin: 0;
+}
+
+.ship-library-table {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  gap: 0.7rem;
+  list-style: none;
+}
+
+.ship-library-table > li {
+  overflow: hidden;
+  background: rgb(255 255 255 / 92%);
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+}
+
+.ship-library-table > li[data-expanded="true"] {
+  border: 2px solid var(--navy);
+}
+
+.ship-library-row {
+  display: grid;
+  min-height: 7.4rem;
+  align-items: stretch;
+  grid-template-columns: 11rem minmax(16rem, 1fr) auto 7.5rem 12rem;
+}
+
+.ship-library-row > * + * {
+  border-left: 1px solid var(--line);
+}
+
+.ship-library-row .ship-artwork {
+  width: 100%;
+  height: 100%;
+  min-height: 7.4rem;
+  border: 0;
+  border-radius: 0;
+}
+
+.ship-library-row .ship-artwork img {
+  padding: 0.35rem;
+}
+
+.ship-library-row__identity {
+  min-width: 0;
+  padding: 1.2rem 1.35rem;
+  border-left: 1px solid var(--line);
+}
+
+.ship-library-row__identity h2 {
+  margin: 0;
+  color: #075d78;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.ship-library-row__identity p {
+  margin: 0.35rem 0 0.7rem;
+  color: var(--ink-muted);
+  font-size: 0.8rem;
+}
+
+.ship-library-row__identity > span {
+  display: inline-flex;
+  padding: 0.25rem 0.45rem;
+  color: var(--ink-muted);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 0.2rem;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.ship-library-row__links {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  gap: 0.45rem;
+}
+
+.ship-library-row__links button {
+  display: grid;
+  width: 2.55rem;
+  height: 2.55rem;
+  padding: 0;
+  place-items: center;
+  color: var(--navy);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.3rem;
+  cursor: pointer;
+}
+
+.ship-library-row__links button:hover {
+  color: #fff;
+  background: var(--navy);
+}
+
+.ship-library-row__links svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+}
+
+.ship-library-row__price {
+  display: grid;
+  padding: 0.9rem 0.65rem;
+  align-content: center;
+  justify-items: center;
+}
+
+.ship-library-row__price strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.65rem;
+}
+
+.ship-library-row__price span {
+  color: var(--ink-muted);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.ship-library-row__price small {
+  margin-top: 0.35rem;
+  color: var(--ink-muted);
+}
+
+.ship-library-row__toggle {
+  align-self: center;
+  margin: 0.8rem;
+  font-size: 0.75rem;
+}
+
+.ship-library-row__profile {
+  padding: 1.15rem;
+  color: #fff;
+  background: var(--library-dark);
+  border-top: 2px solid var(--navy);
+}
+
+.ship-library-row__profile > .eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--library-gold);
+}
+
+.ship-library-row__profile-card {
+  overflow-x: auto;
+}
+
+.ship-library-row__profile-card .ship-card {
+  width: min(100%, 74rem);
+  min-width: 60rem;
+  margin-inline: auto;
+}
+
+@media (max-width: 70rem) {
+  .ship-faction-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ship-library-row {
+    grid-template-columns: 9rem minmax(14rem, 1fr) auto 6.5rem;
+  }
+
+  .ship-library-row__links {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 0 1.35rem 0.9rem;
+    border-left: 1px solid var(--line);
+  }
+
+  .ship-library-row__price {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+
+  .ship-library-row__toggle {
+    grid-column: 4;
+    grid-row: 1 / span 2;
+  }
+}
+
+@media (max-width: 48rem) {
+  .ship-library__heading,
+  .ship-library-results {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ship-library__heading .page-lead {
+    text-align: left;
+  }
+
+  .ship-faction-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ship-faction-grid a {
+    min-height: 12.5rem;
+  }
+
+  .ship-catalog-heading {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .ship-catalog-heading .badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .ship-catalog-heading__return {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+
+  .ship-library-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .ship-library-row {
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+  }
+
+  .ship-library-row .ship-artwork {
+    grid-row: 1 / span 2;
+  }
+
+  .ship-library-row__links {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .ship-library-row__price {
+    grid-column: 1;
+    grid-row: 3;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .ship-library-row__toggle {
+    grid-column: 2;
+    grid-row: 3;
+    min-height: 3rem;
+  }
+}
+
 .roster-card-list {
   display: grid;
   padding: 0;

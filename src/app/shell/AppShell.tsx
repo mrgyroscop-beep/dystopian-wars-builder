@@ -131,6 +131,7 @@ function AppShellContent({ authGateway }: { readonly authGateway: AuthGateway })
 
 function safeScreen(pathname: string): string {
   if (pathname === "/rosters/new") return "new-roster";
+  if (pathname.startsWith("/ships")) return "ship-library";
   if (pathname.startsWith("/rosters/")) return "roster-workspace";
   return pathname;
 }

@@ -10,6 +10,7 @@ import type { CreateRosterDependencies } from "../application/rosters/create-ros
 import type { RosterLibraryDependencies } from "../application/rosters/roster-library";
 import type { RosterSyncGateway } from "../application/rosters/roster-sync";
 import type { RosterWorkspaceDependencies } from "../application/rosters/workspace";
+import type { ShipLibraryDependencies } from "../application/ships/ship-library";
 import { AppShell } from "./shell/AppShell";
 import { FeedbackRoute } from "../routes/FeedbackRoute";
 import { RouteErrorBoundary } from "../routes/RouteErrorBoundary";
@@ -21,6 +22,7 @@ import { ReferenceLibraryRoute } from "../routes/ReferenceLibraryRoute";
 import { SettingsRoute } from "../routes/SettingsRoute";
 import { CampaignRoute } from "../routes/CampaignRoute";
 import { BattleRoute } from "../routes/BattleRoute";
+import { ShipLibraryRoute } from "../routes/ShipLibraryRoute";
 
 export interface AppDependencies {
   authGateway: AuthGateway;
@@ -31,6 +33,7 @@ export interface AppDependencies {
   healthGateway: HealthGateway;
   rosterCreation: CreateRosterDependencies;
   rosterLibrary: RosterLibraryDependencies;
+  shipLibrary: ShipLibraryDependencies;
   rosterWorkspace: RosterWorkspaceDependencies;
   rosterSync: RosterSyncGateway;
 }
@@ -44,6 +47,7 @@ export function createAppRoutes({
   healthGateway,
   rosterCreation,
   rosterLibrary,
+  shipLibrary,
   rosterWorkspace,
   rosterSync,
 }: AppDependencies): RouteObject[] {
@@ -66,6 +70,10 @@ export function createAppRoutes({
         },
         { path: "campaign/:scenarioId?/:tab?", element: <CampaignRoute /> },
         { path: "rosters/new", element: <NewRosterRoute {...rosterCreation} /> },
+        {
+          path: "ships/:factionId?",
+          element: <ShipLibraryRoute dependencies={shipLibrary} />,
+        },
         {
           path: "reference",
           element: (

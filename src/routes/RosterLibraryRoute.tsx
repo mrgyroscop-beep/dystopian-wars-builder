@@ -13,6 +13,7 @@ import {
   renameRoster,
   type RosterLibraryDependencies,
 } from "../application/rosters/roster-library";
+import { EyeIcon } from "../ui/EyeIcon";
 import { fixtureStates, StatePanel, type FixtureState } from "../ui/StatePanel";
 
 const fixtureStateSchema = z.enum(fixtureStates);
@@ -120,6 +121,10 @@ export function RosterLibraryRoute({ dependencies }: { dependencies: RosterLibra
         <div className="roster-library__primary-actions">
           <Link className="button" to="/rosters/new">
             Создать флот
+          </Link>
+          <Link className="button button--secondary roster-library__ships" to="/ships">
+            <EyeIcon />
+            Просмотреть корабли
           </Link>
           <button
             className="button button--secondary"
