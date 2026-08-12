@@ -6,6 +6,7 @@ import { createHttpHealthGateway } from "../infrastructure/health/http-health-ga
 import { createHttpPasswordAuthGateway } from "../infrastructure/auth/http-password-auth-gateway";
 import { createHttpRulesAssistantGateway } from "../infrastructure/assistant/http-rules-assistant-gateway";
 import { createHttpFeedbackGateway } from "../infrastructure/feedback/http-feedback-gateway";
+import { createHttpBattleGateway } from "../infrastructure/battle/http-battle-gateway";
 import { createHttpGlossaryGateway } from "../infrastructure/glossary/http-glossary-gateway";
 import { createPublishedCatalogClient } from "../infrastructure/catalog/published-catalog";
 import { createBrowserRosterRepository } from "../infrastructure/rosters/browser-roster-repository";
@@ -22,6 +23,7 @@ const now = () => new Date().toISOString();
 const publishedCatalog = createPublishedCatalogClient();
 const router = createAppRouter({
   authGateway: createHttpPasswordAuthGateway(),
+  battleGateway: createHttpBattleGateway(),
   assistantGateway: createHttpRulesAssistantGateway(),
   feedbackGateway: createHttpFeedbackGateway(),
   glossaryGateway: createHttpGlossaryGateway(),

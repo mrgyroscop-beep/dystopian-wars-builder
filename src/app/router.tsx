@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router-dom";
 
 import type { HealthGateway } from "../application/health/health-contract";
+import type { BattleGateway } from "../application/battle/battle-contract";
 import type { AuthGateway } from "../application/auth/auth-contract";
 import type { FeedbackGateway } from "../application/feedback/feedback-contract";
 import type { GlossaryGateway } from "../application/glossary/glossary-contract";
@@ -19,9 +20,11 @@ import { RosterWorkspaceRoute } from "../routes/RosterWorkspaceRoute";
 import { ReferenceLibraryRoute } from "../routes/ReferenceLibraryRoute";
 import { SettingsRoute } from "../routes/SettingsRoute";
 import { CampaignRoute } from "../routes/CampaignRoute";
+import { BattleRoute } from "../routes/BattleRoute";
 
 export interface AppDependencies {
   authGateway: AuthGateway;
+  battleGateway: BattleGateway;
   assistantGateway: RulesAssistantGateway;
   feedbackGateway: FeedbackGateway;
   glossaryGateway: GlossaryGateway;
@@ -34,6 +37,7 @@ export interface AppDependencies {
 
 export function createAppRoutes({
   authGateway,
+  battleGateway,
   assistantGateway,
   feedbackGateway,
   glossaryGateway,
@@ -49,6 +53,17 @@ export function createAppRoutes({
       errorElement: <RouteErrorBoundary />,
       children: [
         { index: true, element: <RosterLibraryRoute dependencies={rosterLibrary} /> },
+        {
+          path: "battle",
+          element: (
+            <BattleRoute
+              authGateway={authGateway}
+              battleGateway={battleGateway}
+              catalogGateway={rosterWorkspace.catalogGateway}
+              rosterRepository={rosterLibrary.rosterRepository}
+            />
+          ),
+        },
         { path: "campaign/:scenarioId?/:tab?", element: <CampaignRoute /> },
         { path: "rosters/new", element: <NewRosterRoute {...rosterCreation} /> },
         {

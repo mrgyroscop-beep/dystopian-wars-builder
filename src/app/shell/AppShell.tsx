@@ -9,6 +9,7 @@ import { AUTH_SESSION_CHANGED_EVENT } from "../authSessionEvents";
 const navigationItems = [
   { to: "/", label: "Флоты", end: true },
   { to: "/campaign", label: "Кампания", end: false },
+  { to: "/battle", label: "Баталия", end: false },
   { to: "/reference", label: "Правила", end: false },
   { to: "/feedback", label: "Обратная связь", end: false },
   { to: "/settings", label: "Настройки", end: false },

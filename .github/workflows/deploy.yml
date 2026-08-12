@@ -48,9 +48,10 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           RELEASE_SHA: ${{ github.sha }}
         run: |
+          APP_VERSION=$(node -p "require('./package.json').version")
           CATALOG_VERSION=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('dist/client/catalog/setup.json', 'utf8')).contentVersion)")
           npx wrangler deploy \
-            --var "APP_VERSION:0.1.0" \
+            --var "APP_VERSION:${APP_VERSION}" \
             --var "CATALOG_VERSION:${CATALOG_VERSION}" \
             --var "COMMIT_SHA:${RELEASE_SHA}" \
             --var "DEPLOYMENT_ENV:production" \

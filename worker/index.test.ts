@@ -12,6 +12,7 @@ import {
 } from "./assistant";
 import { sha256 } from "./http";
 import { resolveReferenceDocument } from "./reference-pdf";
+import { createDemonstrationWorkspaceRoster } from "../src/infrastructure/catalog/demonstration-fleet-catalog";
 
 const feedbackAutomationToken = "test-feedback-automation-token-with-enough-entropy";
 
@@ -31,6 +32,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await env.DB.batch([
+    env.DB.prepare("DELETE FROM battle_rooms"),
     env.DB.prepare("DELETE FROM feedback"),
     env.DB.prepare("DELETE FROM roster_revisions"),
     env.DB.prepare("DELETE FROM rosters"),
@@ -53,7 +55,7 @@ describe("Worker API", () => {
     expect(healthResponseSchema.parse(payload)).toEqual({
       status: "ok",
       environment: "local",
-      appVersion: "0.1.0",
+      appVersion: "0.2.0",
       catalogVersion: "not-imported",
       commitSha: "0000000000000000000000000000000000000000",
     });
@@ -160,6 +162,110 @@ describe("Worker API", () => {
         password_iterations: number;
       }>(),
     ).resolves.toEqual({ email: "admiral@example.com", password_iterations: 100_000 });
+  });
+
+  it("runs a two-admiral battle from room key to ship damage", async () => {
+    const headers = { "Content-Type": "application/json", Origin: "http://example.com" };
+    const register = async (displayName: string, email: string) => {
+      const response = await exports.default.fetch("http://example.com/api/auth/register", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ displayName, email, password: "correct-horse-battery-staple" }),
+      });
+      expect(response.status).toBe(201);
+      return response.headers.get("set-cookie")?.split(";", 1)[0] ?? "";
+    };
+    const hostCookie = await register("Host Admiral", "host@example.com");
+    const guestCookie = await register("Guest Admiral", "guest@example.com");
+    const roster = createDemonstrationWorkspaceRoster("battle-roster");
+    const shipId = "test-ship-instance";
+    const testInstances = roster.roster.instances as unknown as Record<string, unknown>;
+    testInstances[shipId] = {
+      contractVersion: 1,
+      id: shipId,
+      definitionId: "test-ship-definition",
+      placementId: null,
+      slotId: null,
+      parentInstanceId: null,
+      forceInstanceId: null,
+      quantity: 1,
+    };
+    const saveRoster = (cookie: string) =>
+      exports.default.fetch("http://example.com/api/rosters/battle-roster", {
+        method: "PUT",
+        headers: { ...headers, Cookie: cookie },
+        body: JSON.stringify({ expectedVersion: 0, roster }),
+      });
+    expect((await saveRoster(hostCookie)).status).toBe(201);
+    expect((await saveRoster(guestCookie)).status).toBe(201);
+
+    const created = await exports.default.fetch("http://example.com/api/battles", {
+      method: "POST",
+      headers: { ...headers, Cookie: hostCookie },
+      body: JSON.stringify({ rosterId: roster.id }),
+    });
+    const createdPayload = await created.json<{
+      game: { key: string[]; version: number; status: string };
+    }>();
+    expect(created.status).toBe(201);
+    expect(createdPayload.game.key).toHaveLength(3);
+    expect(createdPayload.game.status).toBe("waiting");
+
+    const joined = await exports.default.fetch("http://example.com/api/battles/join", {
+      method: "POST",
+      headers: { ...headers, Cookie: guestCookie },
+      body: JSON.stringify({ key: createdPayload.game.key, rosterId: roster.id }),
+    });
+    const joinedPayload = await joined.json<{
+      game: { version: number; status: string; guest: { displayName: string } };
+    }>();
+    expect(joined.status).toBe(200);
+    expect(joinedPayload.game.status).toBe("preparing");
+    expect(joinedPayload.game.guest.displayName).toBe("Guest Admiral");
+
+    const path = createdPayload.game.key.join(".");
+    const ready = async (cookie: string, expectedVersion: number) =>
+      exports.default.fetch(`http://example.com/api/battles/${path}`, {
+        method: "PATCH",
+        headers: { ...headers, Cookie: cookie },
+        body: JSON.stringify({ expectedVersion, update: { type: "ready", ready: true } }),
+      });
+    const hostReady = await ready(hostCookie, joinedPayload.game.version);
+    const hostReadyPayload = await hostReady.json<{ game: { version: number } }>();
+    const guestReady = await ready(guestCookie, hostReadyPayload.game.version);
+    const active = await guestReady.json<{ game: { version: number; status: string } }>();
+    expect(active.game.status).toBe("active");
+
+    const damaged = await exports.default.fetch(`http://example.com/api/battles/${path}`, {
+      method: "PATCH",
+      headers: { ...headers, Cookie: hostCookie },
+      body: JSON.stringify({
+        expectedVersion: active.game.version,
+        update: {
+          type: "ship",
+          shipId,
+          state: {
+            damage: 2,
+            disorder: 1,
+            criticals: { hazard: 1 },
+            crippled: false,
+            destroyed: false,
+            withdrawn: false,
+            activated: true,
+          },
+        },
+      }),
+    });
+    const damagedPayload = await damaged.json<{
+      game: {
+        host: { shipState: Record<string, { damage: number; criticals: { hazard: number } }> };
+      };
+    }>();
+    expect(damaged.status, JSON.stringify(damagedPayload)).toBe(200);
+    expect(damagedPayload.game.host.shipState[shipId]).toMatchObject({
+      damage: 2,
+      criticals: { hazard: 1 },
+    });
   });
 
   it("uses one generic error for invalid credentials", async () => {

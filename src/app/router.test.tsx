@@ -90,6 +90,14 @@ const testDependencies = {
     logout: () => Promise.resolve(),
     deleteAccount: () => Promise.resolve(),
   },
+  battleGateway: {
+    contractVersion: 1 as const,
+    create: () => Promise.reject(new Error("not used")),
+    join: () => Promise.reject(new Error("not used")),
+    read: () => Promise.reject(new Error("not used")),
+    update: () => Promise.reject(new Error("not used")),
+    leave: () => Promise.resolve(),
+  },
   assistantGateway: {
     contractVersion: 1 as const,
     ask: () => Promise.reject(new Error("not used")),
