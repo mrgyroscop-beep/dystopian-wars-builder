@@ -591,9 +591,339 @@
         "url": "/ships/empire/80.webp"
       }
     },
-    "enlightened": {},
+    "enlightened": {
+      "agoracommandcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/19.webp"
+      },
+      "archimedesvaultship": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/20.webp"
+      },
+      "chionesubnauticalexplorer": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/21.webp"
+      },
+      "daedalustethership": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/22.webp"
+      },
+      "descartescontrolship": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/23.webp"
+      },
+      "hypatiageneratorship": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/24.webp"
+      },
+      "icarusaeronauticfabricator": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/25.webp"
+      },
+      "keplerbattlecruiser": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/26.webp"
+      },
+      "loewfastexplorer": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/27.webp"
+      },
+      "nansenexplorer": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/28.webp"
+      },
+      "thuleskyfortress": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/29.webp"
+      },
+      "xenophonbattlecruiser": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/30.webp"
+      },
+      "copernicusheavycruiser": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/31.webp"
+      },
+      "lovelacecruiser": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/32.webp"
+      },
+      "tacitusassaultcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/33.webp"
+      },
+      "valtarsaucer": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/34.webp"
+      },
+      "adamskisaucer": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/35.webp"
+      },
+      "euripidessubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/36.webp"
+      },
+      "ketosmyriapodacolossus": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/37.webp"
+      },
+      "lotanmyriapodacolossus": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/38.webp"
+      },
+      "merianautomatafrigate": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/39.webp"
+      },
+      "chateletdronecarrier": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/40.webp"
+      },
+      "defenceplatformleibnizclass": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/41.webp"
+      },
+      "heavyplatformbellerophonclass": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/42.webp"
+      },
+      "newtoncruiser": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/43.webp"
+      },
+      "origenlatheship": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/44.webp"
+      },
+      "pliniussupportcarrier": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/45.webp"
+      },
+      "quintilianbombardmentcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/46.webp"
+      },
+      "vesaliuscetaceansurgicalship": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/47.webp"
+      },
+      "zumeenacapacitorship": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/48.webp"
+      },
+      "aronnaxvermiformacolossus": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/49.webp"
+      },
+      "diogenessubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/50.webp"
+      },
+      "endymiondyadrotors": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/51.webp"
+      },
+      "euclidscoutsaucer": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/52.webp"
+      },
+      "praxillasubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/53.webp"
+      },
+      "pytheussaucer": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/54.webp"
+      },
+      "claudiusmerchantman": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/55.webp"
+      },
+      "hermessupplyfreighter": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/57.webp"
+      },
+      "supplyplatformdaimlerclass": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/58.webp"
+      },
+      "titanmassconveyer": {
+        "imageIndex": 7,
+        "url": "/ships/enlightened/59.webp"
+      }
+    },
     "imperium": {},
-    "sultanate": {},
+    "sultanate": {
+      "abydoshoverstronghold": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/19.webp"
+      },
+      "anatoliaheavybattlecruiser": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/20.webp"
+      },
+      "kadeshbarragebattlecruiser": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/21.webp"
+      },
+      "khartoumheavybattleskimmer": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/22.webp"
+      },
+      "lyceumaerialdreadnought": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/23.webp"
+      },
+      "mehmedcommandcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/24.webp"
+      },
+      "osirisbattleskimmer": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/25.webp"
+      },
+      "pharoshoverdreadnought": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/26.webp"
+      },
+      "retajportalship": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/27.webp"
+      },
+      "suleimanfleetcarrier": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/28.webp"
+      },
+      "tanisbattlecarrier": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/29.webp"
+      },
+      "topkapicarrier": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/30.webp"
+      },
+      "bayezidgrandcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/32.webp"
+      },
+      "carolusdestroyer": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/33.webp"
+      },
+      "iskandarcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/34.webp"
+      },
+      "mandjetheavyskimmer": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/35.webp"
+      },
+      "sadrazamheavycruiser": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/36.webp"
+      },
+      "alsaqrskybarque": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/37.webp"
+      },
+      "celikdestroyer": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/38.webp"
+      },
+      "hirkaskycutter": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/39.webp"
+      },
+      "izmirmonitor": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/40.webp"
+      },
+      "mesektetskimmer": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/41.webp"
+      },
+      "nasrskyship": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/42.webp"
+      },
+      "temirfrigate": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/43.webp"
+      },
+      "constantinoplesupportcarrier": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/44.webp"
+      },
+      "defenceplatformjebelclass": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/45.webp"
+      },
+      "lesathexemplarcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/47.webp"
+      },
+      "mihrimahflechettecruiser": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/48.webp"
+      },
+      "nemrutbattlecruiser": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/50.webp"
+      },
+      "sabahbarrageskimmer": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/51.webp"
+      },
+      "sobekskimmer": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/52.webp"
+      },
+      "chaskavitruviancolossus": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/53.webp"
+      },
+      "hashashinfastskimmer": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/54.webp"
+      },
+      "kopeshscoutskimmer": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/55.webp"
+      },
+      "qualorvitruviancolossus": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/57.webp"
+      },
+      "aydinsupplyship": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/58.webp"
+      },
+      "europagrandconveyor": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/59.webp"
+      },
+      "hermessupplyfreighter": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/60.webp"
+      },
+      "konyamaintenanceship": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/61.webp"
+      },
+      "moreaminelayer": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/62.webp"
+      },
+      "supplyplatformbenghaziclass": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/63.webp"
+      },
+      "titanmassconveyor": {
+        "imageIndex": 7,
+        "url": "/ships/sultanate/64.webp"
+      }
+    },
     "union": {}
   },
   "missing": {
@@ -619,48 +949,7 @@
     ],
     "crown": [],
     "empire": [],
-    "enlightened": [
-      "adamskisaucer",
-      "agoracommandcruiser",
-      "archimedesvaultship",
-      "aronnaxvermiformacolossus",
-      "chateletdronecarrier",
-      "chionesubnauticalexplorer",
-      "claudiusmerchantman",
-      "copernicusheavycruiser",
-      "daedalustethership",
-      "defenceplatformleibnizclass",
-      "descartescontrolship",
-      "diogenessubmarine",
-      "endymiondyadrotors",
-      "euclidscoutsaucer",
-      "euripidessubmarine",
-      "heavyplatformbellerophonclass",
-      "hermessupplyfreighter",
-      "hypatiageneratorship",
-      "icarusaeronauticfabricator",
-      "keplerbattlecruiser",
-      "ketosmyriapodacolossus",
-      "loewfastexplorer",
-      "lotanmyriapodacolossus",
-      "lovelacecruiser",
-      "merianautomatafrigate",
-      "nansenexplorer",
-      "newtoncruiser",
-      "origenlatheship",
-      "pliniussupportcarrier",
-      "praxillasubmarine",
-      "pytheussaucer",
-      "quintilianbombardmentcruiser",
-      "supplyplatformdaimlerclass",
-      "tacitusassaultcruiser",
-      "thuleskyfortress",
-      "titanmassconveyer",
-      "valtarsaucer",
-      "vesaliuscetaceansurgicalship",
-      "xenophonbattlecruiser",
-      "zumeenacapacitorship"
-    ],
+    "enlightened": [],
     "imperium": [
       "asgardrotortethership",
       "icemaidendreadnoughtsupercarrier",
@@ -672,50 +961,7 @@
       "tempelhoffleetcarrier",
       "zeppelinaerialdreadnought"
     ],
-    "sultanate": [
-      "abydoshoverstronghold",
-      "alsaqrskybarque",
-      "anatoliaheavybattlecruiser",
-      "aydinsupplyship",
-      "bayezidgrandcruiser",
-      "carolusdestroyer",
-      "celikdestroyer",
-      "chaskavitruviancolossus",
-      "constantinoplesupportcarrier",
-      "defenceplatformjebelclass",
-      "europagrandconveyor",
-      "hashashinfastskimmer",
-      "hermessupplyfreighter",
-      "hirkaskycutter",
-      "iskandarcruiser",
-      "izmirmonitor",
-      "kadeshbarragebattlecruiser",
-      "khartoumheavybattleskimmer",
-      "konyamaintenanceship",
-      "kopeshscoutskimmer",
-      "lesathexemplarcruiser",
-      "lyceumaerialdreadnought",
-      "mandjetheavyskimmer",
-      "mehmedcommandcruiser",
-      "mesektetskimmer",
-      "mihrimahflechettecruiser",
-      "moreaminelayer",
-      "nasrskyship",
-      "nemrutbattlecruiser",
-      "osirisbattleskimmer",
-      "pharoshoverdreadnought",
-      "qualorvitruviancolossus",
-      "retajportalship",
-      "sabahbarrageskimmer",
-      "sadrazamheavycruiser",
-      "sobekskimmer",
-      "suleimanfleetcarrier",
-      "supplyplatformbenghaziclass",
-      "tanisbattlecarrier",
-      "temirfrigate",
-      "titanmassconveyor",
-      "topkapicarrier"
-    ],
+    "sultanate": [],
     "union": [
       "americaspecialoperationsvessel",
       "chicagocruiser",

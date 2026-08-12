@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 from io import BytesIO
@@ -59,9 +60,9 @@ MODEL_IMAGE_INDEX: dict[str, int | None] = {
     "commonwealth": None,
     "crown": 8,
     "empire": 7,
-    "enlightened": None,
+    "enlightened": 7,
     "imperium": None,
-    "sultanate": None,
+    "sultanate": 7,
     "union": None,
 }
 
@@ -71,8 +72,26 @@ def model_image_index(slug: str, page_number: int, image_count: int) -> int | No
         # Alliance model layers have a stable square-ish 435x422 source box,
         # while the absolute index moves when a page omits a decoration.
         return -1
-        return None
     return MODEL_IMAGE_INDEX.get(slug)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--faction",
+        choices=(
+            "alliance",
+            "commonwealth",
+            "crown",
+            "empire",
+            "enlightened",
+            "imperium",
+            "sultanate",
+            "union",
+        ),
+        help="Update only one faction while preserving the existing image manifest.",
+    )
+    return parser.parse_args()
 
 
 def candidate(page: Any, slug: str, page_number: int) -> tuple[int, Image.Image] | None:
@@ -103,10 +122,17 @@ def source_path(slug: str) -> Path:
 
 
 def main() -> None:
+    args = parse_args()
     source = json.loads(CARD_MANIFEST.read_text("utf-8"))
-    result: dict[str, Any] = {"images": {}, "missing": {}, "sources": source["sources"]}
+    if args.faction and IMAGE_MANIFEST.is_file():
+        result: dict[str, Any] = json.loads(IMAGE_MANIFEST.read_text("utf-8"))
+        result["sources"] = source["sources"]
+    else:
+        result = {"images": {}, "missing": {}, "sources": source["sources"]}
     OUTPUT.mkdir(parents=True, exist_ok=True)
     for slug, cards in source["cards"].items():
+        if args.faction and slug != args.faction:
+            continue
         pdf = source_path(slug)
         reader = PdfReader(str(pdf)) if pdf.is_file() else None
         by_page: dict[int, list[str]] = {}
