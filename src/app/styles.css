@@ -467,6 +467,38 @@ h3 {
   border-radius: 0.3rem;
 }
 
+.panel .settings-toggle {
+  grid-template-columns: minmax(0, 1fr) auto;
+  max-width: none;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--paper-raised) 74%, var(--navy) 4%);
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+
+.settings-toggle > span {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.settings-toggle small {
+  color: var(--ink-muted);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.panel .settings-toggle input {
+  width: 2.8rem;
+  min-height: 1.55rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--navy);
+  cursor: pointer;
+}
+
 .text-action {
   color: #0d5b76;
   border: 1px solid transparent;

@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { useDocumentTitle } from "../app/useDocumentTitle";
+import {
+  BATTLE_DISPLAY_PREFERENCES_CHANGED_EVENT,
+  readBattleShipCountersVisible,
+} from "../app/battleDisplayPreferences";
 import type { AuthGateway, AuthUser } from "../application/auth/auth-contract";
 import {
   criticalEffectIds,
@@ -114,6 +118,17 @@ export function BattleRoute({
   const [joinKey, setJoinKey] = useState<CriticalEffectId[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [showShipCounters, setShowShipCounters] = useState(readBattleShipCountersVisible);
+
+  useEffect(() => {
+    const syncPreference = () => setShowShipCounters(readBattleShipCountersVisible());
+    window.addEventListener(BATTLE_DISPLAY_PREFERENCES_CHANGED_EVENT, syncPreference);
+    window.addEventListener("storage", syncPreference);
+    return () => {
+      window.removeEventListener(BATTLE_DISPLAY_PREFERENCES_CHANGED_EVENT, syncPreference);
+      window.removeEventListener("storage", syncPreference);
+    };
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -242,6 +257,7 @@ export function BattleRoute({
         onLeave={() => void leaveRoom()}
         onRoom={(room) => setState({ ...state, room })}
         room={state.room}
+        showShipCounters={showShipCounters}
       />
     );
   return (
@@ -368,6 +384,7 @@ function BattleTable({
   onLeave,
   onRoom,
   room,
+  showShipCounters,
 }: {
   readonly busy: boolean;
   readonly catalogGateway: RosterCatalogGateway;
@@ -377,6 +394,7 @@ function BattleTable({
   readonly onLeave: () => void;
   readonly onRoom: (room: BattleRoom) => void;
   readonly room: BattleRoom;
+  readonly showShipCounters: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -487,6 +505,7 @@ function BattleTable({
           editable={room.you === "host" && room.status === "active" && !updating}
           onShip={(shipId, state) => void update({ type: "ship", shipId, state })}
           player={room.host}
+          showShipCounters={showShipCounters}
           side="host"
         />
         <FleetLedger
@@ -495,6 +514,7 @@ function BattleTable({
           editable={room.you === "guest" && room.status === "active" && !updating}
           onShip={(shipId, state) => void update({ type: "ship", shipId, state })}
           player={room.guest}
+          showShipCounters={showShipCounters}
           side="guest"
         />
       </main>
@@ -511,6 +531,7 @@ function FleetLedger({
   editable,
   onShip,
   player,
+  showShipCounters,
   side,
 }: {
   readonly active: boolean;
@@ -518,6 +539,7 @@ function FleetLedger({
   readonly editable: boolean;
   readonly onShip: (shipId: string, state: ShipBattleState) => void;
   readonly player: BattlePlayer | null;
+  readonly showShipCounters: boolean;
   readonly side: BattleSide;
 }) {
   const [catalog, setCatalog] = useState<DomainCatalog | null>(null);
@@ -567,6 +589,7 @@ function FleetLedger({
                 key={unit.id}
                 label={unit.label}
                 onChange={(next) => onShip(unit.id, next)}
+                showShipCounters={showShipCounters}
                 {...(unit.profileAvailable
                   ? {
                       onOpenProfile: () => {
@@ -605,12 +628,14 @@ function ShipTracker({
   label,
   onChange,
   onOpenProfile,
+  showShipCounters,
   state,
 }: {
   readonly editable: boolean;
   readonly label: string;
   readonly onChange: (state: ShipBattleState) => void;
   readonly onOpenProfile?: () => void;
+  readonly showShipCounters: boolean;
   readonly state: ShipBattleState;
 }) {
   const totalCriticals = Object.values(state.criticals).reduce((total, value) => total + value, 0);
@@ -633,11 +658,13 @@ function ShipTracker({
                   : "Боеготов"}
           </small>
         </span>
-        <span className="battle-ship__vitals">
-          <i>DMG {state.damage}</i>
-          <i>DIS {state.disorder}</i>
-          <i>CRIT {totalCriticals}</i>
-        </span>
+        {showShipCounters ? (
+          <span className="battle-ship__vitals">
+            <i>DMG {state.damage}</i>
+            <i>DIS {state.disorder}</i>
+            <i>CRIT {totalCriticals}</i>
+          </span>
+        ) : null}
       </summary>
       <div className="battle-ship__controls">
         {onOpenProfile ? (
@@ -646,34 +673,38 @@ function ShipTracker({
             <b aria-hidden="true">→</b>
           </button>
         ) : null}
-        <Counter
-          disabled={!editable}
-          label="Damage"
-          max={99}
-          onValue={(damage) => patch({ damage })}
-          value={state.damage}
-        />
-        <Counter
-          disabled={!editable}
-          label="Disorder"
-          max={3}
-          onValue={(disorder) => patch({ disorder })}
-          value={state.disorder}
-        />
-        <div className="battle-critical-grid">
-          {criticalEffectIds.map((effect) => (
+        {showShipCounters ? (
+          <>
             <Counter
-              compact
               disabled={!editable}
-              key={effect}
-              label={criticals[effect].short}
-              mark={criticals[effect].mark}
-              max={20}
-              onValue={(value) => patch({ criticals: { ...state.criticals, [effect]: value } })}
-              value={state.criticals[effect] ?? 0}
+              label="Damage"
+              max={99}
+              onValue={(damage) => patch({ damage })}
+              value={state.damage}
             />
-          ))}
-        </div>
+            <Counter
+              disabled={!editable}
+              label="Disorder"
+              max={3}
+              onValue={(disorder) => patch({ disorder })}
+              value={state.disorder}
+            />
+            <div className="battle-critical-grid">
+              {criticalEffectIds.map((effect) => (
+                <Counter
+                  compact
+                  disabled={!editable}
+                  key={effect}
+                  label={criticals[effect].short}
+                  mark={criticals[effect].mark}
+                  max={20}
+                  onValue={(value) => patch({ criticals: { ...state.criticals, [effect]: value } })}
+                  value={state.criticals[effect] ?? 0}
+                />
+              ))}
+            </div>
+          </>
+        ) : null}
         <div className="battle-status-flags">
           {(
             [

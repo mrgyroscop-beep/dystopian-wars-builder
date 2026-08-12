@@ -8,6 +8,10 @@ import {
 } from "../application/health/health-contract";
 import type { RosterSyncGateway, RosterSyncResult } from "../application/rosters/roster-sync";
 import { announceAuthSessionChanged } from "../app/authSessionEvents";
+import {
+  readBattleShipCountersVisible,
+  setBattleShipCountersVisible,
+} from "../app/battleDisplayPreferences";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 
 type HealthState =
@@ -37,6 +41,9 @@ export function SettingsRoute({ authGateway, healthGateway, rosterSync }: Settin
   const [displayName, setDisplayName] = useState("");
   const [accountMessage, setAccountMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showBattleShipCounters, setShowBattleShipCounters] = useState(
+    readBattleShipCountersVisible,
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -273,6 +280,39 @@ export function SettingsRoute({ authGateway, healthGateway, rosterSync }: Settin
         <p aria-live="polite" className={accountMessage ? "system-message" : "sr-only"}>
           {accountMessage}
         </p>
+      </section>
+
+      <section className="panel" aria-labelledby="battle-display-title">
+        <div className="panel__header">
+          <div>
+            <p className="eyebrow">Интерфейс стола</p>
+            <h2 id="battle-display-title">Баталия</h2>
+            <p className="panel__copy">
+              Настройте подробность карточек кораблей на этом устройстве.
+            </p>
+          </div>
+          <span className="badge">Локально</span>
+        </div>
+        <label
+          aria-label="Показывать боевые счётчики у кораблей"
+          className="settings-toggle"
+          htmlFor="battle-ship-counters"
+        >
+          <span>
+            <strong>Показывать боевые счётчики у кораблей</strong>
+            <small>Damage, Disorder и счётчики критических эффектов. По умолчанию скрыты.</small>
+          </span>
+          <input
+            checked={showBattleShipCounters}
+            id="battle-ship-counters"
+            onChange={(event) => {
+              const visible = event.target.checked;
+              setShowBattleShipCounters(visible);
+              setBattleShipCountersVisible(visible);
+            }}
+            type="checkbox"
+          />
+        </label>
       </section>
 
       <section className="panel" aria-labelledby="health-title">

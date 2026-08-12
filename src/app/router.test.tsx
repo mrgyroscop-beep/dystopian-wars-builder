@@ -10,6 +10,7 @@ import {
   createDemonstrationWorkspaceRoster,
 } from "../infrastructure/catalog/demonstration-fleet-catalog";
 import { createAppRoutes } from "./router";
+import { BATTLE_SHIP_COUNTERS_STORAGE_KEY } from "./battleDisplayPreferences";
 
 const readHealth = vi.fn<HealthGateway["read"]>().mockResolvedValue({
   status: "ok",
@@ -79,6 +80,7 @@ const rosterCreation = {
 afterEach(() => {
   cleanup();
   window.localStorage.removeItem("dwb-rule-language");
+  window.localStorage.removeItem(BATTLE_SHIP_COUNTERS_STORAGE_KEY);
   storedRosters.clear();
   rosterRepository.save.mockClear();
 });
@@ -680,6 +682,23 @@ describe("application routes", () => {
     expect(screen.getByLabelText(/^Пароль/u)).toHaveAttribute("type", "password");
     expect(screen.getByRole("button", { name: "Создать аккаунт" })).toBeVisible();
     expect(readHealth).toHaveBeenCalledOnce();
+  });
+
+  it("keeps battle ship counters hidden until they are enabled in settings", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/settings");
+
+    const toggle = await screen.findByRole("checkbox", {
+      name: /Показывать боевые счётчики у кораблей/u,
+    });
+    expect(toggle).not.toBeChecked();
+    expect(window.localStorage.getItem(BATTLE_SHIP_COUNTERS_STORAGE_KEY)).toBeNull();
+
+    await user.click(toggle);
+
+    expect(toggle).toBeChecked();
+    expect(window.localStorage.getItem(BATTLE_SHIP_COUNTERS_STORAGE_KEY)).toBe("show");
   });
 
   it("submits private feedback with an optional email", async () => {

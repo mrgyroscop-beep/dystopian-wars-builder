@@ -1,7 +1,7 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import type { BattleRoom } from "../application/battle/battle-contract";
 import type { StoredRoster } from "../application/rosters/create-roster";
@@ -17,6 +17,15 @@ import {
   createDemonstrationWorkspaceRoster,
 } from "../infrastructure/catalog/demonstration-fleet-catalog";
 import { BattleRoute } from "../routes/BattleRoute";
+import {
+  BATTLE_SHIP_COUNTERS_STORAGE_KEY,
+  setBattleShipCountersVisible,
+} from "./battleDisplayPreferences";
+
+afterEach(() => {
+  cleanup();
+  window.localStorage.removeItem(BATTLE_SHIP_COUNTERS_STORAGE_KEY);
+});
 
 describe("battle ship profiles", () => {
   it("shows Quick Reference faces in the key and the selected ship weapons in its profile", async () => {
@@ -83,6 +92,25 @@ describe("battle ship profiles", () => {
 
     const shipName = await screen.findByText("Akita Demonstrator");
     await user.click(shipName.closest("summary")!);
+    expect(screen.queryByRole("button", { name: "Увеличить Damage" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Увеличить Disorder" })).not.toBeInTheDocument();
+
+    act(() => setBattleShipCountersVisible(true));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Увеличить Damage" })).toBeVisible(),
+    );
+    for (const counter of [
+      "Disorder",
+      "Breach",
+      "Structural Failure",
+      "Hazard",
+      "Shredded Defences",
+      "Navigation Lock",
+      "System Failure",
+    ]) {
+      expect(screen.getByRole("button", { name: `Увеличить ${counter}` })).toBeVisible();
+    }
+
     await user.click(screen.getByRole("button", { name: "Профиль и выбранные пушки" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Akita Demonstrator" });
