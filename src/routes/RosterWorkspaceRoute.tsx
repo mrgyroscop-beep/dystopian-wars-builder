@@ -294,6 +294,34 @@ export function RosterWorkspaceRoute({
     );
   }
 
+  async function quickAdd(item: CatalogItemReadModel) {
+    if (item.availability.state !== "available") return;
+    if (item.eligibleTargets.length !== 1) {
+      openPreview(item);
+      return;
+    }
+    await execute(
+      {
+        type: "add",
+        definitionId: item.id,
+        targetElementInstanceId: item.eligibleTargets[0]!.elementInstanceId,
+      },
+      `${item.name} добавлен в состав.`,
+      undefined,
+      (result) => {
+        if (!result.createdInstanceId) return;
+        const instance = result.model.elements
+          .flatMap((element) => element.instances)
+          .find((candidate) => candidate.id === result.createdInstanceId);
+        if (!instance) return;
+        setSelectedId(instance.definitionId);
+        setEditorInstanceId(instance.id);
+        setActiveView("context");
+        requestAnimationFrame(() => document.getElementById("ship-editor-title")?.focus());
+      },
+    );
+  }
+
   async function dropShip(definitionId: string, targetElementInstanceId: string) {
     const item = model.catalog.find((candidate) => candidate.id === definitionId);
     if (
@@ -564,6 +592,7 @@ export function RosterWorkspaceRoute({
             event.dataTransfer.setData("application/x-dwb-ship-id", item.id);
           }}
           onInspect={(item) => openShipProfile(item.name, session.editor(null, item.id))}
+          onQuickAdd={(item) => void quickAdd(item)}
           onOpenOrbat={(name, imageUrl) => openShipOrbat(name, imageUrl)}
           onPreview={openPreview}
           onToggle={() => setCatalogCollapsed((current) => !current)}
@@ -594,7 +623,7 @@ export function RosterWorkspaceRoute({
           onEdit={(instance) => {
             setContextOrigin({
               view: "composition",
-              elementId: `edit-instance-${safeId(instance.id)}`,
+              elementId: `roster-instance-${safeId(instance.id)}`,
             });
             setSelectedId(instance.definitionId);
             setEditorInstanceId(instance.id);
@@ -657,6 +686,7 @@ function CatalogPane({
   onInspect,
   onOpenOrbat,
   onPreview,
+  onQuickAdd,
   onToggle,
   query,
   selectedId,
@@ -674,6 +704,7 @@ function CatalogPane({
   readonly onInspect: (item: CatalogItemReadModel) => void;
   readonly onOpenOrbat: (name: string, imageUrl: string) => void;
   readonly onPreview: (item: CatalogItemReadModel) => void;
+  readonly onQuickAdd: (item: CatalogItemReadModel) => void;
   readonly onToggle: () => void;
   readonly query: string;
   readonly selectedId: string | null;
@@ -792,6 +823,16 @@ function CatalogPane({
                       <OrbatPageIcon />
                     </button>
                   ) : null}
+                  <button
+                    aria-label={`Добавить ${item.name} в состав`}
+                    className="catalog-row__add"
+                    disabled={item.availability.state !== "available"}
+                    onClick={() => onQuickAdd(item)}
+                    title="Добавить в состав"
+                    type="button"
+                  >
+                    <span aria-hidden="true">+</span>
+                  </button>
                 </div>
               </div>
             );
@@ -852,6 +893,11 @@ function CompositionPane({
   );
   const firstCompositionProblem = compositionProblems[0] ?? null;
   const compositionIssueId = "composition-issue";
+  const orderedElements = [...model.elements].sort(
+    (left, right) =>
+      fleetElementOrder(left.label) - fleetElementOrder(right.label) ||
+      left.label.localeCompare(right.label, "ru"),
+  );
 
   return (
     <section className="builder-pane composition-pane" aria-labelledby="composition-title">
@@ -903,7 +949,7 @@ function CompositionPane({
         {model.doctrine ? (
           <FleetDoctrinePanel busy={busy} doctrine={model.doctrine} onCommand={onDoctrineCommand} />
         ) : null}
-        {model.elements.map((element) => {
+        {orderedElements.map((element) => {
           const isDropTarget = Boolean(
             draggedItem?.eligibleTargets.some((target) => target.elementInstanceId === element.id),
           );
@@ -1026,29 +1072,15 @@ function CompositionPane({
                         aria-current={selectedInstanceId === instance.id ? "true" : undefined}
                         id={`roster-instance-${safeId(instance.id)}`}
                         key={instance.id}
-                        tabIndex={-1}
                       >
-                        <span className="instance-copy">
+                        <button
+                          aria-label={`Открыть настройки ${instance.name}`}
+                          className="instance-copy"
+                          onClick={() => onEdit(instance)}
+                          type="button"
+                        >
                           <span className="instance-title">
                             <strong>{instance.name}</strong>
-                            <button
-                              aria-label={`Показать профиль ${instance.name}`}
-                              className="instance-inspect"
-                              onClick={() => onInspect(instance)}
-                              type="button"
-                            >
-                              <EyeIcon />
-                            </button>
-                            {orbatPageUrl ? (
-                              <button
-                                aria-label={`Показать страницу ORBAT ${instance.name}`}
-                                className="instance-orbat"
-                                onClick={() => onOpenOrbat(instance.name, orbatPageUrl)}
-                                type="button"
-                              >
-                                <OrbatPageIcon />
-                              </button>
-                            ) : null}
                           </span>
                           <small>
                             {instance.points} Points · {instance.victoryPoints} VPR
@@ -1056,24 +1088,34 @@ function CompositionPane({
                           <small className="instance-loadout">
                             {loadout.length ? loadout.join(" · ") : "Оружие не указано"}
                           </small>
-                        </span>
+                        </button>
                         <span className="instance-actions">
                           <button
-                            aria-label={`Настроить ${instance.name}`}
-                            className="instance-action"
-                            disabled={busy}
-                            id={`edit-instance-${safeId(instance.id)}`}
-                            onClick={() => onEdit(instance)}
-                            title="Настроить"
+                            aria-label={`Показать профиль ${instance.name}`}
+                            className="instance-inspect"
+                            onClick={() => onInspect(instance)}
                             type="button"
                           >
-                            <InstanceActionIcon kind="configure" />
+                            <EyeIcon />
                           </button>
+                          {orbatPageUrl ? (
+                            <button
+                              aria-label={`Показать страницу ORBAT ${instance.name}`}
+                              className="instance-orbat"
+                              onClick={() => onOpenOrbat(instance.name, orbatPageUrl)}
+                              type="button"
+                            >
+                              <OrbatPageIcon />
+                            </button>
+                          ) : null}
                           <button
                             aria-label={`Копировать ${instance.name}`}
                             className="instance-action"
                             disabled={busy}
-                            onClick={() => onDuplicate(instance.id, instance.name)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onDuplicate(instance.id, instance.name);
+                            }}
                             title="Копировать"
                             type="button"
                           >
@@ -1083,7 +1125,10 @@ function CompositionPane({
                             aria-label={`Удалить ${instance.name}`}
                             className="instance-action instance-action--delete"
                             disabled={busy}
-                            onClick={() => onDelete(instance.id, instance.name, element.id)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onDelete(instance.id, instance.name, element.id);
+                            }}
                             title="Удалить"
                             type="button"
                           >
@@ -1094,7 +1139,8 @@ function CompositionPane({
                     );
                   })}
                 </ul>
-              ) : (
+              ) : null}
+              {element.maximum === null || element.instances.length < element.maximum ? (
                 <button
                   aria-label={`Добавить подходящий корабль в ${element.label}`}
                   className="element-empty"
@@ -1102,9 +1148,9 @@ function CompositionPane({
                   type="button"
                 >
                   <span aria-hidden="true">＋</span>
-                  <p>Добавьте подходящий корабль из каталога.</p>
+                  <p>Добавьте подходящий корабль</p>
                 </button>
-              )}
+              ) : null}
             </section>
           );
         })}
@@ -1297,7 +1343,15 @@ function safeId(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/gu, "-");
 }
 
-function InstanceActionIcon({ kind }: { readonly kind: "configure" | "duplicate" | "delete" }) {
+function fleetElementOrder(label: string): number {
+  const normalized = label.toLocaleLowerCase("en");
+  const index = fleetCategories.findIndex((category) =>
+    normalized.includes(category.toLocaleLowerCase("en")),
+  );
+  return index < 0 ? fleetCategories.length : index;
+}
+
+function InstanceActionIcon({ kind }: { readonly kind: "duplicate" | "delete" }) {
   return (
     <svg
       aria-hidden="true"
@@ -1306,13 +1360,7 @@ function InstanceActionIcon({ kind }: { readonly kind: "configure" | "duplicate"
       focusable="false"
       viewBox="0 0 24 24"
     >
-      {kind === "configure" ? (
-        <>
-          <path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6" />
-          <circle cx="14" cy="7" r="2" />
-          <circle cx="8" cy="17" r="2" />
-        </>
-      ) : kind === "duplicate" ? (
+      {kind === "duplicate" ? (
         <>
           <rect height="12" rx="1.5" width="12" x="8" y="8" />
           <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />

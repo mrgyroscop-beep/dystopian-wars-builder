@@ -978,9 +978,26 @@ function projectSelectedLoadout(
   const quantities = new Map<string, number>();
   for (const weapon of projectShipProfileRules(snapshot, catalog, unit, model).weapons)
     quantities.set(weapon.weapon, (quantities.get(weapon.weapon) ?? 0) + 1);
-  return [...quantities].map(([weapon, quantity]) =>
+  const weapons = [...quantities].map(([weapon, quantity]) =>
     quantity > 1 ? `${weapon} ×${quantity}` : weapon,
   );
+  const editor = projectShipEditor(snapshot, catalog, unit.id, unit.definitionId, "saved-local");
+  const additions =
+    editor.dataState === "ready"
+      ? editor.groups
+          .filter((group) => /attachments?|escorts?/iu.test(group.label))
+          .flatMap((group) =>
+            group.options
+              .filter((option) => option.selectedQuantity > 0)
+              .map(
+                (option) =>
+                  `${group.label}: ${option.label}${
+                    option.selectedQuantity > 1 ? ` ×${option.selectedQuantity}` : ""
+                  }`,
+              ),
+          )
+      : [];
+  return [...weapons, ...additions];
 }
 
 function projectProblems(

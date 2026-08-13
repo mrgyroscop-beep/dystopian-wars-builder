@@ -3560,6 +3560,7 @@ button.button {
 
 .catalog-row__inspect,
 .catalog-row__orbat,
+.catalog-row__add,
 .instance-inspect,
 .instance-orbat,
 .option-inspect {
@@ -3575,6 +3576,22 @@ button.button {
   border: 1px solid var(--border-strong);
   border-radius: 50%;
   cursor: pointer;
+}
+
+.catalog-row__add {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.catalog-row__add:hover:not(:disabled) {
+  color: var(--surface);
+  background: var(--brand);
+}
+
+.catalog-row__add:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 
 .catalog-row__actions {
@@ -4106,6 +4123,16 @@ button.button {
   border-radius: 0.35rem;
 }
 
+.roster-instance-list li:has(.instance-copy:hover) {
+  background: var(--surface-selected);
+  border-color: var(--brand);
+}
+
+.roster-instance-list li:has(.instance-copy:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .roster-instance-list li[aria-current="true"] {
   background: var(--surface-selected);
   border-color: var(--brand);
@@ -4114,8 +4141,19 @@ button.button {
 
 .instance-copy {
   display: grid;
+  width: 100%;
   min-width: 0;
   gap: 0.08rem;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.instance-copy:focus-visible {
+  outline: 0;
 }
 
 .instance-title {

@@ -192,7 +192,7 @@ describe("application routes", () => {
     expect(screen.getByRole("navigation", { name: "Основная навигация" })).toBeVisible();
     expect(screen.getByRole("main")).toBeVisible();
     expect(screen.getByRole("contentinfo")).toHaveTextContent(
-      "Dystopian Wars 4.0 · версия 0.2.10 · локальные флоты доступны без регистрации",
+      "Dystopian Wars 4.0 · версия 0.2.11 · локальные флоты доступны без регистрации",
     );
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Флоты" })).toHaveAttribute("aria-current", "page");
@@ -588,7 +588,7 @@ describe("application routes", () => {
     await user.click(screen.getByRole("button", { name: "Добавить в состав" }));
 
     expect(
-      await screen.findByRole("button", { name: "Настроить Akita Demonstrator" }),
+      await screen.findByRole("button", { name: "Открыть настройки Akita Demonstrator" }),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Копировать Akita Demonstrator" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Удалить Akita Demonstrator" })).toBeVisible();
@@ -621,6 +621,44 @@ describe("application routes", () => {
       name: /Полная страница ORBAT для Akita Demonstrator/u,
     });
     expect(orbatPage).toHaveAttribute("src", "/orbat-cards/empire/23.webp");
+  });
+
+  it("quick-adds an eligible catalog ship and opens its options", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/rosters/scaffold-demo");
+
+    await user.click(
+      await screen.findByRole("button", { name: "Добавить Akita Demonstrator в состав" }),
+    );
+
+    expect(await screen.findByRole("region", { name: "Настройка корабля" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Akita Demonstrator" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Назад" }));
+    expect(
+      await screen.findByRole("button", { name: "Открыть настройки Akita Demonstrator" }),
+    ).toBeVisible();
+  });
+
+  it("opens options from the ship row and keeps add action until the section is full", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    renderRoute("/rosters/scaffold-demo");
+
+    await user.click(
+      await screen.findByRole("button", { name: "Добавить Akita Demonstrator в состав" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Назад" }));
+    const row = await screen.findByRole("button", {
+      name: "Открыть настройки Akita Demonstrator",
+    });
+    await user.click(row);
+
+    expect(await screen.findByRole("region", { name: "Настройка корабля" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Назад" }));
+    expect(
+      screen.getByRole("button", { name: "Добавить подходящий корабль в Flagship Element" }),
+    ).toBeVisible();
   });
 
   it("marks a fleet element when its maximum ship count is exceeded", async () => {
