@@ -192,7 +192,7 @@ describe("application routes", () => {
     expect(screen.getByRole("navigation", { name: "Основная навигация" })).toBeVisible();
     expect(screen.getByRole("main")).toBeVisible();
     expect(screen.getByRole("contentinfo")).toHaveTextContent(
-      "Dystopian Wars 4.0 · версия 0.2.11 · локальные флоты доступны без регистрации",
+      "Dystopian Wars 4.0 · версия 0.2.12 · локальные флоты доступны без регистрации",
     );
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Флоты" })).toHaveAttribute("aria-current", "page");
