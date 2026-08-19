@@ -92,6 +92,30 @@ describe("ShipCardProfile", () => {
       "System",
     );
   });
+
+  it("keeps identical weapon batteries as separate profile rows", () => {
+    const baseModel = model();
+    const heavyGun = weapon("heavy-gun-1", "Heavy Gun Battery", "FPS", "4", "6", "—", "");
+    const repeatedWeaponsModel: ShipEditorReadyReadModel = {
+      ...baseModel,
+      profileRules: {
+        ...baseModel.profileRules,
+        weapons: [heavyGun, { ...heavyGun, id: "heavy-gun-2" }],
+      },
+    };
+    const view = render(<ShipCardProfile faction="Empire" model={repeatedWeaponsModel} />);
+
+    const desktopWeapons = screen.getByRole("heading", { name: "Weapons" }).closest("section")!;
+    expect(within(desktopWeapons).getAllByRole("row", { name: /Heavy Gun Battery/u })).toHaveLength(
+      2,
+    );
+
+    view.rerender(<ShipMobileProfile faction="Empire" model={repeatedWeaponsModel} />);
+    const mobileProfile = screen.getByRole("article", {
+      name: "Мобильный профиль Akita Super Battleship",
+    });
+    expect(within(mobileProfile).getAllByText("Heavy Gun Battery")).toHaveLength(2);
+  });
 });
 
 function model(): ShipEditorReadyReadModel {

@@ -51,7 +51,7 @@ export function ShipCardProfile({
       .find((section) => section.id === "systems")
       ?.rows.filter((row) => isUsefulValue(row.label)) ?? [];
   const systems = linkedTextEntries(baseSystems, configuredSystems);
-  const weapons = uniqueWeapons(model.profileRules.weapons);
+  const weapons = model.profileRules.weapons;
   const hardpointOptions = selectedLoadout ? [] : availableHardpointOptions(model);
   const rowCount = weapons.length + hardpointOptions.length;
   const tags = uniqueText(model.card?.tags ?? [model.card?.nation, model.card?.platform]);
@@ -199,7 +199,7 @@ export function ShipMobileProfile({
       .find((section) => section.id === "systems")
       ?.rows.filter((row) => isUsefulValue(row.label)) ?? [];
   const systems = linkedTextEntries(baseSystems, configuredSystems);
-  const weapons = uniqueWeapons(model.profileRules.weapons);
+  const weapons = model.profileRules.weapons;
   const hardpointOptions = selectedLoadout ? [] : availableHardpointOptions(model);
   const tags = uniqueText(model.card?.tags ?? [model.card?.nation, model.card?.platform]);
 
@@ -338,8 +338,8 @@ function MobileWeaponList({
       <h4>{title}</h4>
       {weapons.length ? (
         <ul>
-          {weapons.map((weapon) => (
-            <li key={weaponKey(weapon)}>
+          {weapons.map((weapon, weaponIndex) => (
+            <li key={`${weaponKey(weapon)}:${weaponIndex}`}>
               <header>
                 <span className="ship-mobile-profile__weapon-name">
                   {weapon.hardpointWeight ? (
@@ -417,8 +417,8 @@ function WeaponTable({
         </thead>
         <tbody>
           {weapons.length ? (
-            weapons.map((weapon) => (
-              <tr key={weaponKey(weapon)}>
+            weapons.map((weapon, weaponIndex) => (
+              <tr key={`${weaponKey(weapon)}:${weaponIndex}`}>
                 <th scope="row">
                   <span className="ship-card__weapon-label">
                     <span aria-hidden={!weapon.hardpointWeight} className="ship-card__slot-marker">
