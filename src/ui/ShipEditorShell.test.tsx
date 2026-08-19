@@ -268,7 +268,8 @@ describe("ShipEditorShell", () => {
     );
   });
 
-  it("hides the Model tile even when its quantity is variable", () => {
+  it("edits model quantity when the catalog allows a variable unit size", async () => {
+    const user = userEvent.setup();
     const onCommand = vi.fn();
     const variable = {
       ...editorModel("akita"),
@@ -290,10 +291,46 @@ describe("ShipEditorShell", () => {
       />,
     );
 
-    expect(screen.queryByRole("spinbutton", { name: "Количество" })).not.toBeInTheDocument();
+    const quantity = screen.getByRole("spinbutton", { name: "Количество моделей" });
+    expect(quantity).toHaveValue(1);
+    expect(quantity).toHaveAttribute("min", "1");
+    expect(quantity).toHaveAttribute("max", "3");
+    await user.clear(quantity);
+    await user.type(quantity, "2");
+    expect(onCommand).toHaveBeenLastCalledWith(
+      { type: "set-model-quantity", instanceId: "model-instance", quantity: 2 },
+      "Количество моделей: 2.",
+    );
     expect(screen.queryByText("Model")).not.toBeInTheDocument();
-    expect(onCommand).not.toHaveBeenCalled();
     expect(screen.queryByText("Доктрина флота")).not.toBeInTheDocument();
+  });
+
+  it("does not show model quantity for preview or a fixed unit size", () => {
+    const { rerender } = render(
+      <ShipEditorShell
+        busy={false}
+        model={editorModel(null)}
+        onAdd={vi.fn()}
+        onBack={vi.fn()}
+        onCommand={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("spinbutton", { name: "Количество моделей" }),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <ShipEditorShell
+        busy={false}
+        model={editorModel("akita")}
+        onAdd={vi.fn()}
+        onBack={vi.fn()}
+        onCommand={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("spinbutton", { name: "Количество моделей" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders an honest unsupported-data state", () => {

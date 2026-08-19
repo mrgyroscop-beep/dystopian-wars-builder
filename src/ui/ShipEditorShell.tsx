@@ -93,6 +93,22 @@ export function ShipEditorShell({
       </div>
 
       <section className="ship-editor__configuration" aria-label="Настройка корабля">
+        {model.mode === "instance" && !model.modelQuantity.fixed ? (
+          <div className="model-quantity">
+            <div>
+              <strong>Количество моделей</strong>
+              <small>
+                Допустимо: {model.modelQuantity.minimum}–{model.modelQuantity.maximum}
+              </small>
+            </div>
+            <ModelQuantityInput
+              busy={busy}
+              key={`${model.modelQuantity.instanceId}:${model.modelQuantity.value}`}
+              model={model}
+              onCommand={onCommand}
+            />
+          </div>
+        ) : null}
         <div className="editor-groups">
           {model.groups.map((group, groupIndex) => (
             <EditorGroup
@@ -134,6 +150,55 @@ export function ShipEditorShell({
         />
       ) : null}
     </article>
+  );
+}
+
+function ModelQuantityInput({
+  busy,
+  model,
+  onCommand,
+}: {
+  readonly busy: boolean;
+  readonly model: ShipEditorReadyReadModel;
+  readonly onCommand: (command: ShipEditorCommand, announcement: string) => void;
+}) {
+  const { instanceId, maximum, minimum, value } = model.modelQuantity;
+  const [draft, setDraft] = useState(String(value));
+
+  return (
+    <label>
+      <span>Количество</span>
+      <input
+        aria-label="Количество моделей"
+        disabled={busy}
+        max={maximum}
+        min={minimum}
+        onBlur={() => {
+          const quantity = Number(draft);
+          if (!Number.isSafeInteger(quantity) || quantity < minimum || quantity > maximum)
+            setDraft(String(value));
+        }}
+        onChange={(event) => {
+          const nextDraft = event.currentTarget.value;
+          setDraft(nextDraft);
+          const quantity = Number(nextDraft);
+          if (
+            !instanceId ||
+            nextDraft === "" ||
+            !Number.isSafeInteger(quantity) ||
+            quantity < minimum ||
+            quantity > maximum
+          )
+            return;
+          onCommand(
+            { type: "set-model-quantity", instanceId, quantity },
+            `Количество моделей: ${quantity}.`,
+          );
+        }}
+        type="number"
+        value={draft}
+      />
+    </label>
   );
 }
 
