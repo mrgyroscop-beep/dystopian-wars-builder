@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
@@ -48,6 +49,54 @@ describe("application routes", () => {
 
     expect(screen.getByRole("heading", { level: 1, name: "Черновик флота" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Состав" })).toBeVisible();
+  });
+
+  it("adds a ship, opens its settings and shows configured models, attachments and escort", async () => {
+    const user = userEvent.setup();
+    const view = renderRoute("/rosters/scaffold-demo");
+    const route = within(view.container);
+
+    await user.type(route.getByRole("searchbox", { name: "Найти корабль" }), "Akita");
+    await user.click(
+      route.getByRole("button", { name: "Добавить Akita Super Battleship в состав" }),
+    );
+
+    expect(route.getByRole("heading", { name: "Akita Super Battleship" })).toBeVisible();
+    await user.click(route.getByRole("spinbutton", { name: "Количество моделей" }));
+    await user.keyboard("{Control>}a{/Control}3");
+    await user.selectOptions(route.getByLabelText("Attachments"), "Heavy Gun Battery");
+    await user.clear(route.getByRole("spinbutton", { name: "Количество Escort" }));
+    await user.type(route.getByRole("spinbutton", { name: "Количество Escort" }), "2");
+
+    expect(route.getByText("Attachments: Heavy Gun Battery · Escort ×2")).toBeVisible();
+    expect(route.getByText("3 мод.")).toBeVisible();
+    const flagshipSection = route.getByRole("heading", { name: "Flagship" }).closest("section");
+    expect(flagshipSection).not.toBeNull();
+    expect(
+      within(flagshipSection as HTMLElement).queryByRole("button", {
+        name: "Добавьте подходящий корабль",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("filters the catalog from an available composition section", async () => {
+    const user = userEvent.setup();
+    const view = renderRoute("/rosters/scaffold-demo");
+    const route = within(view.container);
+
+    const lineSection = route.getByRole("heading", { name: "Line" }).closest("section");
+    expect(lineSection).not.toBeNull();
+    await user.click(
+      within(lineSection as HTMLElement).getByRole("button", {
+        name: "Добавьте подходящий корабль",
+      }),
+    );
+
+    expect(route.getByRole("combobox", { name: "Категория" })).toHaveValue("Line");
+    expect(route.getByRole("button", { name: "Открыть профиль Dao Light Cruiser" })).toBeVisible();
+    expect(
+      route.queryByRole("button", { name: "Открыть профиль Akita Super Battleship" }),
+    ).not.toBeInTheDocument();
   });
 
   it("uses the HealthGateway injected by the application composition root", async () => {

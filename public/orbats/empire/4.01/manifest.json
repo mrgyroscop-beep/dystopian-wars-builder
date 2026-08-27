@@ -1,0 +1,16 @@
+{
+  "faction": "Empire",
+  "orbatVersion": "4.01",
+  "sourceFilename": "DW-ORBATS_Empire_Full-4.01_W.pdf",
+  "profilePages": {
+    "first": 23,
+    "last": 80,
+    "count": 58
+  },
+  "asset": {
+    "format": "webp",
+    "dpi": 150,
+    "quality": 88,
+    "filenamePattern": "profile-page-{page:03}.webp"
+  }
+}

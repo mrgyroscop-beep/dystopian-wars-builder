@@ -14,6 +14,11 @@ are ignored by Git and must never be committed or uploaded to the repository.
 The same restriction applies to upstream XML exports and generated catalog
 datasets unless their redistribution has been explicitly approved.
 
+Approved, web-optimized ORBAT profile pages under `public/orbats` are the explicit
+exception for the in-app profile viewer. Their source version, page range and
+rendering settings are recorded in the manifest beside the assets; source PDFs
+remain ignored.
+
 ## Requirements
 
 - Node.js 24 or newer;
