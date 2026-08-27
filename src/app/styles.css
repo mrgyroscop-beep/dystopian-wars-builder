@@ -5711,6 +5711,9 @@ button.button {
 
 .profile-dialog-backdrop {
   z-index: 120;
+  align-items: start;
+  overflow: auto;
+  overscroll-behavior: contain;
   background: rgb(8 22 28 / 76%);
   backdrop-filter: blur(3px);
 }
@@ -5748,9 +5751,11 @@ button.button {
   display: grid;
   width: min(90rem, calc(100dvw - 2rem));
   max-width: calc(100dvw - 2rem);
-  height: calc(100dvh - 2rem);
+  min-height: calc(100dvh - 2rem);
+  max-height: none;
   min-width: 0;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: start;
   background: #101a1f;
   border-color: rgb(255 255 255 / 32%);
   overflow: hidden;
@@ -5777,12 +5782,12 @@ button.button {
 
 .profile-dialog[data-card="true"] .profile-dialog__content {
   min-width: 0;
-  min-height: 0;
   padding: 0.75rem;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -6432,9 +6437,10 @@ button.button {
     display: grid;
     width: calc(100dvw - 0.7rem);
     max-width: calc(100dvw - 0.7rem);
-    height: calc(100dvh - 0.7rem);
-    max-height: calc(100dvh - 0.7rem);
-    grid-template-rows: auto minmax(0, 1fr);
+    min-height: calc(100dvh - 0.7rem);
+    max-height: none;
+    grid-template-rows: auto auto;
+    align-content: start;
     overflow: hidden;
   }
 
@@ -6490,13 +6496,11 @@ button.button {
   }
 
   .profile-dialog[data-card="true"] .profile-dialog__content {
-    min-height: 0;
     min-width: 0;
     padding: 0.5rem;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: visible;
     overscroll-behavior: contain;
-    scrollbar-gutter: stable;
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
   }
