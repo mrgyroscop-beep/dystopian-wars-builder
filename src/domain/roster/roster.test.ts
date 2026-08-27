@@ -414,6 +414,71 @@ describe("roster evaluator", () => {
     });
   });
 
+  it("accepts a shared doctrine slot selected directly for a Battlefleet", () => {
+    const forceId = id("commonwealth-force");
+    const doctrineGroupId = id("shared-fleet-doctrines");
+    const doctrineSlotId = sid("shared-fleet-doctrines");
+    const doctrineId = id("shared-doctrine");
+    const doctrinePlacement = placement(
+      "shared-doctrine-placement",
+      doctrineGroupId,
+      doctrineId,
+      {},
+      doctrineSlotId,
+    );
+    const doctrineSlot: Slot = {
+      contractVersion: 1,
+      id: doctrineSlotId,
+      ownerId: doctrineGroupId,
+      kind: "Doctrine",
+      label: presentation("Fleet Doctrines"),
+      placementIds: [doctrinePlacement.id],
+      optionPlacementIds: [doctrinePlacement.id],
+      cardinality: {
+        contractVersion: 1,
+        minimum: amount("0"),
+        maximum: amount("1"),
+        effective: "deferred-to-kan-32",
+      },
+      costIds: [],
+      constraintIds: [],
+      conditionIds: [],
+      modifierIds: [],
+      hidden: false,
+      helper: false,
+      semantics: { contractVersion: 1, selection: "option", evaluation: "deferred-to-kan-32" },
+      provenance: provenance(doctrineGroupId),
+    };
+    const catalog = makeCatalog(
+      [
+        baseEntity("Battlefleet", forceId),
+        baseEntity("Doctrine", doctrineGroupId, { slotIds: [doctrineSlotId] }),
+        baseEntity("Doctrine", doctrineId),
+      ],
+      [doctrinePlacement],
+      [doctrineSlot],
+    );
+    const force = rosterInstanceId("commonwealth-force");
+    const selectedDoctrine = rosterInstanceId("shared-doctrine");
+    const result = evaluateRoster(
+      catalog,
+      roster(catalog, [
+        instance(force, forceId, { forceInstanceId: force }),
+        instance(selectedDoctrine, doctrineId, {
+          parentInstanceId: force,
+          forceInstanceId: force,
+          placementId: doctrinePlacement.id,
+          slotId: doctrineSlotId,
+        }),
+      ]),
+    );
+
+    expect(result.status).toBe("valid");
+    expect(result.problems.some((problem) => problem.code === "PLACEMENT_OWNER_MISMATCH")).toBe(
+      false,
+    );
+  });
+
   it("applies effective hidden and helper slots without creating mandatory controls", () => {
     const shipId = id("visibility-ship");
     const slotOwnerId = id("visibility-slot-owner");

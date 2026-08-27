@@ -262,7 +262,18 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       contextualSlot &&
       contextualSlot.ownerId === placement.ownerId &&
       slotsFor(parent).some((slot) => slot.id === contextualSlot.id);
-    if (parent && placement.ownerId !== parent.definitionId && !slotBelongsToParent)
+    const slotBelongsToForce =
+      parent &&
+      contextualSlot?.kind === "Doctrine" &&
+      contextualSlot.ownerId === placement.ownerId &&
+      instance.forceInstanceId === parent.id &&
+      catalog.entities[parent.definitionId]?.kind === "Battlefleet";
+    if (
+      parent &&
+      placement.ownerId !== parent.definitionId &&
+      !slotBelongsToParent &&
+      !slotBelongsToForce
+    )
       addProblem(
         "PLACEMENT_OWNER_MISMATCH",
         "indeterminate",
