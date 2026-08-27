@@ -65,77 +65,79 @@ export function ShipCardProfile({
       style={{ "--ship-card-accent": template.accent } as CSSProperties}
     >
       <img alt="" aria-hidden="true" className="ship-card__background" src={template.imageUrl} />
-      <div aria-hidden="true" className="ship-card__role ship-card__role--left">
-        {role}
-      </div>
-      <div aria-hidden="true" className="ship-card__role ship-card__role--right">
-        {role}
-      </div>
-
-      <header className="ship-card__identity">
-        <h3>{model.name}</h3>
-        {tags.length ? <p>{tags.join(", ")}</p> : null}
-      </header>
-      <strong aria-label={`${model.victoryPoints} victory points`} className="ship-card__vpr">
-        {model.victoryPoints}
-      </strong>
-
-      <dl className="ship-card__limits">
-        <div>
-          <dt>Models</dt>
-          <dd>{profileValue(model, ["models"]) || model.modelQuantity.value}</dd>
+      <div className="ship-card__canvas">
+        <div aria-hidden="true" className="ship-card__role ship-card__role--left">
+          {role}
         </div>
-        <div>
-          <dt>Escorts</dt>
-          <dd>
-            {selectedLoadout
-              ? selectedGroupQuantity(model, ["escort"])
-              : groupLimit(model, ["escort"])}
-          </dd>
+        <div aria-hidden="true" className="ship-card__role ship-card__role--right">
+          {role}
         </div>
-        <div>
-          <dt>Generator hardpoints</dt>
-          <dd>{groupLimit(model, ["generator", "gen hp"])}</dd>
-        </div>
-      </dl>
 
-      <dl className="ship-card__stats">
-        {statFields.map((stat) => (
-          <div key={stat.label} title={stat.label}>
-            <dt>{stat.label}</dt>
-            <dd>{profileValue(model, stat.aliases) || "—"}</dd>
+        <header className="ship-card__identity">
+          <h3>{model.name}</h3>
+          {tags.length ? <p>{tags.join(", ")}</p> : null}
+        </header>
+        <strong aria-label={`${model.victoryPoints} victory points`} className="ship-card__vpr">
+          {model.victoryPoints}
+        </strong>
+
+        <dl className="ship-card__limits">
+          <div>
+            <dt>Models</dt>
+            <dd>{profileValue(model, ["models"]) || model.modelQuantity.value}</dd>
           </div>
-        ))}
-      </dl>
+          <div>
+            <dt>Escorts</dt>
+            <dd>
+              {selectedLoadout
+                ? selectedGroupQuantity(model, ["escort"])
+                : groupLimit(model, ["escort"])}
+            </dd>
+          </div>
+          <div>
+            <dt>Generator hardpoints</dt>
+            <dd>{groupLimit(model, ["generator", "gen hp"])}</dd>
+          </div>
+        </dl>
 
-      <div className="ship-card__copy ship-card__copy--properties">
-        <span className="visually-hidden">Properties: </span>
-        {properties ? (
-          <RuleLinks
-            kind="Property"
-            onOpenRule={openRule}
-            rules={properties.rules ?? []}
-            text={properties.value.plainText.trim()}
-          />
-        ) : (
-          "—"
-        )}
-      </div>
-      <div className="ship-card__copy ship-card__copy--systems">
-        <span className="visually-hidden">Systems: </span>
-        {systems.length
-          ? systems.map((system, index) => (
-              <span key={normalizeLabel(system.text)}>
-                {index ? ", " : null}
-                <RuleLinks
-                  kind="System"
-                  onOpenRule={openRule}
-                  rules={system.rules}
-                  text={system.text}
-                />
-              </span>
-            ))
-          : "—"}
+        <dl className="ship-card__stats">
+          {statFields.map((stat) => (
+            <div key={stat.label} title={stat.label}>
+              <dt>{stat.label}</dt>
+              <dd>{profileValue(model, stat.aliases) || "—"}</dd>
+            </div>
+          ))}
+        </dl>
+
+        <div className="ship-card__copy ship-card__copy--properties">
+          <span className="visually-hidden">Properties: </span>
+          {properties ? (
+            <RuleLinks
+              kind="Property"
+              onOpenRule={openRule}
+              rules={properties.rules ?? []}
+              text={properties.value.plainText.trim()}
+            />
+          ) : (
+            "—"
+          )}
+        </div>
+        <div className="ship-card__copy ship-card__copy--systems">
+          <span className="visually-hidden">Systems: </span>
+          {systems.length
+            ? systems.map((system, index) => (
+                <span key={normalizeLabel(system.text)}>
+                  {index ? ", " : null}
+                  <RuleLinks
+                    kind="System"
+                    onOpenRule={openRule}
+                    rules={system.rules}
+                    text={system.text}
+                  />
+                </span>
+              ))
+            : "—"}
+        </div>
       </div>
 
       <div

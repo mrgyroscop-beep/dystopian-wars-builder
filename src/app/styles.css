@@ -5955,9 +5955,9 @@ button.button {
 .ship-card {
   position: relative;
   isolation: isolate;
+  container-type: inline-size;
   width: min(84rem, 100%);
   min-width: 55rem;
-  aspect-ratio: 3 / 2;
   margin-inline: auto;
   overflow: hidden;
   color: #171716;
@@ -5965,6 +5965,12 @@ button.button {
   border-radius: 1.1% / 1.65%;
   box-shadow: 0 1rem 2.8rem rgb(0 0 0 / 36%);
   font-family: Georgia, "Times New Roman", serif;
+}
+
+.ship-card__canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
 }
 
 .ship-card__background {
@@ -6154,32 +6160,34 @@ button.button {
 }
 
 .ship-card__tables {
-  position: absolute;
-  top: 67.15%;
-  left: 7.85%;
+  position: relative;
+  z-index: 1;
   display: grid;
   width: 88.6%;
-  height: 23.15%;
+  height: auto;
+  min-height: 15.44cqw;
   grid-template-rows: 1fr;
-  overflow: hidden;
+  margin: -21.9% auto 6.45%;
+  overflow: visible;
   background: rgb(246 242 233 / 93%);
   border: 1px solid rgb(45 42 36 / 56%);
   font-family: Georgia, "Times New Roman", serif;
 }
 
 .ship-card__tables[data-has-options="true"] {
-  height: 27.5%;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 0.78fr);
+  min-height: 18.34cqw;
+  grid-template-rows: auto auto;
   gap: 0.15rem;
+  margin-bottom: 3.57%;
   background: var(--ship-card-accent);
   border-color: var(--ship-card-accent);
 }
 
 .ship-card__table-section {
   display: grid;
-  min-height: 0;
-  grid-template-rows: auto minmax(0, 1fr);
-  overflow: hidden;
+  min-height: min-content;
+  grid-template-rows: auto minmax(min-content, 1fr);
+  overflow: visible;
   background: rgb(246 242 233 / 96%);
 }
 
