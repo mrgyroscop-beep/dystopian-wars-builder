@@ -601,6 +601,7 @@ describe("pinned real domain model", () => {
         () => "real:doctrine:blocked",
       ),
     ).toThrow(/Chinese|Surface/iu);
+    let empireCreated = 0;
     const empireSelected = applyFleetDoctrineCommand(
       empireReady,
       first,
@@ -609,7 +610,7 @@ describe("pinned real domain model", () => {
         instanceId: "real:doctrine:force",
         optionId: paddlewheelReady.id,
       },
-      () => "real:doctrine:paddlewheel",
+      () => `real:doctrine:paddlewheel:${++empireCreated}`,
     );
     expect(
       evaluateRoster(first, empireSelected).totals.find((total) => total.resource === "points"),

@@ -24,7 +24,9 @@ describe("roster evaluator", () => {
     const conditionId = id("has-ship");
     const upperConditionId = id("at-most-two-ships");
     const conditionGroupId = id("ship-count-group");
+    const countConditionGroupId = id("count-condition-group");
     const repeatId = id("per-ship-repeat");
+    const optionRepeatId = id("per-option-repeat");
     const modifierId = id("points-modifier");
     const pointsCost = cost("akita-points", "350", "points", pointsType, "base", {
       modifierIds: [],
@@ -49,18 +51,28 @@ describe("roster evaluator", () => {
       operator: "and",
       conditionIds: [conditionId, upperConditionId],
     });
+    const countConditionGroup = expressionEntity("ConditionGroup", countConditionGroupId, {
+      operator: "count",
+      flags: { min: "2" },
+      conditionIds: [conditionId, upperConditionId],
+    });
     const repeat = expressionEntity("Repeat", repeatId, {
       field: "limit::selection",
       scope: "roster",
       references: [shipId],
+    });
+    const optionRepeat = expressionEntity("Repeat", optionRepeatId, {
+      field: "limit::selection",
+      scope: "roster",
+      references: [optionId],
     });
     const modifier = expressionEntity("Modifier", modifierId, {
       operator: "add",
       field: pointsType,
       scope: "self",
       value: "10",
-      conditionIds: [conditionGroupId],
-      repeatIds: [repeatId],
+      conditionIds: [conditionGroupId, countConditionGroupId],
+      repeatIds: [repeatId, optionRepeatId],
     });
     const ship = baseEntity("Model", shipId, {
       costIds: [pointsCost.id, vpCost.id],
@@ -82,7 +94,9 @@ describe("roster evaluator", () => {
         condition,
         upperCondition,
         conditionGroup,
+        countConditionGroup,
         repeat,
+        optionRepeat,
         modifier,
       ],
       [optionPlacement],
@@ -106,7 +120,7 @@ describe("roster evaluator", () => {
       expect.objectContaining({
         key: pointsType,
         resource: "points",
-        value: "765",
+        value: "810",
         complete: true,
       }),
       expect.objectContaining({
@@ -118,8 +132,13 @@ describe("roster evaluator", () => {
     ]);
     expect(result.contributions).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ costId: pointsCost.id, unitValue: "370", value: "740" }),
-        expect.objectContaining({ costId: deltaCost.id, origin: "definition", value: "25" }),
+        expect.objectContaining({ costId: pointsCost.id, unitValue: "380", value: "760" }),
+        expect.objectContaining({
+          costId: deltaCost.id,
+          origin: "definition",
+          quantity: 2,
+          value: "50",
+        }),
       ]),
     );
     expect(result.contributions.filter((entry) => entry.costId === deltaCost.id)).toHaveLength(1);
@@ -227,6 +246,98 @@ describe("roster evaluator", () => {
     });
   });
 
+  it("applies owner modifiers to a linked slot's constraints", () => {
+    const modelId = id("generator-ship-model");
+    const slotOwnerId = id("generator-group");
+    const slotIdValue = sid("generator-slot");
+    const firstOptionId = id("first-generator");
+    const secondOptionId = id("second-generator");
+    const minimum = expressionEntity("Constraint", id("generator-min"), {
+      operator: "min",
+      field: "selections",
+      scope: "parent",
+      value: "0",
+    });
+    const maximum = expressionEntity("Constraint", id("generator-max"), {
+      operator: "max",
+      field: "selections",
+      scope: "parent",
+      value: "1",
+    });
+    const expandedMaximum = expressionEntity("Modifier", id("expanded-generator-max"), {
+      operator: "set",
+      field: maximum.id,
+      value: "2",
+    });
+    const slotOwner = baseEntity("Generator", slotOwnerId, {
+      slotIds: [slotIdValue],
+      constraintIds: [minimum.id, maximum.id],
+    });
+    const slotPlacement = placement("generator-group-placement", modelId, slotOwnerId);
+    const choices = [firstOptionId, secondOptionId];
+    const choicePlacements = choices.map((choice, index) =>
+      placement(`generator-choice-${index}`, slotOwnerId, choice, {}, slotIdValue, index),
+    );
+    const slot: Slot = {
+      contractVersion: 1,
+      id: slotIdValue,
+      ownerId: slotOwnerId,
+      kind: "Generator",
+      label: presentation("Generators"),
+      placementIds: choicePlacements.map((choice) => choice.id),
+      optionPlacementIds: choicePlacements.map((choice) => choice.id),
+      cardinality: {
+        contractVersion: 1,
+        minimum: amount("0"),
+        maximum: amount("1"),
+        effective: "deferred-to-kan-32",
+      },
+      costIds: [],
+      constraintIds: [minimum.id, maximum.id],
+      conditionIds: [],
+      modifierIds: [],
+      hidden: false,
+      helper: false,
+      semantics: { contractVersion: 1, selection: "option", evaluation: "deferred-to-kan-32" },
+      provenance: provenance(slotOwnerId),
+    };
+    const catalog = makeCatalog(
+      [
+        baseEntity("Model", modelId, { modifierIds: [expandedMaximum.id] }),
+        slotOwner,
+        ...choices.map((choice) => baseEntity("Option", choice)),
+        minimum,
+        maximum,
+        expandedMaximum,
+      ],
+      [slotPlacement, ...choicePlacements],
+      [slot],
+    );
+    const root = rosterInstanceId("generator-ship");
+    const result = evaluateRoster(
+      catalog,
+      roster(catalog, [
+        instance(root, modelId, { forceInstanceId: root }),
+        ...choices.map((choice, index) =>
+          instance(rosterInstanceId(`generator-${index}`), choice, {
+            parentInstanceId: root,
+            forceInstanceId: root,
+            placementId: choicePlacements[index]!.id,
+            slotId: slotIdValue,
+          }),
+        ),
+      ]),
+    );
+
+    expect(result.status).toBe("valid");
+    expect(result.slots).toContainEqual(
+      expect.objectContaining({ ownerInstanceId: root, selected: 2, maximum: "2" }),
+    );
+    expect(result.problems).not.toContainEqual(
+      expect.objectContaining({ code: "SLOT_MAX_EXCEEDED" }),
+    );
+  });
+
   it("reports mandatory category constraints with an exact instance target", () => {
     const battlefleetId = id("battlefleet");
     const categoryId = id("required-category");
@@ -265,6 +376,54 @@ describe("roster evaluator", () => {
       expected: "min 2",
     });
     expect(problem?.target).toMatchObject({ instanceId: root, entityId: battlefleetId });
+  });
+
+  it("applies Battlefleet-conditioned category modifiers to force requirements", () => {
+    const battlefleetId = id("battlefleet-with-role-change");
+    const categoryId = id("battlefleet-role");
+    const unitId = id("role-changing-unit");
+    const condition = expressionEntity("Condition", id("inside-battlefleet"), {
+      operator: "instanceOf",
+      field: "selections",
+      scope: "force",
+      value: "1",
+      references: [battlefleetId],
+    });
+    const roleModifier = expressionEntity("Modifier", id("battlefleet-role-modifier"), {
+      operator: "set-primary",
+      field: "category",
+      value: categoryId,
+      conditionIds: [condition.id],
+    });
+    const requirement = expressionEntity("Constraint", id("battlefleet-role-requirement"), {
+      operator: "min",
+      field: "limit::category",
+      scope: "root-entry",
+      value: "1",
+      references: [categoryId],
+    });
+    const catalog = makeCatalog([
+      baseEntity("Battlefleet", battlefleetId, { constraintIds: [requirement.id] }),
+      baseEntity("Category", categoryId),
+      baseEntity("Unit", unitId, { modifierIds: [roleModifier.id] }),
+      condition,
+      roleModifier,
+      requirement,
+    ]);
+    const root = rosterInstanceId("battlefleet");
+    const unit = rosterInstanceId("unit");
+    const result = evaluateRoster(
+      catalog,
+      roster(catalog, [
+        instance(root, battlefleetId, { forceInstanceId: root }),
+        instance(unit, unitId, { parentInstanceId: root, forceInstanceId: root }),
+      ]),
+    );
+
+    expect(result.status).toBe("valid");
+    expect(result.problems).not.toContainEqual(
+      expect.objectContaining({ sourceEntityId: requirement.id }),
+    );
   });
 
   it("applies self, parent and force scopes plus constraint modifiers", () => {
@@ -477,6 +636,69 @@ describe("roster evaluator", () => {
     expect(result.problems.some((problem) => problem.code === "PLACEMENT_OWNER_MISMATCH")).toBe(
       false,
     );
+  });
+
+  it("charges only the more expensive nested doctrine for Multiple Manufacturers", () => {
+    const pointsType = id("points-type");
+    const forceId = id("enlightened-force");
+    const multipleManufacturersId = id("multiple-manufacturers");
+    const doctrineRootId = id("fleet-doctrines");
+    const peerFamilyId = id("driven-by-the-peer");
+    const forgeFamilyId = id("constructed-by-the-forge");
+    const peerDoctrineId = id("peer-doctrine");
+    const forgeDoctrineId = id("forge-doctrine");
+    const peerCost = cost("peer-doctrine-cost", "20", "points", pointsType, "delta");
+    const forgeCost = cost("forge-doctrine-cost", "30", "points", pointsType, "delta");
+    const peerPlacement = placement("peer-doctrine", peerFamilyId, peerDoctrineId);
+    const forgePlacement = placement("forge-doctrine", forgeFamilyId, forgeDoctrineId);
+    const catalog = makeCatalog(
+      [
+        baseEntity("CostType", pointsType),
+        baseEntity("Rule", multipleManufacturersId, {
+          label: presentation("Multiple Manufacturers"),
+        }),
+        baseEntity("Battlefleet", forceId, { ruleIds: [multipleManufacturersId] }),
+        baseEntity("Option", doctrineRootId, { label: presentation("Fleet Doctrines") }),
+        baseEntity("OptionSlot", peerFamilyId),
+        baseEntity("OptionSlot", forgeFamilyId),
+        baseEntity("Option", peerDoctrineId, { costIds: [peerCost.id] }),
+        baseEntity("Option", forgeDoctrineId, { costIds: [forgeCost.id] }),
+        peerCost,
+        forgeCost,
+      ],
+      [
+        placement("peer-family", doctrineRootId, peerFamilyId),
+        placement("forge-family", doctrineRootId, forgeFamilyId),
+        peerPlacement,
+        forgePlacement,
+      ],
+    );
+    const force = rosterInstanceId("enlightened-force");
+    const peerFamily = rosterInstanceId("peer-family");
+    const forgeFamily = rosterInstanceId("forge-family");
+    const result = evaluateRoster(
+      catalog,
+      roster(catalog, [
+        instance(force, forceId, { forceInstanceId: force }),
+        instance(peerFamily, peerFamilyId, { parentInstanceId: force, forceInstanceId: force }),
+        instance(rosterInstanceId("peer-doctrine"), peerDoctrineId, {
+          parentInstanceId: peerFamily,
+          forceInstanceId: force,
+          placementId: peerPlacement.id,
+        }),
+        instance(forgeFamily, forgeFamilyId, { parentInstanceId: force, forceInstanceId: force }),
+        instance(rosterInstanceId("forge-doctrine"), forgeDoctrineId, {
+          parentInstanceId: forgeFamily,
+          forceInstanceId: force,
+          placementId: forgePlacement.id,
+        }),
+      ]),
+    );
+
+    expect(result.totals.find((total) => total.resource === "points")).toMatchObject({
+      value: "30",
+      complete: true,
+    });
   });
 
   it("applies effective hidden and helper slots without creating mandatory controls", () => {

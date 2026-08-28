@@ -3848,13 +3848,312 @@ button.button {
   overflow: hidden;
 }
 
-.battlefleet-doctrine-group {
+.battlefleet-overview-group {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.45rem;
 }
 
-.battlefleet-doctrine-group > .eyebrow {
+.battlefleet-properties {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--signal);
+  border-radius: 0.55rem;
+  overflow: hidden;
+}
+
+.battlefleet-properties__toggle {
+  display: grid;
+  width: 100%;
+  min-height: 4.5rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  color: var(--text-primary);
+  text-align: left;
+  background: var(--surface);
+  border: 0;
+  cursor: pointer;
+}
+
+.battlefleet-properties__toggle:hover {
+  background: var(--surface-subtle);
+}
+
+.battlefleet-properties__toggle:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+.battlefleet-properties__mark {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  color: var(--surface);
+  background: var(--signal);
+  font-family: "Roboto Mono", "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.battlefleet-properties__copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.battlefleet-properties__copy .eyebrow {
   margin: 0;
+}
+
+.battlefleet-properties__copy strong {
+  overflow: hidden;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battlefleet-properties__copy small {
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battlefleet-properties__chevron {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  color: var(--signal);
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.battlefleet-properties__content {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.85rem;
+  background: var(--surface-subtle);
+  border-top: 1px solid var(--border);
+}
+
+.battlefleet-properties__summary {
+  padding: 0.7rem 0.8rem;
+  margin: 0;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border-left: 3px solid var(--signal);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.battlefleet-properties__section {
+  min-width: 0;
+}
+
+.battlefleet-properties__section h4 {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.battlefleet-properties__section > p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.battlefleet-properties__elements {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.battlefleet-properties__elements li {
+  display: grid;
+  min-width: 0;
+  min-height: 3rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0.35rem;
+}
+
+.battlefleet-properties__elements li[data-state="ready"] {
+  border-left-color: var(--success);
+}
+
+.battlefleet-properties__elements li[data-state="required"],
+.battlefleet-properties__elements li[data-state="error"] {
+  border-left-color: var(--error);
+}
+
+.battlefleet-properties__elements li > span {
+  display: grid;
+  min-width: 0;
+  gap: 0.08rem;
+}
+
+.battlefleet-properties__elements strong,
+.battlefleet-properties__elements small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battlefleet-properties__elements small {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+}
+
+.battlefleet-properties__elements b {
+  display: grid;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  color: var(--brand);
+  background: var(--canvas);
+  border-radius: 50%;
+  font-family: "Roboto Mono", "IBM Plex Mono", monospace;
+  font-size: 0.75rem;
+}
+
+.battlefleet-properties__rules {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.battlefleet-properties__rule {
+  padding: 0.7rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+.battlefleet-properties__rule header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.55rem;
+}
+
+.battlefleet-properties__rule header strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+}
+
+.battlefleet-properties__rule header small,
+.battlefleet-properties__fallback {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+}
+
+.battlefleet-properties__fallback {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  margin-top: 0.35rem;
+  color: var(--warning-text);
+  background: var(--warning-tint);
+  border-radius: 99rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.battlefleet-properties__rule p {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.battlefleet-properties__applied {
+  padding: 0.7rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+.battlefleet-properties__applied dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+}
+
+.battlefleet-properties__applied dl > div {
+  min-width: 0;
+  padding: 0.25rem 0.65rem;
+}
+
+.battlefleet-properties__applied dl > div:first-child {
+  padding-left: 0;
+}
+
+.battlefleet-properties__applied dl > div + div {
+  border-left: 1px solid var(--border);
+}
+
+.battlefleet-properties__applied dt {
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.battlefleet-properties__applied dd {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.battlefleet-properties__applied > p {
+  padding-top: 0.65rem;
+  margin-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 40rem) {
+  .battlefleet-properties__toggle {
+    gap: 0.55rem;
+    padding-inline: 0.65rem;
+  }
+
+  .battlefleet-properties__copy strong {
+    font-size: 1rem;
+  }
+
+  .battlefleet-properties__elements,
+  .battlefleet-properties__applied dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .battlefleet-properties__applied dl > div,
+  .battlefleet-properties__applied dl > div:first-child {
+    padding: 0.45rem 0;
+  }
+
+  .battlefleet-properties__applied dl > div + div {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
 }
 
 .fleet-doctrine__toggle {
@@ -8702,12 +9001,23 @@ button.button {
 
   .main-content--workspace .battlefleet-switcher {
     grid-column: 1 / -1;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.35rem;
     padding: 0.38rem 0.6rem 0.45rem;
     border-top: 1px solid var(--border);
     border-left: 0;
+  }
+
+  .main-content--workspace .battlefleet-switcher__force {
+    max-width: 100%;
+    border-radius: 0.45rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .main-content--workspace .battlefleet-switcher__force button {
+    flex: 0 0 auto;
   }
 
   .main-content--workspace .battlefleet-switcher select {

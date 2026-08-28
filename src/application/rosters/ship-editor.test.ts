@@ -8,6 +8,7 @@ import {
   toSafePresentation,
   type DomainCatalog,
   type DomainEntity,
+  type Placement,
 } from "../../domain/catalog";
 import {
   rosterInstanceId,
@@ -125,6 +126,196 @@ describe("catalog-driven ship editor application boundary", () => {
         instance.definitionId.includes("discount"),
       ),
     ).toBe(false);
+  });
+
+  it("materializes and removes a Battlefleet-conditioned automatic option", () => {
+    const fixture = setup();
+    const testId = (tag: string, upstreamId: string) =>
+      entityId(sourceNodeId("ship-editor-test", tag, upstreamId));
+    const optionId = testId("selectionEntry", "automatic-escort-discount");
+    const costId = testId("cost", "automatic-escort-discount-cost");
+    const minimumId = testId("constraint", "automatic-escort-discount-minimum");
+    const maximumId = testId("constraint", "automatic-escort-discount-maximum");
+    const conditionId = testId("condition", "automatic-escort-discount-condition");
+    const modifierId = testId("modifier", "automatic-escort-discount-modifier");
+    const optionTemplate = entityByLabel(fixture.catalog, "Repair Crane");
+    const costTemplate = Object.values(fixture.catalog.entities).find(
+      (candidate) => candidate.kind === "Cost",
+    )!;
+    const constraintTemplate = Object.values(fixture.catalog.entities).find(
+      (candidate) => candidate.kind === "Constraint",
+    )!;
+    const conditionTemplate = Object.values(fixture.catalog.entities).find(
+      (candidate) => candidate.id === "demo-akita-four-escorts",
+    )! as Extract<DomainEntity, { kind: "Condition" }>;
+    const modifierTemplate = Object.values(fixture.catalog.entities).find(
+      (candidate) => candidate.id === "demo-akita-escort-discount-modifier",
+    )! as Extract<DomainEntity, { kind: "Modifier" }>;
+    const escort = entityByLabel(fixture.catalog, "Tanuki Escort");
+    const modelPlacement = Object.values(fixture.catalog.placements).find(
+      (candidate) =>
+        candidate.ownerId === fixture.unit.definitionId &&
+        fixture.catalog.entities[candidate.definitionId!]?.kind === "Model",
+    )!;
+    const placementIdValue = placementId(
+      fixture.unit.definitionId,
+      sourceNodeId("ship-editor-test", "selectionEntry", "automatic-escort-discount-placement"),
+      999,
+    );
+    const minimum = {
+      ...constraintTemplate,
+      id: minimumId,
+      expression: {
+        ...constraintTemplate.expression,
+        operator: "min" as const,
+        field: "selections",
+        scope: "parent",
+        value: "0",
+        flags: { automatic: "true" },
+      },
+      modifierIds: [],
+      conditionIds: [],
+    };
+    const maximum = {
+      ...constraintTemplate,
+      id: maximumId,
+      expression: {
+        ...constraintTemplate.expression,
+        operator: "max" as const,
+        field: "selections",
+        scope: "parent",
+        value: "1",
+        flags: {},
+      },
+      modifierIds: [],
+      conditionIds: [],
+    };
+    const condition = {
+      ...conditionTemplate,
+      id: conditionId,
+      expression: {
+        ...conditionTemplate.expression,
+        operator: "atLeast" as const,
+        field: "selections",
+        scope: "unit",
+        value: "1",
+        references: [escort.id],
+        referenceResolutions: [],
+      },
+    };
+    const modifier = {
+      ...modifierTemplate,
+      id: modifierId,
+      expression: {
+        ...modifierTemplate.expression,
+        operator: "set" as const,
+        field: minimumId,
+        value: "1",
+      },
+      conditionIds: [conditionId],
+      repeatIds: [],
+    };
+    const discountCost = {
+      ...costTemplate,
+      id: costId,
+      amount: { contractVersion: 1 as const, state: "value" as const, value: "-5" },
+      semantics: {
+        ...costTemplate.semantics,
+        amount: { contractVersion: 1 as const, state: "value" as const, value: "-5" },
+        resource: "points" as const,
+        role: "delta" as const,
+      },
+    };
+    const automaticOption = {
+      ...optionTemplate,
+      id: optionId,
+      kind: "Option" as const,
+      label: toSafePresentation("Escort discount"),
+      attributes: { ...optionTemplate.attributes, hidden: "true" },
+      costIds: [costId],
+      constraintIds: [minimumId, maximumId],
+      modifierIds: [modifierId],
+      slotIds: [],
+    } as DomainEntity;
+    const automaticPlacement: Placement = {
+      ...modelPlacement,
+      id: placementIdValue,
+      ownerId: fixture.unit.definitionId,
+      definitionId: optionId,
+      slotId: null,
+      order: 999,
+      overlay: {
+        ...modelPlacement.overlay,
+        attributes: { hidden: "true" },
+        cardinality: {
+          contractVersion: 1 as const,
+          minimum: { contractVersion: 1 as const, state: "zero" as const, value: "0" },
+          maximum: { contractVersion: 1 as const, state: "value" as const, value: "1" },
+          effective: "deferred-to-kan-32" as const,
+        },
+        costIds: [costId],
+        constraintIds: [minimumId, maximumId],
+        conditionIds: [],
+        modifierIds: [modifierId],
+        repeatIds: [],
+      },
+    };
+    const catalog: DomainCatalog = {
+      ...fixture.catalog,
+      entities: {
+        ...fixture.catalog.entities,
+        [optionId]: automaticOption,
+        [costId]: discountCost,
+        [minimumId]: minimum,
+        [maximumId]: maximum,
+        [conditionId]: condition,
+        [modifierId]: modifier,
+      },
+      placements: {
+        ...fixture.catalog.placements,
+        [placementIdValue]: automaticPlacement,
+      },
+    };
+    const configured = { ...fixture, catalog };
+    let snapshot = materialize(configured);
+    let model = project(snapshot, configured);
+    const initialPoints = Number(model.totalPoints);
+    const escorts = group(model, "Escorts");
+    const escortOption = option(model, "Escorts", "Tanuki Escort");
+
+    snapshot = applyShipEditorCommand(
+      snapshot,
+      catalog,
+      {
+        type: "set-choice-quantity",
+        instanceId: fixture.unit.id,
+        groupId: escorts.id,
+        optionId: escortOption.id,
+        quantity: 2,
+      },
+      fixture.createId,
+    );
+    model = project(snapshot, configured);
+    expect(
+      Object.values(snapshot.instances).filter((instance) => instance.definitionId === optionId),
+    ).toHaveLength(1);
+    expect(Number(model.totalPoints)).toBe(initialPoints + 15);
+
+    snapshot = applyShipEditorCommand(
+      snapshot,
+      catalog,
+      {
+        type: "set-choice-quantity",
+        instanceId: fixture.unit.id,
+        groupId: escorts.id,
+        optionId: escortOption.id,
+        quantity: 0,
+      },
+      fixture.createId,
+    );
+    expect(
+      Object.values(snapshot.instances).filter((instance) => instance.definitionId === optionId),
+    ).toHaveLength(0);
   });
 
   it("shows and edits a standalone option linked directly from the Unit", () => {

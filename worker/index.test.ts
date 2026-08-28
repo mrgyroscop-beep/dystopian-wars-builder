@@ -55,7 +55,7 @@ describe("Worker API", () => {
     expect(healthResponseSchema.parse(payload)).toEqual({
       status: "ok",
       environment: "local",
-      appVersion: "0.2.17",
+      appVersion: "0.2.18",
       catalogVersion: "not-imported",
       commitSha: "0000000000000000000000000000000000000000",
     });

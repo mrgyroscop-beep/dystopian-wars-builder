@@ -26,6 +26,7 @@ import {
 import { orbatCardFor } from "../app/orbatCards";
 import { useDocumentTitle } from "../app/useDocumentTitle";
 import { EyeIcon } from "../ui/EyeIcon";
+import { BattlefleetPropertiesPanel } from "../ui/BattlefleetProperties";
 import { FleetDoctrinePanel } from "../ui/FleetDoctrine";
 import { OrbatPageIcon } from "../ui/OrbatPageIcon";
 import { ShipOrbatPageDialog, ShipProfileDialog } from "../ui/ProfileDialog";
@@ -966,14 +967,16 @@ function CompositionPane({
         </div>
       ) : null}
       <div className="element-list">
-        {model.doctrines.map((doctrine) => {
-          const force = model.roster.forces.find(
-            (candidate) => candidate.instanceId === doctrine.ownerInstanceId,
+        {model.roster.forces.map((force) => {
+          const doctrine = model.doctrines.find(
+            (candidate) => candidate.ownerInstanceId === force.instanceId,
           );
           return (
-            <section className="battlefleet-doctrine-group" key={doctrine.ownerInstanceId}>
-              <p className="eyebrow">{force?.label ?? "Battlefleet"}</p>
-              <FleetDoctrinePanel busy={busy} doctrine={doctrine} onCommand={onDoctrineCommand} />
+            <section className="battlefleet-overview-group" key={force.instanceId}>
+              <BattlefleetPropertiesPanel force={force} />
+              {doctrine ? (
+                <FleetDoctrinePanel busy={busy} doctrine={doctrine} onCommand={onDoctrineCommand} />
+              ) : null}
             </section>
           );
         })}

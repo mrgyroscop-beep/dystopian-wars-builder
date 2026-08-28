@@ -152,6 +152,20 @@ const testDependencies = {
             text: "Корабли получают единый оперативный приказ адмирала.",
           },
         },
+        {
+          id: "R4",
+          title: "Harbour Discipline",
+          text: "Once per Round, re-roll one Blank result for a friendly Patrol unit.",
+          factions: ["Empire"],
+          page: null,
+          translation: {
+            id: "R4",
+            language: "ru" as const,
+            sourceTitle: "Harbour Discipline",
+            title: "Дисциплина гавани",
+            text: "Один раз за раунд перебросьте один пустой результат дружественного отряда Patrol.",
+          },
+        },
       ]),
   },
   healthGateway: { read: readHealth } satisfies HealthGateway,
@@ -192,7 +206,7 @@ describe("application routes", () => {
     expect(screen.getByRole("navigation", { name: "Основная навигация" })).toBeVisible();
     expect(screen.getByRole("main")).toBeVisible();
     expect(screen.getByRole("contentinfo")).toHaveTextContent(
-      "Dystopian Wars 4.0 · версия 0.2.17 · локальные флоты доступны без регистрации",
+      "Dystopian Wars 4.0 · версия 0.2.18 · локальные флоты доступны без регистрации",
     );
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Флоты" })).toHaveAttribute("aria-current", "page");
@@ -540,7 +554,41 @@ describe("application routes", () => {
     expect(document.getElementById(firstIssue.getAttribute("aria-controls")!)).toBeVisible();
   });
 
-  it("shows doctrine as the first accordion in composition and opens its description", async () => {
+  it("shows translated Battlefleet properties, organization and applied builder state", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    const { container } = renderRoute("/rosters/scaffold-demo");
+
+    const toggle = await screen.findByRole("button", {
+      name: /Свойства Battlefleet.*Harbour Patrol/u,
+    });
+    const properties = container.querySelector(".battlefleet-properties")!;
+    const doctrine = container.querySelector(".fleet-doctrine")!;
+    const firstFleetElement = container.querySelector(".fleet-element")!;
+    expect(
+      properties.compareDocumentPosition(doctrine) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      doctrine.compareDocumentPosition(firstFleetElement) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveAccessibleName(/0 кораблей/u);
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const content = document.getElementById(toggle.getAttribute("aria-controls")!);
+    expect(content).not.toBeNull();
+    expect(within(content!).getByRole("heading", { name: "Организация флота" })).toBeVisible();
+    expect(within(content!).getByText("Flagship Element")).toBeVisible();
+    expect(within(content!).getByText("1–3")).toBeVisible();
+    expect(within(content!).getByText("0 из 2 заполнено")).toBeVisible();
+    expect(await within(content!).findByText("Дисциплина гавани")).toBeVisible();
+    expect(content).toHaveTextContent(
+      "Один раз за раунд перебросьте один пустой результат дружественного отряда Patrol.",
+    );
+  });
+
+  it("shows doctrine before fleet elements and opens its description", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();
     const { container } = renderRoute("/rosters/scaffold-demo");

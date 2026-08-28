@@ -106,6 +106,28 @@ describe("roster workspace application boundary", () => {
         }),
       ]),
     );
+    expect(first!.model.roster.forces[0]).toMatchObject({
+      label: "Harbour Patrol",
+      properties: {
+        summary: "Учебный Battlefleet для проверки обязательных и дополнительных элементов флота.",
+        requiredElements: 2,
+        completedRequiredElements: 0,
+        shipCount: 0,
+        rules: [
+          {
+            label: "Harbour Discipline",
+            description:
+              "Once per Round, this Admiral may re-roll one Blank result for a friendly Patrol unit.",
+          },
+        ],
+      },
+    });
+    expect(first!.model.roster.forces[0]!.properties.elements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Flagship Element", minimum: 1, maximum: 3 }),
+        expect.objectContaining({ label: "Line Element", minimum: 1, maximum: 6 }),
+      ]),
+    );
     expect(Object.keys(savedAfterFirstOpen.roster.instances)).toHaveLength(3);
     expect(first!.model.problems).toEqual(
       expect.arrayContaining([
@@ -190,6 +212,9 @@ describe("roster workspace application boundary", () => {
     });
 
     expect(selected.doctrine!.groups[0]!.options[0]!.selectedQuantity).toBe(1);
+    expect(selected.problems).not.toContainEqual(
+      expect.objectContaining({ code: "PLACEMENT_OWNER_MISMATCH" }),
+    );
     expect(selected.summary.persistence).toBe("unsaved");
     await session.save();
     const reopened = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;

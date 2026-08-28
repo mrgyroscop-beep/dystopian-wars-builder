@@ -49,11 +49,22 @@ export function createDemonstrationFleetCatalog(): DomainCatalog {
   const patrolMaximumId = entityId("demo-patrol-maximum");
   const akitaDiscountModifierId = entityId("demo-akita-escort-discount-modifier");
   const akitaRequirementModifierId = entityId("demo-akita-kagutsuchi-requirement");
+  const harbourDisciplineRuleId = entityId("demo-rule-harbour-discipline");
   const categories = categoryNames.map((name) =>
     entity("Category", entityId(`demo-category-${name.toLocaleLowerCase("en")}`), name),
   );
   const entities: DomainEntity[] = [
-    entity("Battlefleet", empireBattlefleetId, "Harbour Patrol"),
+    entity("Battlefleet", empireBattlefleetId, "Harbour Patrol", {
+      description: presentation(
+        "Учебный Battlefleet для проверки обязательных и дополнительных элементов флота.",
+      ),
+      ruleIds: [harbourDisciplineRuleId],
+    }),
+    entity("Rule", harbourDisciplineRuleId, "Harbour Discipline", {
+      description: presentation(
+        "Once per Round, this Admiral may re-roll one Blank result for a friendly Patrol unit.",
+      ),
+    }),
     entity("Battlefleet", empireLineBattlefleetId, "Line Squadron"),
     entity("BattlefleetElement", flagshipElementId, "Flagship Element", {
       constraintIds: [flagshipMaximumId],

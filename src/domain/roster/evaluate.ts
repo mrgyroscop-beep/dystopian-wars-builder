@@ -57,6 +57,7 @@ const EMPTY_TARGET: ProblemTarget = {
 };
 
 const MULTIPLE_MANUFACTURERS_RULE = "Multiple Manufacturers";
+const FLEET_DOCTRINES_LABEL = /fleet\s+doctrines?/iu;
 
 export function rosterInstanceId(value: string): RosterInstanceId {
   return value as RosterInstanceId;
@@ -75,6 +76,8 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
   const children = new Map<string, RosterSelectionInstance[]>();
   const placementsByOwner = new Map<string, Placement[]>();
   const upstreamEntities = new Map<string, EntityId[]>();
+  const categoryEvaluationStack = new Set<string>();
+  const effectiveCategoryCache = new Map<string, ReadonlySet<EntityId>>();
 
   for (const placement of Object.values(catalog.placements)) {
     const owned = placementsByOwner.get(placement.ownerId) ?? [];
@@ -362,12 +365,11 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
         )
       )
         continue;
+      const doctrineDefinitionIds = fleetDoctrineDefinitionIds(catalog, battlefleet);
       const doctrineInstanceIds = new Set(
         instances.flatMap((instance) => {
-          const definition = catalog.entities[instance.definitionId];
-          return instance.parentInstanceId === force.id &&
-            instance.forceInstanceId === force.id &&
-            (definition?.kind === "Option" || definition?.kind === "Doctrine")
+          return instance.forceInstanceId === force.id &&
+            doctrineDefinitionIds.has(instance.definitionId)
             ? [instance.id]
             : [];
         }),
@@ -447,7 +449,8 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       indeterminateExpression(modified.code, instance, cost.id);
       return;
     }
-    const value = multiplyDecimalByInteger(modified.value, instance.quantity);
+    const quantity = effectiveCostQuantity(instance);
+    const value = multiplyDecimalByInteger(modified.value, quantity);
     total.value = addDecimal(total.value, value);
     contributions.push({
       instanceId: instance.id,
@@ -457,10 +460,28 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       costTypeId: cost.semantics.costTypeId,
       sourceCostTypeId: cost.semantics.sourceCostTypeId,
       role: cost.semantics.role === "delta" ? "delta" : "base",
-      quantity: instance.quantity,
+      quantity,
       unitValue: decimalToString(modified.value),
       value: decimalToString(value),
     });
+  }
+
+  function effectiveCostQuantity(instance: RosterSelectionInstance): number {
+    let quantity = instance.quantity;
+    let parentId = instance.parentInstanceId;
+    const visited = new Set<string>();
+    while (parentId) {
+      if (visited.has(parentId)) break;
+      visited.add(parentId);
+      const parent = roster.instances[parentId];
+      if (!parent) break;
+      if (catalog.entities[parent.definitionId]?.kind === "Model") {
+        quantity *= parent.quantity;
+        break;
+      }
+      parentId = parent.parentInstanceId;
+    }
+    return quantity;
   }
 
   function totalFor(cost: Cost): MutableTotal {
@@ -510,7 +531,6 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     incoming: Placement | undefined,
     constraintIds: readonly EntityId[],
   ): void {
-    if (entity.kind !== "Model") return;
     let minimum: DecimalValue | null = null;
     let maximum: DecimalValue | null = null;
     let foundMinimum = false;
@@ -861,7 +881,14 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       const raw = constraint.expression.value ? parseDecimal(constraint.expression.value) : null;
       if (!raw || !constraint.expression.evaluable)
         return { state: "unknown", code: "UNEVALUABLE_SLOT_CONSTRAINT" };
-      const modified = applyModifiers(raw, constraint.modifierIds, instance, () => true);
+      const entity = catalog.entities[instance.definitionId];
+      const incoming = instance.placementId ? catalog.placements[instance.placementId] : undefined;
+      const modified = applyModifiers(
+        raw,
+        effectiveConstraintModifierIds(constraint, entity, incoming),
+        instance,
+        () => true,
+      );
       if (modified.state === "unknown") return modified;
       if (constraint.expression.operator === "min") {
         minimum = minimum && compareDecimal(minimum, modified.value) > 0 ? minimum : modified.value;
@@ -1000,7 +1027,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     const entity = catalog.entities[conditionId];
     if (!entity || (entity.kind !== "Condition" && entity.kind !== "ConditionGroup"))
       return { state: "unknown", code: "INVALID_CONDITION_REFERENCE" };
-    if (!entity.expression.evaluable) {
+    if (!entity.expression.evaluable && entity.expression.operator !== "count") {
       const absentReference =
         entity.kind === "Condition" ? evaluateAbsentReferenceCondition(entity) : null;
       if (absentReference) return absentReference;
@@ -1025,6 +1052,24 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           values.find(
             (value): value is Extract<Truth, { state: "unknown" }> => value.state === "unknown",
           ) ?? { state: "false" }
+        );
+      }
+      if (entity.expression.operator === "count") {
+        const minimum = parseNonNegativeInteger(entity.expression.flags["min"]);
+        const maximum = parseNonNegativeInteger(entity.expression.flags["max"]);
+        if (minimum === null && maximum === null)
+          return { state: "unknown", code: "INVALID_COUNT_CONDITION_GROUP" };
+        const trueCount = values.filter((value) => value.state === "true").length;
+        const unknownCount = values.filter((value) => value.state === "unknown").length;
+        if (maximum !== null && trueCount > maximum) return { state: "false" };
+        if (minimum !== null && trueCount + unknownCount < minimum) return { state: "false" };
+        const minimumSettled = minimum === null || trueCount >= minimum;
+        const maximumSettled = maximum === null || trueCount + unknownCount <= maximum;
+        if (minimumSettled && maximumSettled) return { state: "true" };
+        return (
+          values.find(
+            (value): value is Extract<Truth, { state: "unknown" }> => value.state === "unknown",
+          ) ?? { state: "true" }
         );
       }
       return { state: "unknown", code: "UNSUPPORTED_CONDITION_GROUP" };
@@ -1056,6 +1101,12 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       default:
         return { state: "unknown", code: "UNSUPPORTED_CONDITION_OPERATOR" };
     }
+  }
+
+  function parseNonNegativeInteger(value: string | undefined): number | null {
+    if (value === undefined || !/^\d+$/u.test(value)) return null;
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : null;
   }
 
   function evaluateAbsentReferenceCondition(
@@ -1264,10 +1315,43 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
 
   function instanceMatches(instance: RosterSelectionInstance, targetId: EntityId): boolean {
     if (instance.definitionId === targetId) return true;
+    return effectiveCategoryIds(instance).has(targetId);
+  }
+
+  function effectiveCategoryIds(instance: RosterSelectionInstance): Set<EntityId> {
+    const cached = effectiveCategoryCache.get(instance.id);
+    if (cached) return new Set(cached);
     const entity = catalog.entities[instance.definitionId];
-    if (entity?.categoryIds.includes(targetId)) return true;
     const placement = instance.placementId ? catalog.placements[instance.placementId] : undefined;
-    return placement?.overlay.categoryIds.includes(targetId) ?? false;
+    const categories = new Set<EntityId>([
+      ...(entity?.categoryIds ?? []),
+      ...(placement?.overlay.categoryIds ?? []),
+    ]);
+    if (categoryEvaluationStack.has(instance.id)) return categories;
+    categoryEvaluationStack.add(instance.id);
+    try {
+      const modifierIds = [
+        ...new Set([...(entity?.modifierIds ?? []), ...(placement?.overlay.modifierIds ?? [])]),
+      ].sort();
+      for (const modifierId of modifierIds) {
+        const modifier = catalog.entities[modifierId];
+        if (
+          !modifier ||
+          modifier.kind !== "Modifier" ||
+          modifier.expression.field !== "category" ||
+          !["add", "set-primary"].includes(modifier.expression.operator ?? "")
+        )
+          continue;
+        const enabled = evaluateConditions(modifier.conditionIds, instance, new Set());
+        if (enabled.state !== "true" || !modifier.expression.value) continue;
+        const target = resolveEntityToken(modifier.expression.value);
+        if (target.state === "known" && target.entityId) categories.add(target.entityId);
+      }
+      effectiveCategoryCache.set(instance.id, categories);
+      return new Set(categories);
+    } finally {
+      categoryEvaluationStack.delete(instance.id);
+    }
   }
 
   function implicitTargetForEntity(entity: DomainEntity): EntityId {
@@ -1414,7 +1498,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
     | { readonly state: "known"; readonly value: number }
     | { readonly state: "unknown"; readonly code: string } {
     if (modifier.repeatIds.length === 0) return { state: "known", value: 1 };
-    let repetitions = 1;
+    let repetitions = 0;
     for (const repeatId of [...modifier.repeatIds].sort()) {
       const repeat = catalog.entities[repeatId];
       if (!repeat || repeat.kind !== "Repeat" || !repeat.expression.evaluable)
@@ -1428,7 +1512,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       if (!/^\d+$/u.test(raw)) return { state: "unknown", code: "INVALID_REPEAT_COUNT" };
       const count = Number(raw);
       if (!Number.isSafeInteger(count)) return { state: "unknown", code: "INVALID_REPEAT_COUNT" };
-      repetitions *= count;
+      repetitions += count;
     }
     return { state: "known", value: repetitions };
   }
@@ -1515,6 +1599,51 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       slotId: instance.slotId,
     };
   }
+}
+
+function fleetDoctrineDefinitionIds(
+  catalog: DomainCatalog,
+  battlefleet: DomainEntity,
+): ReadonlySet<EntityId> {
+  const doctrineCategoryIds = new Set(
+    Object.values(catalog.entities)
+      .filter(
+        (entity) =>
+          entity.kind === "Category" && FLEET_DOCTRINES_LABEL.test(entity.label.plainText),
+      )
+      .map((entity) => entity.id),
+  );
+  const roots = Object.values(catalog.entities).filter(
+    (entity) =>
+      entity.kind === "Doctrine" ||
+      (entity.kind === "Option" &&
+        entity.provenance.documentRootId === battlefleet.provenance.documentRootId &&
+        (entity.categoryIds.some((id) => doctrineCategoryIds.has(id)) ||
+          FLEET_DOCTRINES_LABEL.test(entity.label.plainText))),
+  );
+  const outgoing = new Map<EntityId, Placement[]>();
+  for (const placement of Object.values(catalog.placements)) {
+    const placements = outgoing.get(placement.ownerId) ?? [];
+    placements.push(placement);
+    outgoing.set(placement.ownerId, placements);
+  }
+  const doctrineDefinitionIds = new Set<EntityId>();
+  const visited = new Set<EntityId>();
+  const pending = roots.map((root) => root.id);
+  while (pending.length) {
+    const ownerId = pending.pop()!;
+    if (visited.has(ownerId)) continue;
+    visited.add(ownerId);
+    for (const placement of outgoing.get(ownerId) ?? []) {
+      if (!placement.definitionId) continue;
+      const definition = catalog.entities[placement.definitionId];
+      if (!definition || !["Option", "Doctrine", "OptionSlot"].includes(definition.kind)) continue;
+      if (definition.kind === "Option" || definition.kind === "Doctrine")
+        doctrineDefinitionIds.add(definition.id);
+      pending.push(definition.id);
+    }
+  }
+  return doctrineDefinitionIds;
 }
 
 function compareInstance(left: RosterSelectionInstance, right: RosterSelectionInstance): number {

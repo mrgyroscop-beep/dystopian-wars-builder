@@ -100,7 +100,7 @@ const knownModifierOperators = new Set([
   "set",
   "set-primary",
 ]);
-const knownConditionGroupOperators = new Set(["and", "or"]);
+const knownConditionGroupOperators = new Set(["and", "or", "count"]);
 const knownFields = new Set([
   "forces",
   "selections",

@@ -3,6 +3,12 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
+const publication = JSON.parse(
+  await readFile(path.resolve(process.cwd(), "scripts/catalog/publication.json"), "utf8"),
+);
+const generatedCatalogAuthorized =
+  publication.authorization === "confirmed-by-project-owner" &&
+  publication.publishGeneratedCatalog === true;
 const candidates = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
   encoding: "utf8",
 })
@@ -11,7 +17,9 @@ const candidates = execFileSync("git", ["ls-files", "--cached", "--others", "--e
 const forbiddenData = candidates.filter(
   (file) =>
     /\.(?:cat|gst)$/iu.test(file) ||
-    (file.startsWith("data/generated/") && !file.endsWith("README.md")),
+    (file.startsWith("data/generated/") &&
+      !file.endsWith("README.md") &&
+      !generatedCatalogAuthorized),
 );
 if (forbiddenData.length > 0) {
   throw new Error(

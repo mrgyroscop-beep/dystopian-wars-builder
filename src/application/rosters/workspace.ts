@@ -94,6 +94,34 @@ export interface FleetElementReadModel {
   readonly instances: readonly RosterInstanceReadModel[];
 }
 
+export interface BattlefleetRuleReadModel {
+  readonly id: string;
+  readonly label: string;
+  readonly description: string;
+}
+
+export interface BattlefleetPropertiesReadModel {
+  readonly summary: string;
+  readonly rules: readonly BattlefleetRuleReadModel[];
+  readonly elements: readonly {
+    readonly id: string;
+    readonly label: string;
+    readonly minimum: number;
+    readonly maximum: number | null;
+    readonly selected: number;
+  }[];
+  readonly requiredElements: number;
+  readonly completedRequiredElements: number;
+  readonly shipCount: number;
+}
+
+export interface BattlefleetForceReadModel {
+  readonly instanceId: string;
+  readonly battlefleetId: string;
+  readonly label: string;
+  readonly properties: BattlefleetPropertiesReadModel;
+}
+
 export interface WorkspaceProblemReadModel {
   readonly id: string;
   readonly code: string;
@@ -120,11 +148,7 @@ export interface RosterWorkspaceReadModel {
       readonly compatibleShipCount: number;
       readonly removedShipCount: number;
     }[];
-    readonly forces: readonly {
-      readonly instanceId: string;
-      readonly battlefleetId: string;
-      readonly label: string;
-    }[];
+    readonly forces: readonly BattlefleetForceReadModel[];
   };
   readonly summary: {
     readonly points: string;
@@ -878,15 +902,50 @@ function projectWorkspace(
   const forces = stored.roster.rootInstanceIds.flatMap((instanceId) => {
     const instance = stored.roster.instances[instanceId];
     const definition = instance ? catalog.entities[instance.definitionId] : null;
-    return instance && definition?.kind === "Battlefleet"
-      ? [
-          {
-            instanceId: instance.id,
-            battlefleetId: definition.id,
-            label: definition.label.plainText,
-          },
-        ]
-      : [];
+    if (!instance || definition?.kind !== "Battlefleet") return [];
+    const forceElements = elements.filter((element) => element.forceInstanceId === instance.id);
+    const requiredElements = forceElements.filter((element) => element.minimum > 0);
+    const setupOption = setup.factions
+      .find((faction) => faction.id === stored.faction.id)
+      ?.battlefleets.find((battlefleet) => battlefleet.id === definition.id);
+    const rules = definition.ruleIds.flatMap((id): BattlefleetRuleReadModel[] => {
+      const rule = catalog.entities[id];
+      return rule?.kind === "Rule"
+        ? [
+            {
+              id: rule.id,
+              label: rule.label.plainText,
+              description: rule.description?.plainText ?? "",
+            },
+          ]
+        : [];
+    });
+    return [
+      {
+        instanceId: instance.id,
+        battlefleetId: definition.id,
+        label: definition.label.plainText,
+        properties: {
+          summary:
+            definition.description?.plainText ??
+            setupOption?.summary ??
+            "Правила этого Battlefleet применяются к составу автоматически.",
+          rules,
+          elements: forceElements.map((element) => ({
+            id: element.id,
+            label: element.label,
+            minimum: element.minimum,
+            maximum: element.maximum,
+            selected: element.instances.length,
+          })),
+          requiredElements: requiredElements.length,
+          completedRequiredElements: requiredElements.filter(
+            (element) => element.instances.length >= element.minimum,
+          ).length,
+          shipCount: forceElements.reduce((total, element) => total + element.instances.length, 0),
+        },
+      },
+    ];
   });
   const validity: ValidityState =
     evaluation.status === "indeterminate"

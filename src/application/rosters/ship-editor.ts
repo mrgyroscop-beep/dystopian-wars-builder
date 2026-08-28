@@ -205,8 +205,11 @@ export function applyShipEditorCommand(
   command: ShipEditorCommand,
   createId: () => string,
 ): RosterSnapshot {
-  if (command.type === "set-model-quantity")
-    return setModelQuantity(snapshot, catalog, command.instanceId, command.quantity);
+  if (command.type === "set-model-quantity") {
+    const updated = setModelQuantity(snapshot, catalog, command.instanceId, command.quantity);
+    const updatedUnit = updated.instances[command.instanceId];
+    return updatedUnit ? materializeMinimumOptions(updated, catalog, updatedUnit) : updated;
+  }
   const unit = snapshot.instances[command.instanceId];
   if (!unit || !isShipEditorDefinition(catalog, unit.definitionId))
     throw new ShipEditorCommandError("UNKNOWN_INSTANCE", "Редактируемый корабль не найден.");
@@ -289,12 +292,13 @@ export function applyShipEditorCommand(
     );
   }
   const candidate = { ...snapshot, instances };
-  if (evaluateRoster(catalog, candidate).status === "indeterminate")
+  const materialized = materializeMinimumOptions(candidate, catalog, unit);
+  if (evaluateRoster(catalog, materialized).status === "indeterminate")
     throw new ShipEditorCommandError(
       "INDETERMINATE",
       "Каталог не позволяет безопасно проверить эту конфигурацию.",
     );
-  return candidate;
+  return materialized;
 }
 
 export function projectFleetDoctrine(
@@ -409,13 +413,35 @@ export function applyFleetDoctrineCommand(
     if (instance.forceInstanceId === owner.id && doctrineIds.has(instance.definitionId))
       delete instances[instance.id];
   }
+  let doctrineParentId = owner.id;
+  if (option.placement.ownerId !== owner.definitionId) {
+    const existingParent = Object.values(instances).find(
+      (instance) =>
+        instance.forceInstanceId === owner.id &&
+        instance.parentInstanceId === owner.id &&
+        instance.definitionId === option.placement.ownerId,
+    );
+    if (existingParent) doctrineParentId = existingParent.id;
+    else {
+      doctrineParentId = freshId(instances, createId);
+      instances[doctrineParentId] = selection(
+        doctrineParentId,
+        option.placement.ownerId,
+        null,
+        null,
+        owner.id,
+        owner.id,
+        1,
+      );
+    }
+  }
   const id = freshId(instances, createId);
   instances[id] = selection(
     id,
     option.definition.id,
     option.placement.id,
     option.placement.slotId,
-    owner.id,
+    doctrineParentId,
     owner.id,
     1,
   );
@@ -1318,7 +1344,7 @@ function materializeMinimumOptions(
   catalog: DomainCatalog,
   unit: RosterSelectionInstance,
 ): RosterSnapshot {
-  let current = snapshot;
+  let current = reconcileDerivedSelections(snapshot, catalog, unit);
   const blocked = new Set<string>();
   for (let attempt = 0; attempt < 64; attempt += 1) {
     const evaluation = evaluateRoster(catalog, current);
@@ -1379,8 +1405,138 @@ function materializeMinimumOptions(
         ),
       },
     };
+    current = reconcileDerivedSelections(current, catalog, unit);
+  }
+  return reconcileDerivedSelections(current, catalog, unit);
+}
+
+function reconcileDerivedSelections(
+  snapshot: RosterSnapshot,
+  catalog: DomainCatalog,
+  unit: RosterSelectionInstance,
+): RosterSnapshot {
+  let current = snapshot;
+  for (let attempt = 0; attempt < 64; attempt += 1) {
+    let changed = false;
+    const ownerIds = descendantsIncluding(current, unit.id);
+    const owners = [...ownerIds]
+      .map((id) => current.instances[id])
+      .filter((candidate): candidate is RosterSelectionInstance => Boolean(candidate));
+    const evaluation = evaluateRoster(catalog, current);
+    const undersizedModel = owners.find((owner) => {
+      if (catalog.entities[owner.definitionId]?.kind !== "Model") return false;
+      const cardinality = evaluation.selections.find(
+        (candidate) => candidate.instanceId === owner.id,
+      );
+      if (!cardinality?.minimum) return false;
+      const minimum = Number(cardinality.minimum);
+      return Number.isSafeInteger(minimum) && minimum > owner.quantity;
+    });
+    if (undersizedModel) {
+      const cardinality = evaluation.selections.find(
+        (candidate) => candidate.instanceId === undersizedModel.id,
+      )!;
+      current = {
+        ...current,
+        instances: {
+          ...current.instances,
+          [undersizedModel.id]: { ...undersizedModel, quantity: Number(cardinality.minimum) },
+        },
+      };
+      continue;
+    }
+    for (const owner of owners) {
+      const placements = Object.values(catalog.placements)
+        .filter((placement) => isDerivedStandalonePlacement(catalog, owner, placement))
+        .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
+      for (const placement of placements) {
+        const existing = Object.values(current.instances).find(
+          (candidate) =>
+            candidate.parentInstanceId === owner.id && candidate.placementId === placement.id,
+        );
+        const probeId =
+          existing?.id ?? baseOptionInstanceId(current.instances, unit.id, placement.id);
+        const probe =
+          existing ??
+          selection(
+            probeId,
+            placement.definitionId!,
+            placement.id,
+            null,
+            owner.id,
+            unit.forceInstanceId ?? unit.id,
+            1,
+          );
+        const probeSnapshot = existing
+          ? current
+          : { ...current, instances: { ...current.instances, [probe.id]: probe } };
+        const cardinality = evaluateRoster(catalog, probeSnapshot).selections.find(
+          (candidate) => candidate.instanceId === probe.id,
+        );
+        if (!cardinality || cardinality.minimum === null) continue;
+        const minimum = Number(cardinality.minimum);
+        if (!Number.isSafeInteger(minimum) || minimum < 0) continue;
+        if (minimum === 0 && existing) {
+          const instances = { ...current.instances };
+          delete instances[existing.id];
+          current = { ...current, instances };
+          changed = true;
+          break;
+        }
+        if (minimum > 0 && (!existing || existing.quantity !== minimum)) {
+          current = {
+            ...current,
+            instances: {
+              ...current.instances,
+              [probe.id]: { ...probe, quantity: minimum },
+            },
+          };
+          changed = true;
+          break;
+        }
+      }
+      if (changed) break;
+    }
+    if (!changed) return current;
   }
   return current;
+}
+
+function isDerivedStandalonePlacement(
+  catalog: DomainCatalog,
+  owner: RosterSelectionInstance,
+  placement: Placement,
+): boolean {
+  if (
+    placement.ambiguous ||
+    !placement.definitionId ||
+    placement.ownerId !== owner.definitionId ||
+    placement.slotId !== null
+  )
+    return false;
+  const definition = catalog.entities[placement.definitionId];
+  if (definition?.kind !== "Option") return false;
+  const modifierIds = [...new Set([...definition.modifierIds, ...placement.overlay.modifierIds])];
+  return [...new Set([...definition.constraintIds, ...placement.overlay.constraintIds])]
+    .map((id) => catalog.entities[id])
+    .some((candidate) => {
+      if (
+        candidate?.kind !== "Constraint" ||
+        candidate.expression.operator !== "min" ||
+        candidate.expression.field !== "selections"
+      )
+        return false;
+      if (candidate.expression.flags.automatic === "true") return true;
+      if (candidate.expression.value !== "0") return false;
+      return modifierIds.some((modifierId) => {
+        const modifier = catalog.entities[modifierId];
+        return (
+          modifier?.kind === "Modifier" &&
+          (modifier.expression.field === candidate.id ||
+            modifier.expression.field === candidate.identity.upstreamId)
+        );
+      });
+    });
 }
 
 export function directSlotOptionPlacements(catalog: DomainCatalog, slot: Slot): Placement[] {

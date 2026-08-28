@@ -35,7 +35,10 @@ describe("deterministic dataset and atomic lifecycle", () => {
       source: { resolved: { commitTimestamp: lock.commitTimestamp } },
       importer: { contractVersion: 2 },
       sanitizer: { rawHtml: false, plainTextFallback: true },
-      license: { status: "redistribution-unconfirmed", sourcePayloadPublished: false },
+      license: {
+        status: "redistribution-authorized-by-project-owner",
+        sourcePayloadPublished: false,
+      },
       diagnostics: { contractVersion: 1 },
     });
   });
