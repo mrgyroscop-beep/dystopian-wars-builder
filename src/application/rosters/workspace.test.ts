@@ -147,6 +147,48 @@ describe("roster workspace application boundary", () => {
     expect(reopened.model.doctrine!.groups[0]!.options[0]!.selectedQuantity).toBe(1);
   });
 
+  it("adds independent Battlefleets with their own doctrines and removes only the selected force", async () => {
+    const fixture = harness(["second-force", "second-flagship", "second-line", "second-doctrine"]);
+    const session = (await openRosterWorkspace("scaffold-demo", fixture.dependencies))!;
+
+    const added = await session.execute({
+      type: "add-battlefleet",
+      battlefleetId: "demo-empire-patrol",
+    });
+
+    expect(added.roster.forces).toHaveLength(2);
+    expect(added.doctrines).toHaveLength(2);
+    expect(added.elements).toHaveLength(4);
+    expect(added.catalog.find((item) => item.id === "demo-ship-001")!.eligibleTargets).toHaveLength(
+      2,
+    );
+
+    const secondDoctrine = added.doctrines.find(
+      (doctrine) => doctrine.ownerInstanceId === "second-force",
+    )!;
+    const selected = await session.execute({
+      type: "set-fleet-doctrine",
+      instanceId: secondDoctrine.ownerInstanceId,
+      optionId: secondDoctrine.groups[0]!.options[0]!.id,
+    });
+    expect(
+      selected.doctrines.find((doctrine) => doctrine.ownerInstanceId === "second-force")!.groups[0]!
+        .options[0]!.selectedQuantity,
+    ).toBe(1);
+    expect(
+      selected.doctrines.find((doctrine) => doctrine.ownerInstanceId !== "second-force")!.groups[0]!
+        .options[0]!.selectedQuantity,
+    ).toBe(0);
+
+    const removed = await session.execute({
+      type: "remove-battlefleet",
+      instanceId: "second-force",
+    });
+    expect(removed.roster.forces).toHaveLength(1);
+    expect(removed.doctrines).toHaveLength(1);
+    expect(removed.elements).toHaveLength(2);
+  });
+
   it("uses direct slot options and repairs previously saved nested profile selections", async () => {
     const fixture = harness(["unit-1", "model-1"]);
     const baseCatalog = createDemonstrationFleetCatalog();

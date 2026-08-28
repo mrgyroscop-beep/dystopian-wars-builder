@@ -192,7 +192,7 @@ describe("application routes", () => {
     expect(screen.getByRole("navigation", { name: "Основная навигация" })).toBeVisible();
     expect(screen.getByRole("main")).toBeVisible();
     expect(screen.getByRole("contentinfo")).toHaveTextContent(
-      "Dystopian Wars 4.0 · версия 0.2.15 · локальные флоты доступны без регистрации",
+      "Dystopian Wars 4.0 · версия 0.2.16 · локальные флоты доступны без регистрации",
     );
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Флоты" })).toHaveAttribute("aria-current", "page");
@@ -459,9 +459,8 @@ describe("application routes", () => {
     expect(command.getByText("Points")).toBeVisible();
     expect(command.getByText("0 / 1000")).toBeVisible();
     expect(command.getByText("VPR")).toBeVisible();
-    expect(command.getByRole("combobox", { name: "Battlefleet" })).toHaveValue(
-      "demo-empire-patrol",
-    );
+    expect(command.getByRole("combobox", { name: "Добавить Battlefleet" })).toHaveValue("");
+    expect(command.getByText("Harbour Patrol")).toBeVisible();
     expect(command.queryByText("Состав")).not.toBeInTheDocument();
     expect(command.queryByText("Сохранение")).not.toBeInTheDocument();
     expect(command.queryByText("Система")).not.toBeInTheDocument();

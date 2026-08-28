@@ -300,11 +300,15 @@ export function applyShipEditorCommand(
 export function projectFleetDoctrine(
   snapshot: RosterSnapshot,
   catalog: DomainCatalog,
+  ownerInstanceId?: string,
 ): FleetDoctrineReadModel | null {
   const owner = snapshot.rootInstanceIds
     .map((id) => snapshot.instances[id])
     .find(
-      (instance) => instance && catalog.entities[instance.definitionId]?.kind === "Battlefleet",
+      (instance) =>
+        instance &&
+        (!ownerInstanceId || instance.id === ownerInstanceId) &&
+        catalog.entities[instance.definitionId]?.kind === "Battlefleet",
     );
   if (!owner) return null;
   const inventory = fleetDoctrineInventory(catalog, owner.definitionId);
@@ -360,6 +364,16 @@ export function projectFleetDoctrine(
       }),
     })),
   };
+}
+
+export function projectFleetDoctrines(
+  snapshot: RosterSnapshot,
+  catalog: DomainCatalog,
+): readonly FleetDoctrineReadModel[] {
+  return snapshot.rootInstanceIds.flatMap((instanceId) => {
+    const doctrine = projectFleetDoctrine(snapshot, catalog, instanceId);
+    return doctrine ? [doctrine] : [];
+  });
 }
 
 export function applyFleetDoctrineCommand(

@@ -21,7 +21,7 @@ import {
   directSlotOptionPlacements,
   isShipEditorDefinition,
   materializeShipStructure,
-  projectFleetDoctrine,
+  projectFleetDoctrines,
   projectShipEditor,
   type FleetDoctrineReadModel,
   type FleetDoctrineCommand,
@@ -80,6 +80,8 @@ export interface RosterInstanceReadModel {
 export interface FleetElementReadModel {
   readonly id: string;
   readonly definitionId: string;
+  readonly forceInstanceId: string;
+  readonly battlefleetLabel: string;
   readonly label: string;
   readonly minimum: number;
   readonly maximum: number | null;
@@ -112,6 +114,11 @@ export interface RosterWorkspaceReadModel {
       readonly compatibleShipCount: number;
       readonly removedShipCount: number;
     }[];
+    readonly forces: readonly {
+      readonly instanceId: string;
+      readonly battlefleetId: string;
+      readonly label: string;
+    }[];
   };
   readonly summary: {
     readonly points: string;
@@ -128,6 +135,7 @@ export interface RosterWorkspaceReadModel {
   };
   readonly catalog: readonly CatalogItemReadModel[];
   readonly doctrine: FleetDoctrineReadModel | null;
+  readonly doctrines: readonly FleetDoctrineReadModel[];
   readonly elements: readonly FleetElementReadModel[];
   readonly problems: readonly WorkspaceProblemReadModel[];
 }
@@ -141,6 +149,8 @@ export type RosterWorkspaceCommand =
   | { readonly type: "duplicate"; readonly instanceId: string }
   | { readonly type: "delete"; readonly instanceId: string }
   | { readonly type: "change-battlefleet"; readonly battlefleetId: string }
+  | { readonly type: "add-battlefleet"; readonly battlefleetId: string }
+  | { readonly type: "remove-battlefleet"; readonly instanceId: string }
   | FleetDoctrineCommand
   | ShipEditorCommand;
 
@@ -185,6 +195,7 @@ export class WorkspaceCommandError extends Error {
       | "UNKNOWN_TARGET"
       | "UNKNOWN_INSTANCE"
       | "UNKNOWN_BATTLEFLEET"
+      | "LAST_BATTLEFLEET"
       | "INVALID_NAME",
     message: string,
   ) {
@@ -274,6 +285,43 @@ class WorkspaceSession implements RosterWorkspaceSession {
   }
 
   private executeNow(command: RosterWorkspaceCommand): RosterWorkspaceExecution {
+    if (command.type === "add-battlefleet") {
+      const battlefleet = battlefleetsFor(this.current, this.setup).find(
+        (candidate) => candidate.id === command.battlefleetId,
+      );
+      if (!battlefleet)
+        throw new WorkspaceCommandError(
+          "UNKNOWN_BATTLEFLEET",
+          "Battlefleet недоступен для выбранной фракции.",
+        );
+      const candidate = {
+        ...this.current,
+        roster: addBattlefleet(
+          this.current.roster,
+          this.catalog,
+          battlefleet,
+          this.dependencies.createId,
+        ),
+        updatedAt: this.dependencies.now(),
+      };
+      return {
+        model: this.stage(candidate, true),
+        createdInstanceId: null,
+        battlefleetChange: null,
+      };
+    }
+    if (command.type === "remove-battlefleet") {
+      const candidate = {
+        ...this.current,
+        roster: removeBattlefleet(this.current.roster, this.catalog, command.instanceId),
+        updatedAt: this.dependencies.now(),
+      };
+      return {
+        model: this.stage(candidate, true),
+        createdInstanceId: null,
+        battlefleetChange: null,
+      };
+    }
     if (command.type === "change-battlefleet") {
       const battlefleet = battlefleetsFor(this.current, this.setup).find(
         (candidate) => candidate.id === command.battlefleetId,
@@ -486,6 +534,56 @@ function battlefleetsFor(
   ];
 }
 
+function addBattlefleet(
+  snapshot: RosterSnapshot,
+  catalog: DomainCatalog,
+  battlefleet: BattlefleetSetupOption,
+  createId: () => string,
+): RosterSnapshot {
+  const instances = { ...snapshot.instances };
+  const rootId = freshInstanceId(instances, createId);
+  instances[rootId] = selection(rootId, battlefleet.id as EntityId, null, null, rootId);
+  for (const required of battlefleet.requiredElements) {
+    const placement = Object.values(catalog.placements)
+      .filter(
+        (candidate) =>
+          candidate.ownerId === battlefleet.id && candidate.definitionId === required.id,
+      )
+      .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id))[0];
+    if (!placement) continue;
+    const id = freshInstanceId(instances, createId);
+    instances[id] = selection(id, required.id as EntityId, placement.id, rootId, rootId);
+  }
+  return { ...snapshot, rootInstanceIds: [...snapshot.rootInstanceIds, rootId], instances };
+}
+
+function removeBattlefleet(
+  snapshot: RosterSnapshot,
+  catalog: DomainCatalog,
+  instanceId: string,
+): RosterSnapshot {
+  const owner = snapshot.instances[instanceId];
+  if (!owner || catalog.entities[owner.definitionId]?.kind !== "Battlefleet")
+    throw new WorkspaceCommandError("UNKNOWN_BATTLEFLEET", "Battlefleet не найден в составе.");
+  const forceRoots = snapshot.rootInstanceIds.filter(
+    (id) => catalog.entities[snapshot.instances[id]?.definitionId ?? ""]?.kind === "Battlefleet",
+  );
+  if (forceRoots.length <= 1)
+    throw new WorkspaceCommandError(
+      "LAST_BATTLEFLEET",
+      "В составе должен остаться хотя бы один Battlefleet.",
+    );
+  const removed = new Set(descendantsIncluding(snapshot, owner.id));
+  const instances = Object.fromEntries(
+    Object.entries(snapshot.instances).filter(([id]) => !removed.has(id)),
+  );
+  return {
+    ...snapshot,
+    rootInstanceIds: snapshot.rootInstanceIds.filter((id) => id !== owner.id),
+    instances,
+  };
+}
+
 function changeBattlefleet(
   stored: StoredRoster,
   catalog: DomainCatalog,
@@ -629,6 +727,11 @@ function applyCommand(
       "UNKNOWN_BATTLEFLEET",
       "Смена Battlefleet должна выполняться на уровне рабочей сессии.",
     );
+  if (command.type === "add-battlefleet" || command.type === "remove-battlefleet")
+    throw new WorkspaceCommandError(
+      "UNKNOWN_BATTLEFLEET",
+      "Изменение Battlefleet должно выполняться на уровне рабочей сессии.",
+    );
   if (command.type === "set-fleet-doctrine")
     return {
       snapshot: applyFleetDoctrineCommand(snapshot, catalog, command, createId),
@@ -747,6 +850,7 @@ function projectWorkspace(
   if (Number(points) > stored.limits.points)
     problems.push(limitProblem("POINTS_LIMIT_EXCEEDED", "Points", points, stored.limits.points));
   const catalogItems = cachedCatalogItems ?? projectCatalog(catalog, stored);
+  const doctrines = projectFleetDoctrines(stored.roster, catalog);
   const availability = catalogItems.some((item) => item.availability.state === "available")
     ? catalogItems.some((item) => item.availability.state !== "available")
       ? "degraded"
@@ -765,6 +869,19 @@ function projectWorkspace(
       removedShipCount: totalShipCount - compatible,
     };
   });
+  const forces = stored.roster.rootInstanceIds.flatMap((instanceId) => {
+    const instance = stored.roster.instances[instanceId];
+    const definition = instance ? catalog.entities[instance.definitionId] : null;
+    return instance && definition?.kind === "Battlefleet"
+      ? [
+          {
+            instanceId: instance.id,
+            battlefleetId: definition.id,
+            label: definition.label.plainText,
+          },
+        ]
+      : [];
+  });
   const validity: ValidityState =
     evaluation.status === "indeterminate"
       ? "unavailable"
@@ -781,6 +898,7 @@ function projectWorkspace(
       battlefleetId: stored.battlefleet.id,
       battlefleet: stored.battlefleet.label,
       battlefleets,
+      forces,
     },
     summary: {
       points,
@@ -808,7 +926,8 @@ function projectWorkspace(
             : "Каталог недоступен",
     },
     catalog: catalogItems,
-    doctrine: projectFleetDoctrine(stored.roster, catalog),
+    doctrine: doctrines[0] ?? null,
+    doctrines,
     elements,
     problems: problems.sort((left, right) => left.id.localeCompare(right.id)),
   };
@@ -839,19 +958,15 @@ function projectCatalog(
             !placement.ambiguous &&
             elementInstances.some((instance) => instance.definitionId === placement.ownerId),
         )
-        .flatMap((placement) => {
-          const instance = elementInstances.find(
-            (candidate) => candidate.definitionId === placement.ownerId,
-          );
-          if (!instance) return [];
-          return [
-            {
+        .flatMap((placement) =>
+          elementInstances
+            .filter((candidate) => candidate.definitionId === placement.ownerId)
+            .map((instance) => ({
               elementInstanceId: instance.id,
               elementLabel: catalog.entities[instance.definitionId]?.label.plainText || "Element",
               placementId: placement.id,
-            },
-          ];
-        })
+            })),
+        )
         .sort((left, right) => left.elementLabel.localeCompare(right.elementLabel, "ru"));
       const declared = entity.attributes["demo.availability"];
       const state: AvailabilityState =
@@ -927,16 +1042,43 @@ function projectElements(
       return {
         id: element.id,
         definitionId: element.definitionId,
+        forceInstanceId: element.forceInstanceId ?? element.id,
+        battlefleetLabel:
+          catalog.entities[
+            stored.roster.instances[element.forceInstanceId ?? ""]?.definitionId ?? ""
+          ]?.label.plainText || stored.battlefleet.label,
         label:
           catalog.entities[element.definitionId]?.label.plainText ||
           requirement?.label ||
           "Element",
-        minimum: requirement?.minimum ?? 0,
+        minimum: requirement?.minimum ?? fleetElementMinimum(element, catalog),
         maximum: fleetElementMaximum(element, catalog),
         instances: children,
       };
     })
     .sort((left, right) => left.label.localeCompare(right.label, "ru"));
+}
+
+function fleetElementMinimum(element: RosterSelectionInstance, catalog: DomainCatalog): number {
+  const definition = catalog.entities[element.definitionId];
+  const placement = element.placementId ? catalog.placements[element.placementId] : null;
+  const constraintIds = new Set([
+    ...(definition?.constraintIds ?? []),
+    ...(placement?.overlay.constraintIds ?? []),
+  ]);
+  const minima = [...constraintIds].flatMap((id) => {
+    const constraint = catalog.entities[id];
+    if (
+      constraint?.kind !== "Constraint" ||
+      constraint.expression.field !== "selections" ||
+      constraint.expression.operator !== "min" ||
+      !constraint.expression.evaluable
+    )
+      return [];
+    const value = Number(constraint.expression.value);
+    return Number.isSafeInteger(value) && value >= 0 ? [value] : [];
+  });
+  return minima.length ? Math.max(...minima) : 0;
 }
 
 function fleetElementMaximum(

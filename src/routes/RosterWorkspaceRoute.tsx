@@ -415,22 +415,15 @@ export function RosterWorkspaceRoute({
     requestAnimationFrame(() => document.getElementById("catalog-title")?.focus());
   }
 
-  async function changeBattlefleet(battlefleetId: string) {
-    if (battlefleetId === model.roster.battlefleetId) return;
+  async function addBattlefleet(battlefleetId: string) {
+    if (!battlefleetId) return;
     const option = model.roster.battlefleets.find((candidate) => candidate.id === battlefleetId);
     if (!option) return;
-    if (
-      option.removedShipCount > 0 &&
-      !window.confirm(
-        `При смене Battlefleet будет удалено несовместимых кораблей: ${option.removedShipCount}. Продолжить?`,
-      )
-    )
-      return;
     const result = await execute(
-      { type: "change-battlefleet", battlefleetId },
-      `Battlefleet изменён на ${option.label}.`,
+      { type: "add-battlefleet", battlefleetId },
+      `Battlefleet ${option.label} добавлен в состав.`,
     );
-    if (!result?.battlefleetChange) return;
+    if (!result) return;
     setSelectedId(null);
     setSelectedTarget("");
     setCatalogTargetId(null);
@@ -440,10 +433,18 @@ export function RosterWorkspaceRoute({
     setIssueReturnId(null);
     if (location.search)
       void navigate({ pathname: location.pathname, search: "" }, { replace: true });
-    const { preservedShipCount, removedShipCount } = result.battlefleetChange;
     setAnnouncement(
-      `Battlefleet изменён на ${option.label}. Сохранено кораблей: ${preservedShipCount}. Удалено несовместимых: ${removedShipCount}. Points ${result.model.summary.points}, VPR ${result.model.summary.victoryPoints}.`,
+      `Battlefleet ${option.label} добавлен. В составе Battlefleet: ${result.model.roster.forces.length}.`,
     );
+  }
+
+  async function removeBattlefleet(instanceId: string, label: string) {
+    if (!window.confirm(`Удалить Battlefleet ${label} вместе с его кораблями?`)) return;
+    const result = await execute(
+      { type: "remove-battlefleet", instanceId },
+      `Battlefleet ${label} удалён из состава.`,
+    );
+    if (result) setAnnouncement(`Battlefleet ${label} удалён из состава.`);
   }
 
   return (
@@ -484,21 +485,40 @@ export function RosterWorkspaceRoute({
               <dd>{model.summary.victoryPoints}</dd>
             </div>
           </dl>
-          <label className="battlefleet-switcher">
-            <span>Battlefleet</span>
+          <div className="battlefleet-switcher">
+            <span>Battlefleets в составе</span>
+            <div className="battlefleet-switcher__forces">
+              {model.roster.forces.map((force) => (
+                <span className="battlefleet-switcher__force" key={force.instanceId}>
+                  {force.label}
+                  <button
+                    aria-label={`Удалить Battlefleet ${force.label}`}
+                    disabled={busy || model.roster.forces.length <= 1}
+                    onClick={() => void removeBattlefleet(force.instanceId, force.label)}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
             <select
-              disabled={busy || model.roster.battlefleets.length < 2}
-              onChange={(event) => void changeBattlefleet(event.target.value)}
-              value={model.roster.battlefleetId}
+              aria-label="Добавить Battlefleet"
+              disabled={busy || model.roster.battlefleets.length === 0}
+              onChange={(event) => {
+                void addBattlefleet(event.target.value);
+                event.target.value = "";
+              }}
+              value=""
             >
+              <option value="">+ Добавить Battlefleet</option>
               {model.roster.battlefleets.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.label}
-                  {option.removedShipCount > 0 ? ` · удалит ${option.removedShipCount}` : ""}
                 </option>
               ))}
             </select>
-          </label>
+          </div>
         </header>
 
         {model.summary.persistence === "save-error" ? (
@@ -946,9 +966,17 @@ function CompositionPane({
         </div>
       ) : null}
       <div className="element-list">
-        {model.doctrine ? (
-          <FleetDoctrinePanel busy={busy} doctrine={model.doctrine} onCommand={onDoctrineCommand} />
-        ) : null}
+        {model.doctrines.map((doctrine) => {
+          const force = model.roster.forces.find(
+            (candidate) => candidate.instanceId === doctrine.ownerInstanceId,
+          );
+          return (
+            <section className="battlefleet-doctrine-group" key={doctrine.ownerInstanceId}>
+              <p className="eyebrow">{force?.label ?? "Battlefleet"}</p>
+              <FleetDoctrinePanel busy={busy} doctrine={doctrine} onCommand={onDoctrineCommand} />
+            </section>
+          );
+        })}
         {orderedElements.map((element) => {
           const isDropTarget = Boolean(
             draggedItem?.eligibleTargets.some((target) => target.elementInstanceId === element.id),
@@ -1002,7 +1030,10 @@ function CompositionPane({
               <header>
                 <div>
                   <div className="fleet-element__heading-row">
-                    <h3 id={`fleet-element-title-${safeId(element.id)}`}>{element.label}</h3>
+                    <div>
+                      <p className="eyebrow">{element.battlefleetLabel}</p>
+                      <h3 id={`fleet-element-title-${safeId(element.id)}`}>{element.label}</h3>
+                    </div>
                     {firstProblem ? (
                       <button
                         aria-label={`Открыть ошибки раздела ${element.label}: ${firstProblem.reason}`}
