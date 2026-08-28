@@ -1,4 +1,10 @@
-import type { DomainCatalog, DomainEntity, EntityId, PlacementId } from "../../domain/catalog";
+import type {
+  DomainCatalog,
+  DomainEntity,
+  EntityId,
+  Placement,
+  PlacementId,
+} from "../../domain/catalog";
 import {
   evaluateRoster,
   rosterInstanceId,
@@ -1303,7 +1309,7 @@ function entityCost(
     .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id))[0];
   if (modelPlacement?.definitionId) {
     const model = catalog.entities[modelPlacement.definitionId];
-    const minimum = cardinalityNumber(modelPlacement.overlay.cardinality?.minimum) ?? 1;
+    const minimum = modelSelectionMinimum(model, modelPlacement, catalog);
     total +=
       minimum *
       costTotal([...(model?.costIds ?? []), ...modelPlacement.overlay.costIds], catalog, resource);
@@ -1316,7 +1322,7 @@ function costTotal(
   catalog: DomainCatalog,
   resource: "points" | "victory-points",
 ): number {
-  const values = ids.flatMap((id) => {
+  const values = [...new Set(ids)].flatMap((id) => {
     const cost = catalog.entities[id];
     if (cost?.kind !== "Cost" || cost.semantics.resource !== resource) return [];
     return cost.amount.state === "zero"
@@ -1326,6 +1332,31 @@ function costTotal(
         : [];
   });
   return values.reduce((sum, value) => sum + value, 0);
+}
+
+function modelSelectionMinimum(
+  model: DomainEntity | undefined,
+  placement: Placement,
+  catalog: DomainCatalog,
+): number {
+  const minima = [
+    ...new Set([...(model?.constraintIds ?? []), ...placement.overlay.constraintIds]),
+  ].flatMap((id) => {
+    const constraint = catalog.entities[id];
+    if (
+      constraint?.kind !== "Constraint" ||
+      constraint.expression.field !== "selections" ||
+      constraint.expression.operator !== "min" ||
+      !constraint.expression.evaluable ||
+      constraint.conditionIds.length > 0
+    )
+      return [];
+    const value = Number(constraint.expression.value);
+    return Number.isSafeInteger(value) && value >= 1 ? [value] : [];
+  });
+  return minima.length
+    ? Math.max(...minima)
+    : (cardinalityNumber(placement.overlay.cardinality?.minimum) ?? 1);
 }
 
 function cardinalityNumber(

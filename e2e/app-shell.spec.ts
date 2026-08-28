@@ -149,7 +149,7 @@ test("returns a valid Worker health response", async ({ request }) => {
   expect(await response.json()).toEqual({
     status: "ok",
     environment: "local",
-    appVersion: "0.2.16",
+    appVersion: "0.2.17",
     catalogVersion: "not-imported",
     commitSha: "0000000000000000000000000000000000000000",
   });

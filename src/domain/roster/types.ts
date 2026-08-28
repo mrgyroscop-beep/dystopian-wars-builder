@@ -113,6 +113,12 @@ export interface EffectiveSlotCardinality {
   readonly helper: boolean;
 }
 
+export interface EffectiveSelectionCardinality {
+  readonly instanceId: RosterInstanceId;
+  readonly minimum: string | null;
+  readonly maximum: string | null;
+}
+
 export interface PlacementAvailability {
   readonly ownerInstanceId: RosterInstanceId;
   readonly placementId: PlacementId;
@@ -128,6 +134,7 @@ export interface RosterEvaluation {
   readonly valid: boolean;
   readonly totals: readonly CostTotal[];
   readonly contributions: readonly CostContribution[];
+  readonly selections: readonly EffectiveSelectionCardinality[];
   readonly slots: readonly EffectiveSlotCardinality[];
   readonly availability: readonly PlacementAvailability[];
   readonly problems: readonly RosterProblem[];

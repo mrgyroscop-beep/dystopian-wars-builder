@@ -141,6 +141,145 @@ describe("pinned real domain model", () => {
     ).toEqual([]);
   });
 
+  it("evaluates model-count constraints for every real ship instead of placeholder cardinality", () => {
+    const playableDocuments = new Set(
+      [
+        "Alliance",
+        "Commonwealth",
+        "Crown",
+        "Empire",
+        "Enlightened",
+        "Imperium",
+        "Sultanate",
+        "Union",
+      ].map((faction) => `${faction}.cat`),
+    );
+    const pairs = Object.values(first.placements)
+      .filter((placement) => {
+        const owner = first.entities[placement.ownerId];
+        const target = placement.definitionId ? first.entities[placement.definitionId] : null;
+        return (
+          owner?.kind === "Unit" &&
+          playableDocuments.has(owner.provenance.documentPath) &&
+          target?.kind === "Model"
+        );
+      })
+      .sort((left, right) => left.id.localeCompare(right.id));
+    const instances: Record<string, RosterSelectionInstance> = {};
+    const rootInstanceIds = [];
+    const expected = new Map<string, { minimum: number; maximum: number }>();
+    for (const [index, placement] of pairs.entries()) {
+      const definition = first.entities[placement.definitionId!]!;
+      const constraints = [
+        ...new Set([...definition.constraintIds, ...placement.overlay.constraintIds]),
+      ]
+        .map((id) => first.entities[id])
+        .filter(
+          (entity): entity is Extract<DomainEntity, { kind: "Constraint" }> =>
+            entity?.kind === "Constraint" && entity.expression.field === "selections",
+        );
+      const minimum = Math.max(
+        ...constraints
+          .filter((constraint) => constraint.expression.operator === "min")
+          .map((constraint) => Number(constraint.expression.value)),
+      );
+      const maximum = Math.min(
+        ...constraints
+          .filter((constraint) => constraint.expression.operator === "max")
+          .map((constraint) => Number(constraint.expression.value)),
+      );
+      expect(Number.isSafeInteger(minimum), `${definition.label.plainText} minimum`).toBe(true);
+      expect(Number.isSafeInteger(maximum), `${definition.label.plainText} maximum`).toBe(true);
+      const unitId = rosterInstanceId(`model-audit:unit:${index}`);
+      const modelId = rosterInstanceId(`model-audit:model:${index}`);
+      rootInstanceIds.push(unitId);
+      instances[unitId] = {
+        contractVersion: 1,
+        id: unitId,
+        definitionId: placement.ownerId,
+        placementId: null,
+        slotId: null,
+        parentInstanceId: null,
+        forceInstanceId: unitId,
+        quantity: 1,
+      };
+      instances[modelId] = {
+        contractVersion: 1,
+        id: modelId,
+        definitionId: placement.definitionId!,
+        placementId: placement.id,
+        slotId: placement.slotId,
+        parentInstanceId: unitId,
+        forceInstanceId: unitId,
+        quantity: minimum,
+      };
+      expected.set(modelId, { minimum, maximum });
+    }
+    const evaluation = evaluateRoster(first, {
+      contractVersion: 1,
+      id: "real-model-count-audit",
+      catalogContentVersion: first.contentVersion,
+      rootInstanceIds,
+      instances,
+    });
+    for (const instanceId of expected.keys()) {
+      const selection = evaluation.selections.find(
+        (candidate) => candidate.instanceId === instanceId,
+      );
+      const minimum = Number(selection?.minimum);
+      const maximum = Number(selection?.maximum);
+      expect(Number.isSafeInteger(minimum) && minimum >= 1, `${instanceId} minimum`).toBe(true);
+      expect(Number.isSafeInteger(maximum) && maximum >= minimum, `${instanceId} maximum`).toBe(
+        true,
+      );
+    }
+    expect(pairs).toHaveLength(389);
+    expect(
+      [...expected.values()].filter(({ minimum, maximum }) => minimum !== maximum),
+    ).toHaveLength(261);
+    const isolated = (name: string) => {
+      const unit = Object.values(first.entities).find(
+        (entity) => entity.kind === "Unit" && entity.label.plainText === name,
+      )!;
+      const placement = pairs.find((candidate) => candidate.ownerId === unit.id)!;
+      const pairIndex = pairs.indexOf(placement);
+      const bounds = expected.get(`model-audit:model:${pairIndex}`)!;
+      const unitId = rosterInstanceId(`isolated:${name}:unit`);
+      const modelId = rosterInstanceId(`isolated:${name}:model`);
+      const result = evaluateRoster(first, {
+        contractVersion: 1,
+        id: `isolated-${name}`,
+        catalogContentVersion: first.contentVersion,
+        rootInstanceIds: [unitId],
+        instances: {
+          [unitId]: {
+            contractVersion: 1,
+            id: unitId,
+            definitionId: unit.id,
+            placementId: null,
+            slotId: null,
+            parentInstanceId: null,
+            forceInstanceId: unitId,
+            quantity: 1,
+          },
+          [modelId]: {
+            contractVersion: 1,
+            id: modelId,
+            definitionId: placement.definitionId!,
+            placementId: placement.id,
+            slotId: placement.slotId,
+            parentInstanceId: unitId,
+            forceInstanceId: unitId,
+            quantity: bounds.minimum,
+          },
+        },
+      });
+      return result.selections.find((selection) => selection.instanceId === modelId);
+    };
+    expect(isolated("Kyoto Fast Frigate")).toMatchObject({ minimum: "2", maximum: "6" });
+    expect(isolated("Shenlong Draconic Colossus")).toMatchObject({ minimum: "1", maximum: "3" });
+  });
+
   it("derives the Empire/Akita walkthrough without effective evaluation", () => {
     const entities = Object.values(first.entities).filter(
       (entity) => entity.provenance.documentPath === "Empire.cat",

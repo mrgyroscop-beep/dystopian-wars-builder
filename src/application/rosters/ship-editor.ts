@@ -179,7 +179,7 @@ export function materializeShipStructure(
   );
   if (!modelExists) {
     const id = freshId(snapshot.instances, createId);
-    const quantity = placementCardinality(placement)?.minimum ?? 1;
+    const quantity = declaredModelCardinality(catalog, placement)?.minimum ?? 1;
     materialized = {
       ...snapshot,
       instances: {
@@ -588,7 +588,7 @@ export function projectShipEditor(
     : relevantProblems.some((problem) => problem.severity === "error") || mandatoryProblems.length
       ? "invalid"
       : "valid";
-  const modelBounds = placementCardinality(modelPlacement);
+  const modelBounds = evaluatedSelectionCardinality(evaluation, modelInstance.id);
   if (!modelBounds)
     return unavailable(
       "unsupported-data",
@@ -1195,7 +1195,9 @@ function setModelQuantity(
   if (!model || definition?.kind !== "Model")
     throw new ShipEditorCommandError("UNKNOWN_INSTANCE", "Структурная Model не найдена.");
   const placement = model.placementId ? catalog.placements[model.placementId] : null;
-  const bounds = placement ? placementCardinality(placement) : null;
+  const bounds = placement
+    ? evaluatedSelectionCardinality(evaluateRoster(catalog, snapshot), model.id)
+    : null;
   if (!bounds)
     throw new ShipEditorCommandError(
       "INDETERMINATE",
@@ -1211,7 +1213,11 @@ function setModelQuantity(
     ...snapshot,
     instances: { ...snapshot.instances, [model.id]: { ...model, quantity } },
   };
-  if (evaluateRoster(catalog, candidate).status === "indeterminate")
+  const candidateBounds = evaluatedSelectionCardinality(
+    evaluateRoster(catalog, candidate),
+    model.id,
+  );
+  if (!candidateBounds || quantity < candidateBounds.minimum || quantity > candidateBounds.maximum)
     throw new ShipEditorCommandError("INDETERMINATE", "Количество Model нельзя проверить.");
   return candidate;
 }
@@ -1292,7 +1298,7 @@ function previewSnapshot(
     null,
     unitId,
     unitId,
-    placementCardinality(modelPlacement)?.minimum ?? 1,
+    declaredModelCardinality(catalog, modelPlacement)?.minimum ?? 1,
   );
   const preview = {
     contractVersion: 1 as const,
@@ -1428,13 +1434,35 @@ function cardinality(slot: Slot): { readonly minimum: number; readonly maximum: 
   return minimum === null || maximum === null ? null : { minimum, maximum };
 }
 
-function placementCardinality(
+function declaredModelCardinality(
+  catalog: DomainCatalog,
   placement: Placement,
 ): { readonly minimum: number; readonly maximum: number } | null {
+  const definition = placement.definitionId ? catalog.entities[placement.definitionId] : null;
+  const constraints = [
+    ...new Set([...(definition?.constraintIds ?? []), ...placement.overlay.constraintIds]),
+  ]
+    .map((id) => catalog.entities[id])
+    .filter(
+      (entity): entity is Extract<DomainEntity, { kind: "Constraint" }> =>
+        entity?.kind === "Constraint" &&
+        entity.expression.evaluable &&
+        entity.expression.field === "selections" &&
+        entity.conditionIds.length === 0,
+    );
+  const minimums = constraints
+    .filter((constraint) => constraint.expression.operator === "min")
+    .map((constraint) => Number(constraint.expression.value))
+    .filter((value) => Number.isSafeInteger(value));
+  const maximums = constraints
+    .filter((constraint) => constraint.expression.operator === "max")
+    .map((constraint) => Number(constraint.expression.value))
+    .filter((value) => Number.isSafeInteger(value));
   const source = placement.overlay.cardinality;
-  if (!source) return null;
-  const minimum = amountNumber(source.minimum);
-  const maximum = amountNumber(source.maximum);
+  const fallbackMinimum = source ? amountNumber(source.minimum) : null;
+  const fallbackMaximum = source ? amountNumber(source.maximum) : null;
+  const minimum = minimums.length > 0 ? Math.max(...minimums) : fallbackMinimum;
+  const maximum = maximums.length > 0 ? Math.min(...maximums) : fallbackMaximum;
   return minimum === null || maximum === null || minimum < 1 || maximum < minimum
     ? null
     : { minimum, maximum };
@@ -1477,6 +1505,22 @@ function evaluatedCardinality(
   const maximum = Number(slot.maximum);
   return Number.isSafeInteger(minimum) &&
     minimum >= 0 &&
+    Number.isSafeInteger(maximum) &&
+    maximum >= minimum
+    ? { minimum, maximum }
+    : null;
+}
+
+function evaluatedSelectionCardinality(
+  evaluation: RosterEvaluation,
+  instanceId: string,
+): { readonly minimum: number; readonly maximum: number } | null {
+  const selection = evaluation.selections.find((candidate) => candidate.instanceId === instanceId);
+  if (!selection || selection.minimum === null || selection.maximum === null) return null;
+  const minimum = Number(selection.minimum);
+  const maximum = Number(selection.maximum);
+  return Number.isSafeInteger(minimum) &&
+    minimum >= 1 &&
     Number.isSafeInteger(maximum) &&
     maximum >= minimum
     ? { minimum, maximum }

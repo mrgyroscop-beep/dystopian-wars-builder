@@ -227,15 +227,50 @@ describe("catalog-driven ship editor application boundary", () => {
     expect(option(model, "Supply Escorts", "Supply Escorts").selectedQuantity).toBe(2);
   });
 
-  it("supports catalog-declared variable Model quantity", () => {
+  it("reads variable Model quantity from selection constraints instead of placeholder cardinality", () => {
     const fixture = setup();
-    const structured = materialize(fixture);
-    const initial = project(structured, fixture);
-    const modelId = initial.modelQuantity.instanceId!;
-    const placementId = structured.instances[modelId]!.placementId!;
+    const initialStructure = materialize(fixture);
+    const initialModelId = project(initialStructure, fixture).modelQuantity.instanceId!;
+    const placementId = initialStructure.instances[initialModelId]!.placementId!;
     const placement = fixture.catalog.placements[placementId]!;
+    const modelDefinition = fixture.catalog.entities[placement.definitionId!]!;
+    const constraintTemplate = Object.values(fixture.catalog.entities).find(
+      (entity): entity is Extract<DomainEntity, { kind: "Constraint" }> =>
+        entity.kind === "Constraint",
+    )!;
+    const minimumId = entityId(sourceNodeId("test", "constraint", "model-count-min"));
+    const maximumId = entityId(sourceNodeId("test", "constraint", "model-count-max"));
+    const constraint = (
+      id: DomainEntity["id"],
+      operator: "min" | "max",
+      value: string,
+    ): Extract<DomainEntity, { kind: "Constraint" }> => ({
+      ...constraintTemplate,
+      id,
+      identity: { ...constraintTemplate.identity, canonicalId: id },
+      conditionIds: [],
+      modifierIds: [],
+      expression: {
+        ...constraintTemplate.expression,
+        operator,
+        field: "selections",
+        scope: "parent",
+        value,
+        evaluable: true,
+        unevaluableReasons: [],
+      },
+    });
     const catalog: DomainCatalog = {
       ...fixture.catalog,
+      entities: {
+        ...fixture.catalog.entities,
+        [minimumId]: constraint(minimumId, "min", "2"),
+        [maximumId]: constraint(maximumId, "max", "6"),
+        [modelDefinition.id]: {
+          ...modelDefinition,
+          constraintIds: [minimumId, maximumId],
+        },
+      },
       placements: {
         ...fixture.catalog.placements,
         [placementId]: {
@@ -245,17 +280,28 @@ describe("catalog-driven ship editor application boundary", () => {
             cardinality: {
               contractVersion: 1,
               minimum: { contractVersion: 1, state: "value", value: "1" },
-              maximum: { contractVersion: 1, state: "value", value: "3" },
+              maximum: { contractVersion: 1, state: "value", value: "1" },
               effective: "deferred-to-kan-32",
             },
+            constraintIds: [minimumId, maximumId],
           },
         },
       },
     };
+    const tailored = { ...fixture, catalog };
+    const structured = materialize(tailored);
+    const initial = project(structured, tailored);
+    const modelId = initial.modelQuantity.instanceId!;
+    expect(initial.modelQuantity).toMatchObject({
+      value: 2,
+      minimum: 2,
+      maximum: 6,
+      fixed: false,
+    });
     const snapshot = applyShipEditorCommand(
       structured,
       catalog,
-      { type: "set-model-quantity", instanceId: modelId, quantity: 2 },
+      { type: "set-model-quantity", instanceId: modelId, quantity: 4 },
       fixture.createId,
     );
     expect(
@@ -268,7 +314,95 @@ describe("catalog-driven ship editor application boundary", () => {
           "saved-local",
         ),
       ).modelQuantity,
-    ).toMatchObject({ value: 2, minimum: 1, maximum: 3, fixed: false });
+    ).toMatchObject({ value: 4, minimum: 2, maximum: 6, fixed: false });
+  });
+
+  it("changes a valid Model quantity when an unrelated roster branch is indeterminate", () => {
+    const fixture = setup();
+    const initialStructure = materialize(fixture);
+    const initialModelId = project(initialStructure, fixture).modelQuantity.instanceId!;
+    const modelPlacement =
+      fixture.catalog.placements[initialStructure.instances[initialModelId]!.placementId!]!;
+    const modelDefinition = fixture.catalog.entities[modelPlacement.definitionId!]!;
+    const constraintTemplate = Object.values(fixture.catalog.entities).find(
+      (entity): entity is Extract<DomainEntity, { kind: "Constraint" }> =>
+        entity.kind === "Constraint",
+    )!;
+    const minimumId = entityId(sourceNodeId("test", "constraint", "unrelated-model-min"));
+    const maximumId = entityId(sourceNodeId("test", "constraint", "unrelated-model-max"));
+    const constraint = (
+      id: DomainEntity["id"],
+      operator: "min" | "max",
+      value: string,
+    ): Extract<DomainEntity, { kind: "Constraint" }> => ({
+      ...constraintTemplate,
+      id,
+      identity: { ...constraintTemplate.identity, canonicalId: id },
+      conditionIds: [],
+      modifierIds: [],
+      expression: {
+        ...constraintTemplate.expression,
+        operator,
+        field: "selections",
+        scope: "parent",
+        value,
+        evaluable: true,
+        unevaluableReasons: [],
+      },
+    });
+    const catalog: DomainCatalog = {
+      ...fixture.catalog,
+      entities: {
+        ...fixture.catalog.entities,
+        [minimumId]: constraint(minimumId, "min", "1"),
+        [maximumId]: constraint(maximumId, "max", "3"),
+        [modelDefinition.id]: {
+          ...modelDefinition,
+          constraintIds: [minimumId, maximumId],
+        },
+      },
+      placements: {
+        ...fixture.catalog.placements,
+        [modelPlacement.id]: {
+          ...modelPlacement,
+          overlay: {
+            ...modelPlacement.overlay,
+            constraintIds: [minimumId, maximumId],
+          },
+        },
+      },
+    };
+    const tailored = { ...fixture, catalog };
+    const structured = materialize(tailored);
+    const modelId = project(structured, tailored).modelQuantity.instanceId!;
+    const missingDefinitionId = entityId(sourceNodeId("test", "unit", "missing-definition"));
+    const unrelatedId = rosterInstanceId("unrelated-indeterminate");
+    const snapshot: RosterSnapshot = {
+      ...structured,
+      rootInstanceIds: [...structured.rootInstanceIds, unrelatedId],
+      instances: {
+        ...structured.instances,
+        [unrelatedId]: {
+          contractVersion: 1,
+          id: unrelatedId,
+          definitionId: missingDefinitionId,
+          placementId: null,
+          slotId: null,
+          parentInstanceId: null,
+          forceInstanceId: unrelatedId,
+          quantity: 1,
+        },
+      },
+    };
+
+    const updated = applyShipEditorCommand(
+      snapshot,
+      catalog,
+      { type: "set-model-quantity", instanceId: modelId, quantity: 2 },
+      fixture.createId,
+    );
+
+    expect(updated.instances[modelId]?.quantity).toBe(2);
   });
 
   it("removes effective hidden and helper slots from controls while failing closed honestly", () => {

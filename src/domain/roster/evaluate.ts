@@ -22,6 +22,7 @@ import {
 import type {
   CostContribution,
   CostTotal,
+  EffectiveSelectionCardinality,
   EffectiveSlotCardinality,
   PlacementAvailability,
   ProblemSeverity,
@@ -68,6 +69,7 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
   const problems = new Map<string, RosterProblem>();
   const contributions: CostContribution[] = [];
   const totals = new Map<string, MutableTotal>();
+  const selectionResults: EffectiveSelectionCardinality[] = [];
   const slotResults: EffectiveSlotCardinality[] = [];
   const availability: PlacementAvailability[] = [];
   const children = new Map<string, RosterSelectionInstance[]>();
@@ -124,6 +126,9 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       `${left.instanceId}:${left.origin}:${left.costId}`.localeCompare(
         `${right.instanceId}:${right.origin}:${right.costId}`,
       ),
+    ),
+    selections: selectionResults.sort((left, right) =>
+      left.instanceId.localeCompare(right.instanceId),
     ),
     slots: slotResults.sort((left, right) =>
       `${left.ownerInstanceId}:${left.slotId}`.localeCompare(
@@ -492,10 +497,67 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
           : entity.id;
       evaluateConstraint(constraintId, instance, null, false, implicitTarget);
     }
+    evaluateSelectionCardinality(instance, entity, incoming, ids);
     evaluateErrorModifiers(
       [...new Set([...entity.modifierIds, ...(incoming?.overlay.modifierIds ?? [])])].sort(),
       instance,
     );
+  }
+
+  function evaluateSelectionCardinality(
+    instance: RosterSelectionInstance,
+    entity: DomainEntity,
+    incoming: Placement | undefined,
+    constraintIds: readonly EntityId[],
+  ): void {
+    if (entity.kind !== "Model") return;
+    let minimum: DecimalValue | null = null;
+    let maximum: DecimalValue | null = null;
+    let foundMinimum = false;
+    let foundMaximum = false;
+    for (const constraintId of constraintIds) {
+      const constraint = catalog.entities[constraintId];
+      if (
+        !constraint ||
+        constraint.kind !== "Constraint" ||
+        constraint.expression.field !== "selections" ||
+        (constraint.expression.operator !== "min" && constraint.expression.operator !== "max")
+      )
+        continue;
+      const active = evaluateConditions(constraint.conditionIds, instance, new Set());
+      if (active.state === "unknown") {
+        selectionResults.push({ instanceId: instance.id, minimum: null, maximum: null });
+        return;
+      }
+      if (active.state === "false") continue;
+      const raw = constraint.expression.value ? parseDecimal(constraint.expression.value) : null;
+      if (!raw || !constraint.expression.evaluable) {
+        selectionResults.push({ instanceId: instance.id, minimum: null, maximum: null });
+        return;
+      }
+      const modifierIds = effectiveConstraintModifierIds(constraint, entity, incoming);
+      const modified = applyModifiers(raw, modifierIds, instance, () => true);
+      if (modified.state === "unknown") {
+        selectionResults.push({ instanceId: instance.id, minimum: null, maximum: null });
+        return;
+      }
+      if (constraint.expression.operator === "min") {
+        minimum = minimum && compareDecimal(minimum, modified.value) > 0 ? minimum : modified.value;
+        foundMinimum = true;
+      } else {
+        maximum = maximum && compareDecimal(maximum, modified.value) < 0 ? maximum : modified.value;
+        foundMaximum = true;
+      }
+    }
+    if (!foundMinimum && incoming?.overlay.cardinality)
+      minimum = decimalFromCardinality(incoming.overlay.cardinality.minimum);
+    if (!foundMaximum && incoming?.overlay.cardinality)
+      maximum = decimalFromCardinality(incoming.overlay.cardinality.maximum);
+    selectionResults.push({
+      instanceId: instance.id,
+      minimum: minimum ? decimalToString(minimum) : null,
+      maximum: maximum ? decimalToString(maximum) : null,
+    });
   }
 
   function evaluateErrorModifiers(
@@ -578,7 +640,14 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       indeterminateExpression("INVALID_CONSTRAINT_VALUE", instance, constraint.id, slotIdValue);
       return { state: "unknown", code: "INVALID_CONSTRAINT_VALUE" };
     }
-    const bound = applyModifiers(rawBound, constraint.modifierIds, instance, () => true);
+    const entity = catalog.entities[instance.definitionId];
+    const incoming = instance.placementId ? catalog.placements[instance.placementId] : undefined;
+    const bound = applyModifiers(
+      rawBound,
+      effectiveConstraintModifierIds(constraint, entity, incoming),
+      instance,
+      () => true,
+    );
     if (bound.state === "unknown") {
       indeterminateExpression(bound.code, instance, constraint.id, slotIdValue);
       return { state: "unknown", code: bound.code };
@@ -1310,6 +1379,32 @@ export function evaluateRoster(catalog: DomainCatalog, roster: RosterSnapshot): 
       }
     }
     return { state: "known", value };
+  }
+
+  function effectiveConstraintModifierIds(
+    constraint: Extract<DomainEntity, { kind: "Constraint" }>,
+    entity: DomainEntity | undefined,
+    incoming: Placement | undefined,
+  ): EntityId[] {
+    const attached = [...(entity?.modifierIds ?? []), ...(incoming?.overlay.modifierIds ?? [])]
+      .map((id) => catalog.entities[id])
+      .filter(
+        (candidate): candidate is Extract<DomainEntity, { kind: "Modifier" }> =>
+          candidate?.kind === "Modifier" && modifierTargetsConstraint(candidate, constraint),
+      )
+      .map((modifier) => modifier.id);
+    return [...new Set([...constraint.modifierIds, ...attached])].sort();
+  }
+
+  function modifierTargetsConstraint(
+    modifier: Extract<DomainEntity, { kind: "Modifier" }>,
+    constraint: Extract<DomainEntity, { kind: "Constraint" }>,
+  ): boolean {
+    const field = modifier.expression.field;
+    if (field === constraint.id || field === constraint.identity.upstreamId) return true;
+    return modifier.expression.referenceResolutions.some(
+      (resolution) => resolution.state === "resolved" && resolution.entityId === constraint.id,
+    );
   }
 
   function modifierRepetitions(

@@ -30,6 +30,55 @@ describe("roster workspace application boundary", () => {
     expect(session!.model.catalog.every((item) => item.id.startsWith("demo-"))).toBe(true);
   });
 
+  it("projects the minimum Model count without double-counting linked Cost ids", async () => {
+    const fixture = harness(["minimum-unit", "minimum-model"]);
+    const source = createDemonstrationFleetCatalog();
+    const unit = source.entities["demo-ship-001"]!;
+    const modelPlacement = Object.values(source.placements).find(
+      (placement) =>
+        placement.ownerId === unit.id &&
+        placement.definitionId &&
+        source.entities[placement.definitionId]?.kind === "Model",
+    )!;
+    const model = source.entities[modelPlacement.definitionId!]!;
+    const catalog: DomainCatalog = {
+      ...source,
+      entities: {
+        ...source.entities,
+        [unit.id]: { ...unit, costIds: [] },
+        [model.id]: { ...model, costIds: [...unit.costIds] },
+      },
+      placements: {
+        ...source.placements,
+        [modelPlacement.id]: {
+          ...modelPlacement,
+          overlay: {
+            ...modelPlacement.overlay,
+            cardinality: {
+              contractVersion: 1,
+              minimum: { contractVersion: 1, state: "value", value: "2" },
+              maximum: { contractVersion: 1, state: "value", value: "3" },
+              effective: "deferred-to-kan-32",
+            },
+            costIds: [...unit.costIds],
+          },
+        },
+      },
+    };
+    const dependencies: RosterWorkspaceDependencies = {
+      ...fixture.dependencies,
+      catalogGateway: {
+        contractVersion: 1,
+        load: () => Promise.resolve(catalog),
+      },
+    };
+
+    const session = (await openRosterWorkspace("scaffold-demo", dependencies))!;
+    expect(session.model.catalog.find((item) => item.id === unit.id)?.points).toBe("700");
+    const added = await session.execute({ type: "add", definitionId: unit.id });
+    expect(added.summary.points).toBe("700");
+  });
+
   it("creates the Battlefleet structure idempotently without mutating the input fixture", async () => {
     const fixture = harness();
     const original = structuredClone(fixture.fallback);
