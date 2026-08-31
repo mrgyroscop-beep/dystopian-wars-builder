@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { moduleLoreFor } from "../app/moduleLore";
 
 import type {
   ShipEditorCommand,
@@ -10,17 +11,20 @@ import type {
 } from "../application/rosters/ship-editor";
 import type { WeaponProfileReadModel } from "../application/rosters/profile-rules";
 import { EyeIcon } from "./EyeIcon";
+import { ModuleLoreButton } from "./ModuleLoreButton";
 import { useRuleTranslation } from "./GlossaryContext";
 import { OptionDescriptionDialog, WeaponProfileDialog } from "./ProfileDialog";
 
 export function ShipEditorShell({
   busy,
+  faction = "",
   model,
   onAdd,
   onBack,
   onCommand,
 }: {
   readonly busy: boolean;
+  readonly faction?: string;
   readonly model: ShipEditorReadModel;
   readonly onAdd: () => void;
   readonly onBack: () => void;
@@ -114,6 +118,7 @@ export function ShipEditorShell({
             <EditorGroup
               busy={busy}
               domId={`ship-editor-group-unit-${groupIndex}`}
+              faction={faction}
               group={group}
               key={group.id}
               model={model}
@@ -220,6 +225,7 @@ function OptionCopy({ option }: { readonly option: ShipEditorOptionReadModel }) 
 function EditorGroup({
   busy,
   domId,
+  faction,
   group,
   model,
   nameToken,
@@ -231,6 +237,7 @@ function EditorGroup({
 }: {
   readonly busy: boolean;
   readonly domId: string;
+  readonly faction: string;
   readonly group: ShipEditorGroupReadModel;
   readonly model: ShipEditorReadyReadModel;
   readonly nameToken: string;
@@ -313,11 +320,14 @@ function EditorGroup({
                   />
                   <OptionCopy option={option} />
                 </label>
-                <OptionInspect
-                  onInspectOption={onInspectOption}
-                  onInspectWeapon={onInspectWeapon}
-                  option={option}
-                />
+                <div className="editor-option__actions">
+                  <OptionInspect
+                    onInspectOption={onInspectOption}
+                    onInspectWeapon={onInspectWeapon}
+                    option={option}
+                  />
+                  <ModuleLoreButton faction={faction} name={option.label} />
+                </div>
                 <OptionTraitLink onInspectOption={onInspectOption} option={option} />
               </div>
             ) : (
@@ -327,6 +337,16 @@ function EditorGroup({
                 key={option.id}
               >
                 <OptionCopy option={option} />
+                {moduleLoreFor(faction, option.label) ? (
+                  <div className="editor-option__actions">
+                    <OptionInspect
+                      onInspectOption={onInspectOption}
+                      onInspectWeapon={onInspectWeapon}
+                      option={option}
+                    />
+                    <ModuleLoreButton faction={faction} name={option.label} />
+                  </div>
+                ) : null}
                 <div className="quantity-stepper">
                   <button
                     aria-label={`Уменьшить количество ${option.label}`}

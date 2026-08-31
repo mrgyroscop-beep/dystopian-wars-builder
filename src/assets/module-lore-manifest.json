@@ -1,0 +1,278 @@
+{
+  "faction": "Empire",
+  "source": {
+    "title": "The Empire · ORBAT 4.01",
+    "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01_W.pdf",
+    "sha256": "1ecca809a0c2fc4366036de40f5decba6c2c405f052323e37ab41fff80008cad"
+  },
+  "modules": [
+    {
+      "id": "light-alchemical-rockets",
+      "name": "Light Alchemical Rocket Battery",
+      "aliases": ["Light Alchemical Rockets"],
+      "category": "Вооружение",
+      "page": 81,
+      "imageUrl": "/modules/empire/light-alchemical-rockets.webp",
+      "imageWidth": 375,
+      "imageHeight": 203,
+      "paragraphs": [
+        "In the 14th century, while European powers were tinkering with their earliest cannons, Jiāo Yu was already compiling four centuries of gunpowder development into the Huolongjing, a training manual for the first Ming ruler’s new Empire. Still widely read today, countless examples of early rockets are described in its pages, with their first use in naval warfare purportedly coming in the 13th century battles between the Song Dynasty and the Jurchen-Jin.",
+        "Also detailed are the variant gunpowder blends employed by Song alchemists including poisons, corrosive elements, and blinding smoke powder. Prior to the formation of the Jade Pact, the formulae of these weapons were closely guarded secrets, but there are now many centres of excellence throughout the Seven Realms, not least in the Promethean Complexes of Japan, Burma, and Vietnam, all of which continue to draw upon the wisdom of their forebears. Naval-mounted launchers point directly upwards, each individual rocket requiring painstaking calibration to ensure it hits its intended target. The time and effort is invariably worth it, however, for the ability to fire in any direction is a powerful tactical advantage."
+      ]
+    },
+    {
+      "id": "light-corrosive-mortars",
+      "name": "Light Corrosive Mortar",
+      "aliases": ["Light Corrosive Mortars"],
+      "category": "Вооружение",
+      "page": 81,
+      "imageUrl": "/modules/empire/light-corrosive-mortars.webp",
+      "imageWidth": 212,
+      "imageHeight": 210,
+      "paragraphs": [
+        "The Light Corrosive Mortar was developed in parallel with the ground based Fengbao Heavy Launcher. It shares the same ceramic shells and uses special calibrated powder charges to launch them in high, curving arcs from its squat barrel. The shell’s transparency allows the brilliant green of its acidic payload to be seen clearly in the sky, lending an additional, psychological, edge as it sails through the skies towards its target’s crew. On impact, the frangible shells shatter, and their liquid payload erupts. The violent acid sticks to everything it touches, devouring even the strongest of sturginium-enhanced metals. Its effects on anyone unfortunate to be in a Corrosive Mortar’s firing line are often too horrific to contemplate, and mercy killings by erstwhile crewmates are a common outcome."
+      ]
+    },
+    {
+      "id": "cap-cap-flak-gun",
+      "name": "Cạp Cạp Flak Gun",
+      "aliases": ["Cap Cap Flak Gun"],
+      "category": "Вооружение",
+      "page": 81,
+      "imageUrl": "/modules/empire/cap-cap-flak-gun.webp",
+      "imageWidth": 241,
+      "imageHeight": 211,
+      "paragraphs": [
+        "With the skies above the world’s fleets increasingly open to airborne attackers, long-barrelled guns capable of elevating their barrels have begun to proliferate amongst the Empire’s ships. It was the marriage of optical ranging devices from the Unsei corporation and timed fuses crafted by the Vietnamese Peer Tran Hùng that gave the Empire its edge in anti-aircraft warfare, with the invention of the Cap Cap Flak Gun; so . . named for the insistent quacking heard from their home in Hanoi that the weapon’s repeated fire always called to Hùng’s mind. As enemy aircraft approach, their height and distance can be precisely identified, a clockwork calculation engine determining the correct length of fuse down to the millimetre. At this point, the gunners swarm round the hungry guns, feeding them shell after shell, flooding the attackers’ path with densely packed explosions. These weapons are equally able to shoot down incoming rockets, demonstrating their true value in the lives they protect."
+      ]
+    },
+    {
+      "id": "light-gun-battery",
+      "name": "Light Gun Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 82,
+      "imageUrl": "/modules/empire/light-gun-battery.webp",
+      "imageWidth": 311,
+      "imageHeight": 100,
+      "paragraphs": [
+        "Every gun currently employed by the Empire’s navies is a bespoke piece of art, hand-crafted in one of the countless workshops and state armouries across the Seven Realms. There is no standard bore width, barrel length, or calibre of shot. The crude iron casting of the Crown, the soulless modular construction of the Imperium, and the bleak massproduction of the Union of Federated States is not for the Celestian Emperors. The gunnery aboard a single vessel tends to be of a similar design, however. This has less to do with pragmatism than the fact that the same master craftsman (often with fixed ideas about what makes the perfect naval cannon) is usually responsible for outfitting the entire vessel, and for providing its quartermaster with the correct size of munitions thereafter. Even these are handmade, each shell painstakingly etched with its maker’s calligraphy.",
+        "The commission to arm a ship is thus not only a great honour for any craftsman, but a guaranteed source of income and prestige. A contract for a single frigate might sustain a provincial workshop or family business for decades, giving every worker in its employ a powerful incentive to produce their finest work every single time."
+      ]
+    },
+    {
+      "id": "light-huoqiang",
+      "name": "Light Huǒqiāng",
+      "aliases": ["Light Huoqiang"],
+      "category": "Вооружение",
+      "page": 82,
+      "imageUrl": "/modules/empire/light-huoqiang.webp",
+      "imageWidth": 398,
+      "imageHeight": 162,
+      "paragraphs": [
+        "The first Huoqiāng appeared in 9th century China and is considered one of the earliest ancestors of all modern firearms. A polearm-mounted pyrotechnic tube that one primed by setting it alight, it was used purely for psychological effect, delivering an explosive cascade of burning shrapnel over a hopefully reeling foe before engaging them in melee. The Empire’s alchemical knowledge has advanced somewhat in the intervening 900 years but, like its predecessor, the naval Huoqiāng is a weapon of terror. While doing little damage to the sturginium-steel hulls of modern warships, the great gouts of relentless flame seep through every open hatch, cracked armour plate, and gunport, consuming everything within."
+      ]
+    },
+    {
+      "id": "heavy-gun-battery",
+      "name": "Heavy Gun Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 82,
+      "imageUrl": "/modules/empire/heavy-gun-battery.webp",
+      "imageWidth": 478,
+      "imageHeight": 174,
+      "paragraphs": [
+        "Commissions to outfit the largest ships of the Empire’s navy lie beyond the capabilities of the small family workshops that otherwise keep its enormous military armed and armoured. To craft the weaponry for a Jian-class cruiser, or even a mighty Kongō Heavy Battleship, requires a true master of their craft. Individuals with hundreds, if not not thousands, of apprentices at their beck and call. Artisans who have achieved the summit of metallurgy, alchemy, lacquerworking, calligraphy, and more besides.",
+        "Much like the smaller workshops that keep the humble frigates and destroyers of the Empire furnished with weaponry, every item is bespoke, but the vision of what the ideal end product should be is writ large, and disseminated amongst countless workers.",
+        "And yet, despite the sheer number of souls involved, each design remains a carefully guarded secret, passed down from master to student. Some continue to swear by bamboo, while others work in steel, some in ornate brass, or (increasingly) the more esoteric metals that have been introduced to the Empire by the Covenant of the Enlightened. Some weapons, particularly those crafted by the artisans of Korea, launch hard resin shells packed with volatile chemicals. Others might fire sturginium-tipped shells, elegantly winged terracotta bombs, or high-velocity steel rods reminiscent of the huoyaojian fire arrows of old. The destruction they wreak on the enemy is invariably the same."
+      ]
+    },
+    {
+      "id": "heavy-alchemical-rockets",
+      "name": "Heavy Alchemical Rocket Battery",
+      "aliases": ["Heavy Alchemical Rockets"],
+      "category": "Вооружение",
+      "page": 82,
+      "imageUrl": "/modules/empire/heavy-alchemical-rockets.webp",
+      "imageWidth": 442,
+      "imageHeight": 259,
+      "paragraphs": [
+        "Although alchemical rockets have been launched from Chinese ships as early as the 13th century, and have been standard fixtures on Empire vessels since the signing of the Jade Pact in the 14th, the heavier rocket battery is a recent invention.",
+        "Delivering more destructive payloads is more complicated than simply building a larger rocket, requiring complete redesigns of existing technologies and the development of entirely novel materials. It was the Thai alchemist Nittaya Sathirathai who, watching the fireworks to mark Emperor Anuman’s Rite of Celestian Renewal, made the conceptual leap to a two-stage rocket.",
+        "Launching an initial booster rocket ignites a payload of smaller rockets, which in turn deploys clusters of deadly alchemical munitions on the unfortunate targets below. Such weapons are extraordinarily complicated to prepare and fire, and sacrifice the lighter variant’s directional versatility, but when timed correctly by a master they can swathe an entire battleship in caustic alchemical fumes and unquenchable liquid fire."
+      ]
+    },
+    {
+      "id": "heavy-huoqiang",
+      "name": "Heavy Huǒqiāng",
+      "aliases": ["Heavy Huoqiang"],
+      "category": "Вооружение",
+      "page": 83,
+      "imageUrl": "/modules/empire/heavy-huoqiang.webp",
+      "imageWidth": 574,
+      "imageHeight": 195,
+      "paragraphs": [
+        "While its smaller counterpart is employed for burning decking and incinerating any exposed crew, the Heavy Huoqiāng is more than capable of stripping the armour plating right off a ship’s keel. The larger alembic within its casing allows for greater volumes of alchemical precursor to be combined, and for longer periods, generating enough internal pressure for an extended spray of white-hot flame. The resultant temperatures are far in excess of anything achievable with a standard mixing vessel, and while specifications vary greatly across the Empire, their flames burn hot enough to make even sturginium enhanced materials run like wax."
+      ]
+    },
+    {
+      "id": "heavy-corrosive-mortar",
+      "name": "Heavy Corrosive Mortar",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 83,
+      "imageUrl": "/modules/empire/heavy-corrosive-mortar.webp",
+      "imageWidth": 253,
+      "imageHeight": 211,
+      "paragraphs": [
+        "Operating on the same principles as its smaller counterpart, the Heavy Corrosive Mortar is one of the Empire’s most effective weapons. Hurling great ceramic shells incredible distances, these weapons are equal parts terror and destruction. As the size of the ceramic shell is increased it has become possible to make different fillings that can be selected depending on the target type. A thicker mix is used against a heavily armoured ship, while those enemy vessels that are of a more open construction have shells fired at them whose filing is less viscous, more able to flow into the gaps and crevices. Regardless of the mix, corrosive death is all but guaranteed."
+      ]
+    },
+    {
+      "id": "jangdaebi-repeating-gun",
+      "name": "Jangdaebi Repeating Gun",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 83,
+      "imageUrl": "/modules/empire/jangdaebi-repeating-gun.webp",
+      "imageWidth": 599,
+      "imageHeight": 200,
+      "paragraphs": [
+        "It is unusual, to say the least, for the engineers of the Empire to take inspiration from abroad. After all, the flow of innovation has run one way for over a thousand years. But such was the strange tale of the Jangdaebi Repeating Gun, originating not in the Hwacha fire cart of medieval Korea, nor the “Mother of a Hundred Bullets Gun” of the Huolongjing, but in the work of an inventor named Richard Jordan Gatling who was born in 1818 on the wrong side of the Pacific Ocean.",
+        "After the Empire’s ignominious defeat during the Caribbean Hurricane of 1867, Admiral Harikēn returned in shame to her home in Kobe, Japan. The sight of Chesapeake Gatling Guns gutting her fleet’s defenceless Chita escort automata had had a sobering effect on the young Admiral, and her belief in the superiority of Empire craftsmanship. Harikēn was, at her heart, a creative soul so she set about commissioning a new weapon, employing Asian principles and American ingenuity, that might restore her nation’s pride. She called it the Bōfūu Gatler, with a handmade prototype unleashing 220 fine porcelain shuriken in under a minute and greatly impressing the watching Empress Shinzua.",
+        "The Empress could not publicly adopt the designs of one whose honour had been so tarnished, however, particularly after Harikēn’s loss of the Nagato at Ashmore Refinery. Harikēn agreed to gift the prototype to a Korean entrepreneur whom Shinzua favoured named Ho Onjok in an effort to regain the Empress’ favour. Onjok would rename it the Jangdaebi Repeating Gun, and quickly rose to great fame following its spectacular introduction in the Battle of Okinawa in early 1870."
+      ]
+    },
+    {
+      "id": "atomic-generator",
+      "name": "Atomic Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 83,
+      "imageUrl": "/modules/empire/atomic-generator.webp",
+      "imageWidth": 411,
+      "imageHeight": 195,
+      "paragraphs": [
+        "Despite great efforts by the Imperium to keep it to themselves, the secrets of the atom—unlocked by German scientists Eberhard Bunsen and Gustav Kirchhoff in 1846— have since gone on to shape each Great Power. In many ways, it was the last great truly human leap in science, before the alien discoveries made within Antarctica made the impossible dreams of engineers around the world a reality. And as with all earthly accomplishments, none have exercised as much mastery over these sciences as the engineers of the Empire.",
+        "Pioneering this “clean” energy in ways the other Great Powers can only hope to match, few aspects of Empire culture have benefitted more from the incorporation of Atomic Generators than their naval forces. These generators see warships moving at unmatched speeds across the waves, over greater distances than ever before. However, as early adopters of these machines, the Empire have noted an unintended side effect, as entire crews have fallen mysteriously ill over the decades. Great pains have been taken to prevent this in recent years, and the operation of Atomic Generators is now restricted to specialised automata, housed within heavy lead-lined engine rooms."
+      ]
+    },
+    {
+      "id": "fury-generator",
+      "name": "Fury Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 84,
+      "imageUrl": "/modules/empire/fury-generator.webp",
+      "imageWidth": 402,
+      "imageHeight": 197,
+      "paragraphs": [
+        "Inciting levels of aggression and fearlessness in soldiers that borders on the animalistic, the use of Fury Generators is frowned upon by many higher-ranking admirals of the Empire’s navies. For despite its undeniable potency in battle, even the Empire’s finest minds have not yet managed to decipher exactly how this generator operates. The closest explanation their scientists have come to is not through engineering, but rather biology. It appears that a dose of RJ-1027 and a carefully calibrated electrical current causes the amygdala of those in proximity to the generator to swell and distort. With repeated usage, this change can be permanent, sometimes even fatal. But, as war across the globe intensifies, so too does the need for such desperate tools..."
+      ]
+    },
+    {
+      "id": "great-wall-generator",
+      "name": "Great Wall Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 84,
+      "imageUrl": "/modules/empire/great-wall-generator.webp",
+      "imageWidth": 393,
+      "imageHeight": 200,
+      "paragraphs": [
+        "An esteemed scientist within the Empire, Sòng Měi Lián’s work in improving upon the Heavy Shields employed by other nations and her resultant Great Wall Generator have proved invaluable to the Empire’s reputation as wielding the finest naval force in the world. Through favours curried with Egalitarians of the Enlightened, in 1858 Sòng managed to procure mummified remains found within the ruins of The Lost World: an alien creature with diamond-shaped plates across its skin, scales that seemed to shift in response to its environment, even after death.",
+        "A student of both biology and engineering, Sòng was able to marry these two mediums to articulate a far grander idea: a shifting, living shield, adaptable and malleable. After years of study and experimentation, in 1864 the first network of Great Wall Generators were deployed in the South China Sea, and promptly employed across the Empire’s naval forces.",
+        "Projecting giant barriers of energy between ships, the diamond-shaped lattices emanating from these generators latch onto one another at their peripheral edges, creating great unbroken walls across entire fleets. Denying all but the heaviest firepower, each explosive strike against these shields ripples like liminal bricks in the air, leaving those vessels that sail in their wake untouched and unharmed. The loss of any life, no matter how small or seemingly insignificant, should be viewed as a tragedy; through Sòng’s work such tragedies are averted almost daily."
+      ]
+    },
+    {
+      "id": "heavy-shield-generator",
+      "name": "Heavy Shield Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 84,
+      "imageUrl": "/modules/empire/heavy-shield-generator.webp",
+      "imageWidth": 410,
+      "imageHeight": 195,
+      "paragraphs": [
+        "Few generators have seen as much use in the Dystopian Age as the Heavy Shield Generator. First found in 1850, extracted from the ruined Antarctic structure that would come to be called “The Vault”, the device that would come to protect naval vessels around the world has remained largely unchanged since its discovery. While the Peers of the Enlightened still debate the exact nature of what The Vault actually is, many believe that it was once some kind of alien craft, and that the devices removed from its exterior once fulfilled the same function they perform on earthly ships today.",
+        "When mounted to a physical object—be that a vehicle or structure—and charged with a suitably powerful current, these Heavy Shield Generators surround the object with a close-fitting sleeve of near translucent energy. All but unseen to the naked eye, these shields defend against high velocity impacts, making them ideal for warfare. The Empire, especially, has embraced this technology with open arms; their vessels are works of art, and anything that might ensure such works of art persist is a great boon indeed."
+      ]
+    },
+    {
+      "id": "interphase-generator",
+      "name": "Interphase Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 85,
+      "imageUrl": "/modules/empire/interphase-generator.webp",
+      "imageWidth": 396,
+      "imageHeight": 210,
+      "paragraphs": [
+        "The Interphase Generators of the Empire defy earthly explanation. For they are not of this world. First discovered in The Lost World of Antarctica, the site from which the Covenant of the Enlightened (and by extension, this new Dystopian Age) would be born, the staunchly Empireloyal scientists of the Dawn Cabinet Promethean Complex have managed to harness these alien technologies in ways only dreamed of by their compatriots.",
+        "First demonstrated against the Indian Raj in the Bay of Bengal, the tales that Crown sailors tell of the “ghost ships” they faced that day persist even now, for the effect of these generators aboard vessels is an unnerving one. While an Interphase Generator thrums it is as though both ship and crew fade into a dark, smoky translucence. True spectres, like those whispered about by sailors since time immemorial, with no mass, and no permanence. In this weightless state, even the most gargantuan vessels move at a hitherto unimagined speed, passing through solid objects as though they were naught but vapour and leaving a chill mist in their wake.",
+        "Of course, such sciences expend extraordinary amounts of power, and as potent as these generators are, their malfunction can prove devastating. There are some reports of early miscalculations leading entire ships to rematerialise within solid rock, or halfway through other vessels. With disastrous consequences. Now Interphase Generators are only permitted to be used by the most level-headed of admirals."
+      ]
+    },
+    {
+      "id": "magma-cast-generator",
+      "name": "Magma Cast Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 85,
+      "imageUrl": "/modules/empire/magma-cast-generator.webp",
+      "imageWidth": 429,
+      "imageHeight": 195,
+      "paragraphs": [
+        "The Magma Cast Generator is more natural-disaster than weapon, summoning eruptions of molten lava from far beneath the waves. In recent years, as skirmishes have grown more and more bloody between the Great Powers, its popularity has soared, so potent is its application for offense and defense alike.",
+        "The greatest discoveries are made by accident, and so too was it with the Magma Cast Generator. After being outmanoeuvred one-too-many times by the Sultanate’s portals, the Empire committed to retrofitting their own version of such generators. It was to little avail, as even their greatest minds struggled to open portals for more than a couple of seconds at most, leading to such frustration that Queen Yadana of Burma put out a ‘bounty’ to whomever could discover a use for the fickle science. Only when the Sichuan-based Yāoguài Research Centre was suddenly buried in an unprecedented and spontaneous volcanic eruption after an experiment gone wrong, was a martial use of the technology discovered.",
+        "Its use consists of two portals being opened sequentially. The first is opened deep below the Earth’s mantle, the second just beneath the sea’s surface. The corresponding link between the two sees the high-pressure magma forced upwards as a brutal, primal weapon of war. The researchers and engineers whose sacrifice created this peerless tool remain eternally honoured by The Celestian Emperors, their names ritually engraved onto every Magama Cast Generator that is mounted on an Empire ship."
+      ]
+    },
+    {
+      "id": "magnetic-generator",
+      "name": "Magnetic Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 85,
+      "imageUrl": "/modules/empire/magnetic-generator.webp",
+      "imageWidth": 429,
+      "imageHeight": 199,
+      "paragraphs": [
+        "While the Magnetic Generator was born of war, it was not initially designed for it. Rather, as a response to it.",
+        "In the wake of escalating conflicts around Korea’s eastern seaboard—with tensions between the Empire and Commonwealth reaching their zenith (prior to full-scale invasion) in 1857—the country’s trade routes had become untenable. Almost daily, merchantmen and civilian mass conveyors fell victim to the vast minefields left in the wake of the battles waged between the two Great Powers. It was these losses that led Korean engineer Mae Do-hee to develop a solution.",
+        "Affixed to the prows of these same civilian ships, her generators utilised intense galvanism to produce a magnetic pulse capable of repulsing mines in the water, clearing a path that they might pass unharmed.",
+        "Of course, even the most innocuous of inventions have their uses in battle, and it was not long before these devices were folded into the Empire war effort. Mounted upon their naval vessels, these generators now guard against torpedoes, rockets, and small aircraft alike, causing these weapons and craft to veer wildly and violently off course, exploding harmlessly in the waves or—under particularly canny guidance—unsuspecting enemy ships."
+      ]
+    },
+    {
+      "id": "repulsion-generator",
+      "name": "Repulsion Field Generator",
+      "aliases": ["Repulsion Generator"],
+      "category": "Генератор",
+      "page": 86,
+      "imageUrl": "/modules/empire/repulsion-generator.webp",
+      "imageWidth": 439,
+      "imageHeight": 209,
+      "paragraphs": [
+        "Inspired by the Kheshig Sky Cutter Wings of their military, Mongolian scientist Odval Énuò had a singular vision for these same rotors, writ large upon the open seas. Reappropriating the inner workings of a crashed Adamski Strike Saucer recovered off the coast of the Yam Islands, she set to work applying the principles of its engines to what would eventually become the Repulsion Field Generator.",
+        "These remarkable devices have since gone on to proliferate naval forces the world over. Requiring a more involved integration, these generators are built into the hulls of surface ships, often as part of their engines. When activated, these newly inbuilt rotors move at such a rate—all the while generating an anti-gravitational field beneath the ship’s hull—that ships will literally rise out of the water, hovering over short distances, allowing them to navigate even the most treacherous of waters."
+      ]
+    },
+    {
+      "id": "shroud-generator",
+      "name": "Shroud Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 86,
+      "imageUrl": "/modules/empire/shroud-generator.webp",
+      "imageWidth": 418,
+      "imageHeight": 200,
+      "paragraphs": [
+        "First incorporated into the Empire’s arsenal in 1854, the Shroud Generator has gone on to prove indispensable to their naval tactics. Infamously used to incredible effect by Kongō Heavy Battleships, these generators are able to make already tough ships into outright behemoths; mountains shrouded in a layer of dark and stormy clouds.",
+        "Incorporating mechanics from their own Interphase Generators, Empire vessels equipped with Shroud Generators are akin to ghosts. While not incorporeal, they are shrouded in dark smoke and nightmarish fumes that obfuscate their movements and intentions from the enemy. Massed gun batteries have been unleashed against these shadow craft, shells plunging into inky blackness, only for their inchoate targets to emerge from the pall unscathed. Such is the effectiveness of these generators that many foreign sailors believe that Empire ships are crewed by the dead themselves."
+      ]
+    }
+  ]
+}

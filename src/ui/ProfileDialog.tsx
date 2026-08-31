@@ -10,6 +10,8 @@ import {
 
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
 import type { RuleReadModel, WeaponProfileReadModel } from "../application/rosters/profile-rules";
+import { moduleLoreRussianParagraphs, moduleLoreSource, type ModuleLore } from "../app/moduleLore";
+import { CameraIcon } from "./CameraIcon";
 import { WeaponProfiles } from "./ProfileRules";
 import { RuleDescription, RuleLinks, ShipCardProfile, ShipMobileProfile } from "./ShipCardProfile";
 
@@ -178,6 +180,79 @@ export function OptionDescriptionDialog({
   );
 }
 
+export function ModuleLoreDialog({
+  module,
+  name,
+  onClose,
+}: {
+  readonly module: ModuleLore;
+  readonly name: string;
+  readonly onClose: () => void;
+}) {
+  const [language, setLanguage] = useState<"ru" | "en">("ru");
+  const translation = moduleLoreRussianParagraphs(module);
+  const translated = language === "ru" && translation !== null;
+  const paragraphs = translated ? translation : module.paragraphs;
+
+  return (
+    <InspectorDialog
+      backgroundUrl={null}
+      closeLabel="Закрыть изображение и лор"
+      compact
+      eyebrow={`Арсенал Империи · ${module.category}`}
+      name={name}
+      onClose={onClose}
+    >
+      <article className="module-lore">
+        <figure className="module-lore__figure">
+          <img
+            alt={`${module.name} — оригинальная иллюстрация из ORBAT Империи`}
+            decoding="async"
+            height={module.imageHeight}
+            src={module.imageUrl}
+            width={module.imageWidth}
+          />
+          <figcaption>Иллюстрация из Tools of War</figcaption>
+        </figure>
+        <div className="module-lore__heading">
+          <h3>История модуля</h3>
+          {translation ? (
+            <div aria-label="Язык лора" className="rule-language-toggle" role="group">
+              <button aria-pressed={translated} onClick={() => setLanguage("ru")} type="button">
+                RU · Перевод
+              </button>
+              <button aria-pressed={!translated} onClick={() => setLanguage("en")} type="button">
+                EN · Оригинал
+              </button>
+            </div>
+          ) : (
+            <span>EN · Оригинал</span>
+          )}
+        </div>
+        <div className="module-lore__text" lang={translated ? "ru" : "en"}>
+          {paragraphs.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
+        </div>
+        <footer className="module-lore__source">
+          <a
+            href={`${moduleLoreSource.url}#page=${module.page}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {moduleLoreSource.title} · стр. {module.page} ↗
+          </a>
+          <small>
+            Иллюстрация и лор © Warcradle Studios.
+            {translated ? " Неофициальный русский перевод." : ""} Игровые свойства — по кнопке с
+            глазом.
+          </small>
+        </footer>
+      </article>
+    </InspectorDialog>
+  );
+}
+
 function InspectorDialog({
   backgroundUrl,
   card = false,
@@ -320,15 +395,6 @@ function InspectorDialog({
         type="button"
       />
     </div>
-  );
-}
-
-function CameraIcon() {
-  return (
-    <svg aria-hidden="true" className="camera-icon" viewBox="0 0 24 24">
-      <path d="M3.5 7.5h4l1.4-2h6.2l1.4 2h4v11h-17Z" />
-      <circle cx="12" cy="13" r="3.25" />
-    </svg>
   );
 }
 

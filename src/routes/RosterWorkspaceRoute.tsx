@@ -665,6 +665,7 @@ export function RosterWorkspaceRoute({
         <ContextPane
           busy={busy}
           collapsed={contextCollapsed}
+          faction={model.roster.faction}
           onAdd={() => void addSelected()}
           onTarget={setSelectedTarget}
           editor={selected ? session.editor(resolvedEditorInstanceId, selected.id) : null}
@@ -1196,6 +1197,7 @@ function CompositionPane({
 function ContextPane({
   busy,
   collapsed,
+  faction,
   onAdd,
   onTarget,
   editor,
@@ -1207,6 +1209,7 @@ function ContextPane({
 }: {
   readonly busy: boolean;
   readonly collapsed: boolean;
+  readonly faction: string;
   readonly onAdd: () => void;
   readonly onTarget: (value: string) => void;
   readonly editor: ShipEditorReadModel | null;
@@ -1243,6 +1246,7 @@ function ContextPane({
       {editor ? (
         <ShipEditorShell
           busy={busy}
+          faction={faction}
           model={editor}
           onAdd={onAdd}
           onBack={onEditorBack}

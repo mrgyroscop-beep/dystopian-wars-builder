@@ -7525,6 +7525,136 @@ button.button {
   flex: 0 0 auto;
 }
 
+.editor-option__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.5rem;
+}
+
+.editor-option__actions:empty {
+  display: none;
+}
+
+.option-camera:hover {
+  background: var(--surface-selected);
+  border-color: var(--brand);
+}
+
+.profile-dialog:has(.module-lore) {
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+.profile-dialog:has(.module-lore) .profile-dialog__header {
+  z-index: 2;
+  background: var(--surface);
+}
+
+.profile-dialog:has(.module-lore) .profile-dialog__header h2 {
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  overflow-wrap: anywhere;
+}
+
+.profile-dialog:has(.module-lore) .profile-dialog__veil {
+  display: none;
+}
+
+.module-lore {
+  padding: 0.25rem clamp(0rem, 2vw, 1rem) 0.5rem;
+}
+
+.module-lore__figure {
+  display: grid;
+  min-height: 12rem;
+  margin: 0 0 1.5rem;
+  padding: 1.5rem 1rem 0.75rem;
+  place-items: center;
+  gap: 1.25rem;
+  background: #e8e2d4;
+  border: 1px solid #c7bead;
+  border-radius: 0.35rem;
+}
+
+.module-lore__figure img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 10rem;
+  object-fit: contain;
+}
+
+.module-lore__figure figcaption {
+  color: #625a4c;
+  font-size: 0.7rem;
+}
+
+.module-lore__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.module-lore__heading h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.module-lore__heading span,
+.module-lore__source {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.module-lore__text {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.module-lore__text p {
+  margin: 1rem 0;
+}
+
+.module-lore__source {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.module-lore__source a {
+  width: fit-content;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  color: var(--brand);
+}
+
+@media (max-width: 48rem) {
+  .editor-option:has(.option-camera) {
+    flex-wrap: wrap;
+  }
+
+  .editor-option:has(.option-camera) .editor-option__choice {
+    flex-basis: calc(100% - 7rem);
+  }
+
+  .editor-option:has(.option-camera) .editor-option__copy {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-wrap: anywhere;
+  }
+
+  .editor-option:has(.option-camera) .editor-option__copy > span:last-child {
+    justify-items: start;
+    text-align: left;
+  }
+}
+
 .editor-option__trait {
   min-height: 2.75rem;
   flex: 0 1 auto;

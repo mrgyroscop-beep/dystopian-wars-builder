@@ -16,6 +16,84 @@ afterEach(() => {
 });
 
 describe("ShipEditorShell", () => {
+  it("opens Empire module lore after the eye without changing the loadout and restores focus", async () => {
+    const user = userEvent.setup();
+    const onCommand = vi.fn();
+    render(
+      <ShipEditorShell
+        busy={false}
+        faction="Empire"
+        model={{
+          ...editorModel("jian"),
+          groups: [
+            group("heavy", "Heavy Hardpoint: PSA", 1, 1, [
+              option("gun", "Heavy Gun Battery", "Option", true),
+            ]),
+          ],
+        }}
+        onAdd={vi.fn()}
+        onBack={vi.fn()}
+        onCommand={onCommand}
+      />,
+    );
+    const eye = screen.getByRole("button", { name: "Показать свойства Heavy Gun Battery" });
+    const camera = screen.getByRole("button", {
+      name: "Показать изображение и лор Heavy Gun Battery",
+    });
+    expect(eye.nextElementSibling).toBe(camera);
+    await user.click(camera);
+    const dialog = screen.getByRole("dialog", { name: "Heavy Gun Battery" });
+    expect(within(dialog).getByRole("img")).toHaveAttribute(
+      "src",
+      "/modules/empire/heavy-gun-battery.webp",
+    );
+    expect(dialog).toHaveTextContent("Заказы на вооружение крупнейших кораблей");
+    expect(dialog.querySelector("[lang='ru']")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "EN · Оригинал" }));
+    expect(dialog).toHaveTextContent("Commissions to outfit the largest ships");
+    expect(dialog.querySelector("[lang='en']")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "RU · Перевод" }));
+    expect(dialog).toHaveTextContent("Заказы на вооружение крупнейших кораблей");
+    expect(within(dialog).getByRole("link")).toHaveAttribute(
+      "href",
+      expect.stringContaining("#page=82"),
+    );
+    expect(onCommand).not.toHaveBeenCalled();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(camera).toHaveFocus();
+  });
+
+  it("shows generator artwork in preview, including catalog aliases, only for Empire", async () => {
+    const user = userEvent.setup();
+    const props = {
+      busy: false,
+      model: {
+        ...editorModel(null),
+        groups: [
+          group("generator", "Generators", 0, 1, [
+            option("repulsion", "Repulsion Generator", "Generator"),
+          ]),
+        ],
+      },
+      onAdd: vi.fn(),
+      onBack: vi.fn(),
+      onCommand: vi.fn(),
+    };
+    const { rerender } = render(<ShipEditorShell {...props} faction="Empire" />);
+    expect(screen.getByRole("radio")).toBeDisabled();
+    await user.click(
+      screen.getByRole("button", { name: "Показать изображение и лор Repulsion Generator" }),
+    );
+    expect(screen.getByRole("dialog")).toHaveTextContent("Одвал Энуо");
+    await user.click(screen.getByRole("button", { name: "Закрыть изображение и лор" }));
+    expect(props.onCommand).not.toHaveBeenCalled();
+    rerender(<ShipEditorShell {...props} faction="Crown" />);
+    expect(
+      screen.queryByRole("button", { name: /Показать изображение и лор/u }),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders a compact summary with the configuration always open", async () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();
