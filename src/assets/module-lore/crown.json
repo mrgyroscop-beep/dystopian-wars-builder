@@ -1,0 +1,189 @@
+{
+  "faction": "Crown",
+  "source": {
+    "title": "Crown · ORBAT 4.02a",
+    "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02a.pdf",
+    "kind": "orbat",
+    "sha256": "6d960998953f5e9ebda5cebc8c4d369fc82cc5ad92c63c8ca21a32b6d66265df"
+  },
+  "modules": [
+    {
+      "id": "heavy-gun-battery",
+      "name": "Heavy Gun Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 70,
+      "imageUrl": "/modules/crown/heavy-gun-battery.webp",
+      "imageWidth": 490,
+      "imageHeight": 178,
+      "paragraphs": [
+        "The navies of every Great Power still rely on some form of gun battery as their most common offensive weapons. The Crown puts great faith in their 15” shells, with most vessels being fitted with three barrels to maximise destructive capability. They specialise in using proprietary blended gunpowder and shaped munitions known as Leithal, after the famed gunnery school in Leith. There, the Crown Navy drills Her Majesty’s heavy gun and broadside crews in the latest engineering principles and tactics, instilling a degree of fire discipline that is unmatched in the Dystopian Age."
+      ]
+    },
+    {
+      "id": "heavy-rocket-battery",
+      "name": "Heavy Rocket Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 70,
+      "imageUrl": "/modules/crown/heavy-rocket-battery.webp",
+      "imageWidth": 388,
+      "imageHeight": 225,
+      "paragraphs": [
+        "While the expertise of many Crown weapon crews is rightly focused on their Leithal batteries, rocketry is no less commonly utilised, even if it is occasionally sniffed at by those of a more traditionalist bent. Any commodore worth their salt will have at least a handful of heavy rocket batteries distributed throughout their fleet. As the skies become ever more crowded with rotorcraft, dirigibles, and the otherworldly saucers of the Enlightened, weaponry that can deal with such targets is proving ever more useful. 7” high explosive rockets with timers ensure that the detonation occurs as close to the target as possible."
+      ]
+    },
+    {
+      "id": "heavy-swift-torpedo-turret",
+      "name": "Heavy Swift Torpedo Turret",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 70,
+      "imageUrl": "/modules/crown/heavy-swift-torpedo-turret.webp",
+      "imageWidth": 495,
+      "imageHeight": 167,
+      "paragraphs": [
+        "The Crown’s Royal Navy is known for its traditionalism. While breakthroughs in engineering are frequently made, courtesy of the boffins at Bletchley Park, they are not always made use of. The torpedo turret, fortunately for the ambitions of the Crown, is not one of those cases.",
+        "As naval warfare across the globe intensified, the engineer Henry Swift noticed that while torpedoes were seeing increased use, owing to the steady establishment of submarine warfare in military doctrines, their designs had remained largely unchanged since their inception. Firing tubes and weapon crews necessitate the need for space and a fixed direction of fire, which creates difficulties when targets are on the move. Swift believed that an autoloading system, utilising the hardpoints already available on naval vessels, could overcome this problem. Had he come from a working class background, this would likely have been the end of it. However, his status amongst the landed gentry earned him a hearing with the Ministry of Defence and the rest is history."
+      ]
+    },
+    {
+      "id": "majestic-cannons",
+      "name": "Majestic Cannons",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 71,
+      "imageUrl": "/modules/crown/majestic-cannons.webp",
+      "imageWidth": 503,
+      "imageHeight": 188,
+      "paragraphs": [
+        "Even the conservative warfare of the Crown has had to make concessions to the immutable fact that in matters of engineering, advances must occasionally be made. As vessels have become larger, their armour thicker and redundancies more prevalent, arms have been forced to move apace. From this necessity, the Majestic Cannon was born. Using 300 lb hardened charges within tungstentipped Palliser shells, the outer casing of these shells is designed to crack on impact, allowing the core to penetrate the armour of the target. Once inside, this core detonates, resulting in enormous internal damage.",
+        "Although these weapons have impressive range, they are too ponderous to engage nearby targets. This often presents enemy captains with a difficult choice: stay distant and weather volley after volley of Majestic shells, or draw close and risk coming into broadside range."
+      ]
+    },
+    {
+      "id": "light-gun-battery",
+      "name": "Light Gun Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 71,
+      "imageUrl": "/modules/crown/light-gun-battery.webp",
+      "imageWidth": 567,
+      "imageHeight": 109,
+      "paragraphs": [
+        "The 5” Leithal shells fired by the Crown’s frigates and destroyers may be less potent than their larger counterparts, but they are no less effective when brought to bear in number. Squadrons of Excalibur Heavy Destroyers are known to punch well above their weight thanks to gun battery emplacements to the fore and aft, and are the bane of those looking to challenge the Pax Britannia."
+      ]
+    },
+    {
+      "id": "light-rocket-battery",
+      "name": "Light Rocket Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 71,
+      "imageUrl": "/modules/crown/light-rocket-battery.webp",
+      "imageWidth": 232,
+      "imageHeight": 106,
+      "paragraphs": [
+        "Some old-fashioned admirals maintain that bigger is always better. However, this is not always the case, least of all in matters of war. Despite the smaller payload in comparison to the 7” rockets of larger batteries, the 4 1⁄4” rockets employed by smaller craft take up significantly less space, allowing their launchers to be easily mounted upon multiple hardpoints. This has proved particularly useful in providing meaningful anti-air support in coastal waters, where heavier assets are incapable of venturing."
+      ]
+    },
+    {
+      "id": "light-swift-torpedo-turret",
+      "name": "Light Swift Torpedo Turret",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 71,
+      "imageUrl": "/modules/crown/light-swift-torpedo-turret.webp",
+      "imageWidth": 286,
+      "imageHeight": 108,
+      "paragraphs": [
+        "Henry Swift’s torpedo turret designs proved so successful that they were soon modified for smaller payloads. This allowed their placement on destroyers and frigates but also as an addition to larger weapons mounted on heavy cruisers and weightier vessels.",
+        "At the short-lived Battle of Sumba, in 1863, a Crown patrol led by the Sabre-class Command Cruisers HMS Motte and HMS Bailey, found the Indonesian territory blockaded by a flotilla of Imperium ships. With sealed messages from the Ministry of Intelligence pertaining to assets in Madjaas, and instructions to deliver them with all due haste, the two Sabres immediately engaged the enemy. With Swift Torpedo Turrets and aft-mounted Trident Generators, this devastatingly accurate strike, crippled the enemy’s Falkenstein-class Flagship in its first salvo, forcing her Bavarian captain to surrender, before a follow-up attack could be ordered."
+      ]
+    },
+    {
+      "id": "atomic-generator",
+      "name": "Atomic Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 72,
+      "imageUrl": "/modules/crown/atomic-generator.webp",
+      "imageWidth": 411,
+      "imageHeight": 195,
+      "paragraphs": [
+        "It was Eberhard Bunsen and Gustav Kirchhoff, German scientists at the University of Königsberg who, in 1846, and in collaboration with Lord Barnabas Sturgeon, first unlocked the secrets of the atom. The Imperium arrested Bunsen and Kirchoff and confiscated their research, leading Sturgeon to leave Europe altogether and found the Covenant of the Enlightened, but scientific breakthroughs, once made, are difficult to unmake. Thanks to the work of the Ordo Teutonic, and the spies of rival Powers, many of those atomic secrets have since found their way around the world.",
+        "Atomic Generators can produce a constant and reliable power output with little in the way of fuel. Indeed, a vessel retrofitted with an Atomic Generator is not only faster than others of the same class, it can also go further between refuellings, with several complete circumnavigations of the globe being reported by various navies. The only reason they are not more widespread is the need for highly trained engineers to constantly supervise the devices and prevent accidents. More than one captain has felt the need to power down their Atomic Generator should its senior technician fall ill, rather than keep it operational and risk the consequences."
+      ]
+    },
+    {
+      "id": "fury-generator",
+      "name": "Fury Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 72,
+      "imageUrl": "/modules/crown/fury-generator.webp",
+      "imageWidth": 407,
+      "imageHeight": 197,
+      "paragraphs": [
+        "Every Great Power has come to appreciate and resent the Fury Generator in equal measure. Its utility in battle is without question. While the exact mechanisms are not yet fully understood, the generator induces aggression to the point that sudden orders to ram or board the enemy are obeyed without question. The mysterious glowing core of the generator and the hookworm-like tendrils of its connectors require relatively little internal space compared with the weapons systems they tend to replace. This is convenient, for ships with Fury Generators installed tend to require exceptionally well stocked weapons lockers: pistols, blunderbusses, grappling hooks, cutlasses, to name but a few, are all standard armaments on such a ship.",
+        "The resentment among certain senior officers and staff stems from the fact that, while the design of the Fury Generator has been disseminated and copied by engineers across the globe, its fuel source comes exclusively from the Warcradle, the Promethean Complex of President-Elect Burson Carpathian. To date, it remains the only place on Earth from which one can obtain the luminous crimson ooze known as RJ-1027, with the proceeds almost certainly funding his recent election triumph. While many attempts at replicating the substance have been attempted, and some have successfully diluted or combined it with other fuels such as oil or coal, its secrets are closely guarded by the Peer."
+      ]
+    },
+    {
+      "id": "guardian-generator",
+      "name": "Guardian Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 72,
+      "imageUrl": "/modules/crown/guardian-generator.webp",
+      "imageWidth": 869,
+      "imageHeight": 196,
+      "paragraphs": [
+        "The Guardian Generators of the Crown share the same root designs as the more commonly used Heavy Shield Generator. When the first Heavy Shields were being tested, the “Bletchley Boffins” (a colloquial, and not entirely kind, term for the engineers at England’s preeminent Promethean Complex) soon came to the realisation that networked generators could prove more effective than the same number of independent generators working alone. By operating in series, the size and power requirements of these generators could be greatly reduced, allowing them to be installed on most vessels of cruiser size or greater. Their ubiquity aboard Crown vessels has the added benefit of bolstering morale, with every sailor knowing that their ships are protected by the long arm of their fellows, and that they protect them in turn.",
+        "This protective aegis is further supported by specialist shield amplifiers, such as the McCurdy-pattern Guardian Array and those aboard the Camelot High Guardian, which draw power from the ships’ engines to reinforce the energy shields across a battlefleet. Given adequate communication across multiple units, it is possible for a Guardian network to maintain integrity, even when under the pressures of combat."
+      ]
+    },
+    {
+      "id": "magnetic-generator",
+      "name": "Magnetic Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 73,
+      "imageUrl": "/modules/crown/magnetic-generator.webp",
+      "imageWidth": 429,
+      "imageHeight": 200,
+      "paragraphs": [
+        "A captain with a Heavy Shield Generator aboard their ship will wax lyrical about the many times it saved their skin. Less talked about, but no less useful to those with a smidgeon of imagination, are Magnetic Generators. Employing focused galvanism, under the guidance of a specialist engineer, Magnetic Generators can cause torpedoes, rockets and the like to veer wildly off course, exploding harmlessly in the water several hundred yards from their intended target. While it may not prevent every potential impact, these generators can often turn a direct hit into a glancing one, or cause munitions to explode prematurely, significantly lessening the potential harm. Even more useful (if harrowing, if one were to pause and consider it) is the defence against smaller attack aircraft, which can be deflected in similar fashion.",
+        "Particularly canny captains have even found a use for their Magnetic Generators when navigating minefields simply nudging these floating hazards out of the way, obviating the need for dedicated minesweeper units and allowing a single powerful vessel to move around enemy positions at will."
+      ]
+    },
+    {
+      "id": "shroud-generator",
+      "name": "Shroud Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 73,
+      "imageUrl": "/modules/crown/shroud-generator.webp",
+      "imageWidth": 418,
+      "imageHeight": 200,
+      "paragraphs": [
+        "While commonly used, the term “Shroud Generator” is actually something of a misnomer, referring instead to a host of engineering tricks and innovative systems designed to mask a vessel from detection. This can range from chaff launchers loaded with explosive aluminium pods that can obscure heat signatures, to phosphorous emitters that veil a moving ship in thick smoke, to the esoteric countermeasures of the Covenant of the Enlightened. These may involve the bending of light, the projection of false imagery, or the generation of false “realities” in which the subject so concealed no longer exists at all. None are particularly well understood by the admirals who use them, or even, it must be said, by the Enlightened scientists who install them."
+      ]
+    },
+    {
+      "id": "trident-generator",
+      "name": "Trident Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 73,
+      "imageUrl": "/modules/crown/trident-generator.webp",
+      "imageWidth": 394,
+      "imageHeight": 230,
+      "paragraphs": [
+        "Ever since the advent of Henry Swift’s revolutionary torpedo turret designs, there have been ongoing discussions over ways to improve their capabilities. Out of such talks was the Trident Generator born.",
+        "Looking, as is so often the case, to their glorious past, inspiration came in the form of the renowned British longbow. An elegant weapon, yes. Decisive in trained hands, most certainly. But it was preparation, not raw power, that made it such an effective weapon. After all, it was through careful surveillance of the battlefield, marking it with flags to communicate ranges to the ranks of waiting bowmen, that a small force of stoutly British hearts secured victory at Agincourt.",
+        "It was Paul Robertson, a chemical engineer and amateur naturalist employed by Taff Valley Railway, who first had the bright idea of exciting sea salts to create a visible (and measurable) glow, akin to the bioluminescence of certain deep sea creatures. Through this, and by measuring the diffraction pattern and spectral shifts triggered by a moving object crossing these colour boundaries, Trident operators in the torpedo bay of Crown vessels several miles distant, can determine the range, position, and velocity of submerged targets with pinpoint accuracy."
+      ]
+    }
+  ]
+}

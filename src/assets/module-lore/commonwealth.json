@@ -1,0 +1,77 @@
+{
+  "faction": "Commonwealth",
+  "source": {
+    "title": "Commonwealth · Faction Starter Set — Assembly Guide",
+    "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/units/assembly-guides/DW-Assembly-COMMONWEALTH-Faction-Starter-Set_W.pdf",
+    "kind": "assembly",
+    "sha256": "fbda49a0e971f574eecd47eded826d4449001a80b31aad826d0f7f0596ad0d63"
+  },
+  "modules": [
+    {
+      "id": "heavy-gun-battery",
+      "name": "Heavy Gun Battery",
+      "aliases": ["Tracer Heavy Gun Battery"],
+      "category": "Вооружение",
+      "page": 1,
+      "imageUrl": "/modules/commonwealth/heavy-gun-battery.webp",
+      "imageWidth": 207,
+      "imageHeight": 187,
+      "paragraphs": []
+    },
+    {
+      "id": "tri-railgun",
+      "name": "Tri-Railgun",
+      "aliases": ["Tracer Tri-Railgun"],
+      "category": "Вооружение",
+      "page": 1,
+      "imageUrl": "/modules/commonwealth/tri-railgun.webp",
+      "imageWidth": 202,
+      "imageHeight": 188,
+      "paragraphs": []
+    },
+    {
+      "id": "zhalo-rocket-battery",
+      "name": "Zhalo Rocket Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 1,
+      "imageUrl": "/modules/commonwealth/zhalo-rocket-battery.webp",
+      "imageWidth": 189,
+      "imageHeight": 179,
+      "paragraphs": []
+    },
+    {
+      "id": "light-gun-battery",
+      "name": "Light Gun Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 5,
+      "imageUrl": "/modules/commonwealth/light-gun-battery.webp",
+      "imageWidth": 145,
+      "imageHeight": 143,
+      "paragraphs": []
+    },
+    {
+      "id": "railgun",
+      "name": "Railgun",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 5,
+      "imageUrl": "/modules/commonwealth/railgun.webp",
+      "imageWidth": 177,
+      "imageHeight": 232,
+      "paragraphs": []
+    },
+    {
+      "id": "seismic-mortar",
+      "name": "Seismic Mortar",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 5,
+      "imageUrl": "/modules/commonwealth/seismic-mortar.webp",
+      "imageWidth": 172,
+      "imageHeight": 218,
+      "paragraphs": []
+    }
+  ]
+}

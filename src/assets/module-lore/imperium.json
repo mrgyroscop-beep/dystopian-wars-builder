@@ -1,0 +1,70 @@
+{
+  "faction": "Imperium",
+  "source": {
+    "title": "Imperium · Faction Starter Set — Assembly Guide",
+    "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/units/assembly-guides/DW-Assembly-IMPERIUM-Faction-Starter-Set.pdf",
+    "kind": "assembly",
+    "sha256": "e038c81aaa345a9b0f194abe1d6375e7ae9ac476d3ab938009b611233adeda90"
+  },
+  "modules": [
+    {
+      "id": "heavy-voltaic-gun-battery",
+      "name": "Heavy Voltaic Gun Battery",
+      "aliases": [
+        "Auto-Targeting Heavy Voltaic Gun Battery",
+        "Guided Heavy Voltaic Gun Battery",
+        "Twin-Linked Heavy Voltaic Gun Battery"
+      ],
+      "category": "Вооружение",
+      "page": 3,
+      "imageUrl": "/modules/imperium/heavy-voltaic-gun-battery.webp",
+      "imageWidth": 263,
+      "imageHeight": 163,
+      "paragraphs": []
+    },
+    {
+      "id": "stromschlag-rocket-battery",
+      "name": "Stromschlag Rocket Battery",
+      "aliases": ["Guided Stromschlag Rocket Battery"],
+      "category": "Вооружение",
+      "page": 3,
+      "imageUrl": "/modules/imperium/stromschlag-rocket-battery.webp",
+      "imageWidth": 190,
+      "imageHeight": 205,
+      "paragraphs": []
+    },
+    {
+      "id": "gustav-twin-bombard",
+      "name": "Gustav Twin Bombard",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 2,
+      "imageUrl": "/modules/imperium/gustav-twin-bombard.webp",
+      "imageWidth": 451,
+      "imageHeight": 255,
+      "paragraphs": []
+    },
+    {
+      "id": "bertha-heavy-bombard",
+      "name": "Bertha Heavy Bombard",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 2,
+      "imageUrl": "/modules/imperium/bertha-heavy-bombard.webp",
+      "imageWidth": 451,
+      "imageHeight": 256,
+      "paragraphs": []
+    },
+    {
+      "id": "shroud-generator",
+      "name": "Shroud Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 4,
+      "imageUrl": "/modules/imperium/shroud-generator.webp",
+      "imageWidth": 547,
+      "imageHeight": 312,
+      "paragraphs": []
+    }
+  ]
+}

@@ -1,0 +1,239 @@
+{
+  "faction": "Sultanate",
+  "source": {
+    "title": "Sultanate · ORBAT 4.01",
+    "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Sultanate-4.01_W.pdf",
+    "kind": "orbat",
+    "sha256": "362cc06ab94e5b5650f136e743bd6f91b46b4431c424cf04186ef4bc4cfa35b6"
+  },
+  "modules": [
+    {
+      "id": "aetheric-lance",
+      "name": "Aetheric Lance",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 65,
+      "imageUrl": "/modules/sultanate/aetheric-lance.webp",
+      "imageWidth": 360,
+      "imageHeight": 192,
+      "paragraphs": [
+        "Through dreams, the cosmic knowledge of the Order is bestowed upon their followers. So it was that Derya Kaldırım, waking one morning, could not fully explain the confidence with which she first embarked on the designs of what would come to be one of the most powerful weapons in the Sultanate’s arsenal.",
+        "Befitting its otherworldly origins, the aetheric lance defies earthly understanding. Unleashing solid beams of light in violent, concussive bursts, these screaming beams carve blinding white lines across enemy ships, burning through the thickest of metals as though they were nothing.",
+        "But for all their destructive capabilities, it is the unnerving reports from crews unfortunate enough of being caught in their path that cause the most consternation. With limbs cleanly carved off in cauterising blasts, sailors describe neither pain nor agony in the moment of impact. Rather a numbness, and a distinct sense of... nothing. An emptiness that lingers long after, in mind, body, and soul..."
+      ]
+    },
+    {
+      "id": "light-gun-battery",
+      "name": "Light Gun Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 65,
+      "imageUrl": "/modules/sultanate/light-gun-battery.webp",
+      "imageWidth": 457,
+      "imageHeight": 187,
+      "paragraphs": [
+        "The ships of the Sultanate are artisanal creations, designed to evoke the majestic vistas of Turkey and the many realms under Sultan Mustafa’s rule. More than war machines, they are intended to inspire awe in their foes, showcasing the Sultanate in all its opulent glory. Indeed, there are few who could argue, save perhaps for the shipwrights of the Empire, that the Sultanate boasts the most beautiful vessels across the globe.",
+        "This design philosophy extends to its weapons. Their light gun batteries are often wrought in shimmering steels and gleaming golds, dutifully cleaned and polished after each encounter, that no imperfection may be seen upon their surface by the enemy. Although more frequently seen on their smaller ships, it is a fool who underestimates the firepower of the Sultanate’s simplest weapon, as a volley from these formidable guns has been known to wipe entire ships from the sea’s surface in a cacophony of precisely choreographed salvos."
+      ]
+    },
+    {
+      "id": "light-rocket-battery",
+      "name": "Light Rocket Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 65,
+      "imageUrl": "/modules/sultanate/light-rocket-battery.webp",
+      "imageWidth": 342,
+      "imageHeight": 177,
+      "paragraphs": [
+        "Few of the weapons deployed by the Sultanate’s navy delight their ruler as greatly as their rockets. He is reported as exclaiming they remind him of “those joyful days as a boy, sat upon my father’s knee, watching firework displays in his honour.” So great is his love for them, that it is not unusual for an entire fleet to be impulsively summoned to Istanbul to fire their powerful rockets wastefully into the Sea of Marmara as he watches on, enraptured from his palace balcony.",
+        "In battle, it is a different matter entirely. Unlike the dummy ammunition used for their Sultan’s pleasure (at the Grand Vizier’s insistence), the Cirit rockets of the Sultanate are designed so that no shot is wasted. Each houses simple automata punch cards, affording them unwavering accuracy, as they course correct their trajectory before colliding into their target with truly terrifying force, tearing apart metal with fire."
+      ]
+    },
+    {
+      "id": "d-cannon-battery",
+      "name": "D-Cannon Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 66,
+      "imageUrl": "/modules/sultanate/d-cannon-battery.webp",
+      "imageWidth": 453,
+      "imageHeight": 257,
+      "paragraphs": [
+        "First developed by Ömer Tilki in 1862, the distortion cannon is a weaponisation of the Order’s portals. Unlike the stable tears in reality afforded by their larger generators, these cannons jettison micro-portals across great distances; liminal spheres of unreality that lose coherency over the split-second they are in flight, before collapsing in on themselves entirely. These fearsome implosions are terrifying to behold; an unsettling moment of absolute silence, followed by the roaring sound of a gaping vacuum, as great spheres are carved out of ships, water, and land alike in the blink of an eye.",
+        "In the wake of this destruction, there remains an unnerving shimmer in the air. Perfect globules of nothing, observable only in one’s periphery, that seem to hum a quiet song of emptiness: a white noise that fills the ears and mind of those nearby."
+      ]
+    },
+    {
+      "id": "heavy-gun-battery",
+      "name": "Heavy Gun Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 66,
+      "imageUrl": "/modules/sultanate/heavy-gun-battery.webp",
+      "imageWidth": 521,
+      "imageHeight": 168,
+      "paragraphs": [
+        "Often built of rare metals, and sometimes even ornamented with encrusted jewels, each Kılıç gun battery is considered as an extension of their Sultan’s will. So much so that, upon their construction, each weapon is delivered to his palace in Istanbul where, it is said, he personally sanctifies each gun in turn, to deliver his judgement across the globe. This is, of course, untrue, though the frankly horrific amount of gold it takes to ensure the pageantry of this lie is very, very real.",
+        "On the waters, however, their power cannot be denied. These gaudy, ornate dual-barrelled batteries unleash fiery hell upon the enemy, ripping through the hulls of enemy ships with all the terrifying speed associated with the Sultanate’s vessels, as—thanks to advanced automated systems built into each battery—shells are immediately discarded and reloaded in a matter of seconds."
+      ]
+    },
+    {
+      "id": "heavy-rocket-battery",
+      "name": "Heavy Rocket Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 66,
+      "imageUrl": "/modules/sultanate/heavy-rocket-battery.webp",
+      "imageWidth": 430,
+      "imageHeight": 242,
+      "paragraphs": [
+        "Boasting the same automata guided rockets as their lighter variants, the Mizrak rockets of the Sultanate are as unerringly accurate as they are devastatingly powerful. Unleashing up to fourteen rockets at a time from any given battery, these projectiles trace smokey arcs across the skies, before careening down onto the decking of ships and blowing crew and defensive weapons apart in cataclysmic displays of destruction.",
+        "Of course, as with most rockets, the range of these weapons is altogether more limiting than other naval weapons, requiring careful positioning. These projectiles will simply soar over any targets that are too close, and arc into the water before they reach enemy vessels that are too far away. However, this presents little issue to the Sultanate. Given the lateral engines and the speed with which most Sultanate vessels move, this manoeuvrability is used in partnership with their weapons to terrifying effect."
+      ]
+    },
+    {
+      "id": "pala-railgun",
+      "name": "Pala Railgun",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 66,
+      "imageUrl": "/modules/sultanate/pala-railgun.webp",
+      "imageWidth": 636,
+      "imageHeight": 179,
+      "paragraphs": [
+        "A recent addition to the Sultanate’s burgeoning naval forces, the pala railgun comprises twin magnetic rails, parallel frames that launch projectiles at near impossible velocity. Their deafening recoil sends powerful shockwaves out in every direction, with the resultant shot punching through ships in a split second with little more effort than popping a grape. But the introduction of this weapon to the Sultanate came not from their own engineers; rather from the palace of the Sultan.",
+        "Much like the Eurasian magpies that fill his palace gardens, it is said that Sultan Mustafa the Golden is drawn to shiny objects. Becoming enamoured with the Commonwealth’s powerful railguns in 1863, he expressed a desire to purchase them directly from the Tsar himself. Inviting the head of state to Istanbul in a ceremony of great pomp, the two rulers discussed global matters in his throne room, with nary a mention of the now forgotten guns, while Grand Vizier Pasha went about the actual business of securing the weapons with the Tsar’s advisors."
+      ]
+    },
+    {
+      "id": "particle-beamer",
+      "name": "Particle Beamer",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 67,
+      "imageUrl": "/modules/sultanate/particle-beamer.webp",
+      "imageWidth": 470,
+      "imageHeight": 203,
+      "paragraphs": [
+        "Even above the mysterious Order and the mercurial House of Gold, the Crimson League holds a sway over the Sultanate like no other. For it is a relationship bound not by religion or gold, but by blood. Only through the careful mediation of the Grand Vizier has a kind of peace been maintained between Sultan Mustafa and the leader of the League: the Sultan’s sister, Princess Scheherazade.",
+        "Through this peace, the Sultanate have been given unfettered access to the advanced sciences of the Covenant, perfectly encapsulated in the terrifying Particle Beamer.",
+        "A refined variation on the Enlightened’s own designs, the League’s iterative testing has yielded a weapon like no other in the Sultanate’s arsenal. With shrieking, hissing gouts of light, these sleek guns fire bright blue beams of crackling energy across the waves, reducing metal and flesh alike to nothing more than sizzling, sparking atoms. The effect is instantaneous, just long enough for its victims to see their bodies evaporating before their eyes."
+      ]
+    },
+    {
+      "id": "atomic-generator",
+      "name": "Atomic Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 67,
+      "imageUrl": "/modules/sultanate/atomic-generator.webp",
+      "imageWidth": 419,
+      "imageHeight": 195,
+      "paragraphs": [
+        "Despite his claims to the contrary, the Sultanate’s reputation as one of the most scientifically advanced powers on the planet cannot be laid at Sultan Mustafa’s velvet shoes. Rather, it is by the grace of his sister and her Crimson League that his realms enjoy the effects of clean energy in their day to day life. And much of this can be attributed to their unique harnessing of atomic energy.",
+        "Though hampered by the machinations of the Order (even if none are sure why), the Sultanate’s scientists have perfected the principles first unlocked by Bunsen and Kirchhoff to create nigh unmatched atomic generators. In addition to powering entire city blocks, as war has intensified, so too have these remarkable discoveries slowly been applied to their navy. Capable of producing hitherto unimaginable amounts of energy, these machines ensure that the already swift ships of the Sultanate are capable of outrunning their enemies across the waves, and over greater distances."
+      ]
+    },
+    {
+      "id": "fury-generator",
+      "name": "Fury Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 67,
+      "imageUrl": "/modules/sultanate/fury-generator.webp",
+      "imageWidth": 410,
+      "imageHeight": 197,
+      "paragraphs": [
+        "Despite their usage amongst the other Great Powers, research into the fury generator’s permanent effects upon the amygdala caused the Sultan’s finest minds to balk. For a time, the installation of them was entirely forbidden. This was, however, until Order sponsored scientist Ayşe Marangoz proposed an alternative. With funding facilitated by a reluctant Grand Vizier Pasha, development of new generators began in earnest, and soon saw installation across their fleets.",
+        "When activated, entire crews find themselves temporarily possessed of a mind that is not their own, directed by a rage that stretches over aeons and entire galaxies. While these hapless sailors cannot possibly comprehend what has overtaken them, those who have given themselves over to the teachings of the Order understand with perfect clarity the gift they have been given: the chance to serve as a momentary vessel for the souls of their divine masters. For many, it is the closest they will come to Apotheosis, the ritual through which their mortal bodies may serve as a host to the Cor Caroli. Of course, this possession will eventually consume them, and so it is for those affected by the fury generators, as with each exposure, their corporeal forms are slowly burned away from within..."
+      ]
+    },
+    {
+      "id": "heavy-shield-generator",
+      "name": "Heavy Shield Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 67,
+      "imageUrl": "/modules/sultanate/heavy-shield-generator.webp",
+      "imageWidth": 410,
+      "imageHeight": 195,
+      "paragraphs": [
+        "Since its discovery in 1850, the heavy shield generator has become ubiquitous with naval warfare across the globe, serving as the only reliable defence against the rapidly escalating weaponry of the unfolding Dystopian Age. Thanks to Princess Scheherazade’s role as an Enlightened Peer, few Great Powers have as open access to these remarkable feats in engineering as the Sultanate, albeit at a steeper cost than most, owing to her uniquely antagonistic alliance with her brother.",
+        "Mounted on their decking, these powerful generators smother the artisanal vessels of the Sultanate in a shimmering film of energy, protecting them from high velocity impacts and heavy weapons fire. Given the ostentatious design of these ships, it is seen as an affront to the Sultan himself for surviving vessels to return to port either marked or marred. Therefore, the employment of heavy shields is commonplace, especially upon the Turkish ships of the Sublime Porte."
+      ]
+    },
+    {
+      "id": "magnetic-generator",
+      "name": "Magnetic Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 68,
+      "imageUrl": "/modules/sultanate/magnetic-generator.webp",
+      "imageWidth": 415,
+      "imageHeight": 199,
+      "paragraphs": [
+        "The seemingly endless reserves of wealth supplied by the House of Gold have enabled the Sultanate to develop at a rate unmatched by their contemporaries, developing not only their own sciences, but purchasing those of the other Great Powers.",
+        "Like their acquisition of Commonwealth railguns, the Sultanate’s magnetic generators are the result of another great expenditure in 1863, this time in cooperation with the Empire. These largely unchanged generators now protect their exquisitely crafted ships in a magnetic field, causing incoming small arms and craft to be shunted suddenly off course. Torpedoes spiral into the depths, shells veer wildly into nearby ships, and enemy aircraft violently careen into one another.",
+        "Given the magnetic fluctuations around such ships, their crewing is highly exclusive. Recruits cannot have fillings or mechanical appendages, and all crew must be wellversed in more traditional cartography and celestial navigation, given the unreliability of compasses on board."
+      ]
+    },
+    {
+      "id": "mirage-generator",
+      "name": "Mirage Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 68,
+      "imageUrl": "/modules/sultanate/mirage-generator.webp",
+      "imageWidth": 436,
+      "imageHeight": 200,
+      "paragraphs": [
+        "Developed by the engineers of the Crimson League, the mirage generators deployed upon Sultanate vessels are emblematic of the scientific advantages Sultan Mustafa’s erstwhile sister has afforded them, even if he would never admit it.",
+        "Based upon, what appear to be, alien transportation devices, iterative testing upon these mechanisms have yielded a generator capable of rudimentarily displacing its environment. Causing ships to be surrounded by an eerie, prismatic bubble of refracting, geometric cracks in reality, the effect these generators cause is akin to seeing an object through a broken mirror: uncertain and ever-shifting. Their movements through the waters are unclear, and any attempts at firing upon these vessels will often lead to entire batteries of guns missing their target entirely.",
+        "For all their benefits, mirage devices consume vast amounts of power, and must be used sparingly. The Sublime Navy’s engineers are trained to activate their vessel’s generator in the moments preceding an incoming barrage, throwing off the enemy’s targeting and rangefinding data, then immediately cutting off the illusory cloak before it overloads critical systems."
+      ]
+    },
+    {
+      "id": "portal-generator",
+      "name": "Portal Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 68,
+      "imageUrl": "/modules/sultanate/portal-generator.webp",
+      "imageWidth": 418,
+      "imageHeight": 203,
+      "paragraphs": [
+        "The advanced sciences gifted by the mysterious Order are great and many, but none so impactful as the portal generators employed across its realms. Facilitating uninterrupted trade routes through realspace and long distance travel for its citizens, so too have these remarkable creations transformed the stage of war.",
+        "Slicing gargantuan tears through the very fabric of reality, these generators enable entire ships to pass through these liminal passages and emerge almost anywhere on the battlefield. Particularly canny admirals have even been known to draw line of sight between these portals, unleashing hellish bombardments against the enemy from impossible vantages.",
+        "Though the uses of these generators are apparent, the truth is that even their engineers have no comprehension of how they operate. They are often constructed in a fugue state, the minds of those who build them guided by the noncorporeal beings of the Order. So it is that their inner workings continue to remain a secret, even to this day."
+      ]
+    },
+    {
+      "id": "repulsion-field-generator",
+      "name": "Repulsion Field Generator",
+      "aliases": ["Repulsion Generator"],
+      "category": "Генератор",
+      "page": 69,
+      "imageUrl": "/modules/sultanate/repulsion-field-generator.webp",
+      "imageWidth": 433,
+      "imageHeight": 206,
+      "paragraphs": [
+        "Another contribution from the Crimson League, albeit one dearly bought thanks to the House of Gold’s assistance, the repulsion field generator is one of the Sultanate’s most prized acquisitions. Discovered by the Enlightened as part of the monolithic “Vault” in the Lost World of Antarctica, these anti-gravitational generators are frequently installed into the heart of Sultanate cruisers as great cylindrical engines that stretch through the hull and contain stacks of giant rotors. The force generated by these propellers sees these ships rise out of the sea, columns of saltwater and foam pouring off their surface as they hover over dangerous terrain, and sometimes even other ships, before crashing back into the waves. So disorienting is the experience, that such ships are frequently crewed by those drawn from the Sultanate’s aerial forces, solidifying their reputation as one of the most elite fleets in the world."
+      ]
+    },
+    {
+      "id": "shroud-generator",
+      "name": "Shroud Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 69,
+      "imageUrl": "/modules/sultanate/shroud-generator.webp",
+      "imageWidth": 415,
+      "imageHeight": 195,
+      "paragraphs": [
+        "The Order proliferates much of the Sultanate’s navy, much to the consternation of its admirals. Unlike their Sultan, those who maintain the traditions of their forebears are not so easily swayed by the swell of this radical religious group. However, it is undeniable the efficacy the Order’s “advancements” have had upon the Sultan’s fleets. The shroud generator is just one such example.",
+        "Vessels that carry these machines are cloaked in a ghostly and pallid hue, within which a choir of screaming faces and voices can be seen and heard, warping the fabric of reality that surrounds them. Who—or what—exactly these beings are is uncertain, but this ghoulish effect is terrifying to behold, and it is nigh impossible to draw a clear view on these vessels. Enemy shells that enter this swirling mass often fly wide of the mark, seeming to twist and turn in the seconds before meeting their target, flung off course by stretching, grasping, translucent limbs."
+      ]
+    }
+  ]
+}

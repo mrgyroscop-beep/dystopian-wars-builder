@@ -23,7 +23,11 @@ export function ModuleLoreButton({
         aria-haspopup="dialog"
         className="option-inspect option-camera"
         onClick={() => setOpen(true)}
-        title="Изображение и лор из ORBAT"
+        title={
+          module.source.kind === "assembly"
+            ? "Изображение из инструкции сборки · лор пока отсутствует"
+            : "Изображение и лор из ORBAT"
+        }
         type="button"
       >
         <CameraIcon />

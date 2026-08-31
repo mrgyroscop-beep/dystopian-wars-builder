@@ -1,0 +1,67 @@
+{
+  "faction": "Union",
+  "source": {
+    "title": "Union · Faction Starter Set — Assembly Guide",
+    "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/units/assembly-guides/UNION-Faction-Starter-Set_WEB.pdf",
+    "kind": "assembly",
+    "sha256": "d74cf785792d688a6f96003a28aeca17cef1ab94dd9ba5b3c62f11a258b2c7f8"
+  },
+  "modules": [
+    {
+      "id": "heavy-gun-battery",
+      "name": "Heavy Gun Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 1,
+      "imageUrl": "/modules/union/heavy-gun-battery.webp",
+      "imageWidth": 265,
+      "imageHeight": 201,
+      "paragraphs": []
+    },
+    {
+      "id": "heavy-rocket-battery",
+      "name": "Heavy Rocket Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 1,
+      "imageUrl": "/modules/union/heavy-rocket-battery.webp",
+      "imageWidth": 207,
+      "imageHeight": 203,
+      "paragraphs": []
+    },
+    {
+      "id": "light-gun-battery",
+      "name": "Light Gun Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 10,
+      "imageUrl": "/modules/union/light-gun-battery.webp",
+      "imageWidth": 255,
+      "imageHeight": 189,
+      "source": {
+        "title": "Union · Long Range Squadrons — Assembly Guide",
+        "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/units/assembly-guides/DW-Assembly-UNION-Long-Range-Squadrons_W.pdf",
+        "kind": "assembly",
+        "sha256": "b5ce46171762f2656b33056ce095b30f60f4c6a8020ae3ec7217056e266014ba"
+      },
+      "paragraphs": []
+    },
+    {
+      "id": "chesapeake-gatling-gun",
+      "name": "Chesapeake Gatling Gun",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 10,
+      "imageUrl": "/modules/union/chesapeake-gatling-gun.webp",
+      "imageWidth": 233,
+      "imageHeight": 187,
+      "source": {
+        "title": "Union · Long Range Squadrons — Assembly Guide",
+        "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/units/assembly-guides/DW-Assembly-UNION-Long-Range-Squadrons_W.pdf",
+        "kind": "assembly",
+        "sha256": "b5ce46171762f2656b33056ce095b30f60f4c6a8020ae3ec7217056e266014ba"
+      },
+      "paragraphs": []
+    }
+  ]
+}

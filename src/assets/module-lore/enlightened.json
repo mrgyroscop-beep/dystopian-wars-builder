@@ -1,0 +1,281 @@
+{
+  "faction": "Enlightened",
+  "source": {
+    "title": "Enlightened · ORBAT 4.01",
+    "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01_W_Compressed-further.pdf",
+    "kind": "orbat",
+    "sha256": "a302f04083c1ae8e38c0df1145c2c3b21b36694d1833ea7ca7131a357dbb6bfa"
+  },
+  "modules": [
+    {
+      "id": "advanced-aetheric-lance",
+      "name": "Advanced Aetheric Lance",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 60,
+      "imageUrl": null,
+      "imageWidth": null,
+      "imageHeight": null,
+      "paragraphs": [
+        "A highly precise and lethal weapon favoured by many Enlightened commanders, the aetheric lance is based upon energy-based devices discovered in the 1845 excavation of the Bimini Crater. It was the physicist Hermann Neuer who managed to harness the power of these extraterrestrial objects, adapting them into the ship-sized models seen today.",
+        "Aetheric lances focus and solidify beams of light, unleashing them at ultra-high speeds sufficient to penetrate almost any substance in existence. These projectiles have been known to pass right through the hull of a heavily armed Crown battleship and out the other side. Far more accurate than conventional shells and missiles, in their wake they leave neatly cauterised holes in the ship’s hull—and in the bodies of any luckless crew members who happened to be in the wrong place at the wrong time. The main drawback to aetheric weaponry is that it tends to lose power and integrity at extreme distances, meaning that to utilise them effectively a captain must draw dangerously close to their intended target."
+      ]
+    },
+    {
+      "id": "light-gun-battery",
+      "name": "Light Gun Battery",
+      "aliases": ["ESCF Light Gun Battery"],
+      "category": "Вооружение",
+      "page": 60,
+      "imageUrl": "/modules/enlightened/light-gun-battery.webp",
+      "imageWidth": 320,
+      "imageHeight": 100,
+      "paragraphs": [
+        "The Enlightened is known for the extraordinary array of reality-distorting, material-atomising tools at its disposal, but that does not mean that its fleets entirely eschew more utilitarian forms of weaponry. Indeed, there is consensus amongst the Lords and Ladies of the Covenant that conventional gun batteries should more than suffice for the needs of the E.S.C.F.—after all, they are merely CitizenSoldiers, not to be trusted with devices that may one day change the world.",
+        "Of course, this being the Enlightened, even mundane weapon platforms seldom remain unmodified for long. The favoured light naval gun of the E.S.C.F. is the Lennicht Model ‘76, a reliable model easily upgraded with experimental components such as kinetic stabilisers, mag-coil rifling, and fire control automata. It can also be loaded with a variety of experimental ammunition; a particular favourite is the SAGC (self-activating gravitic charge), which bursts above a vessel’s deck, inverting the laws of physics and causing the startled crew to float up into the air, then come crashing back down with bonebreaking force."
+      ]
+    },
+    {
+      "id": "light-rocket-battery",
+      "name": "Light Rocket Battery",
+      "aliases": ["ESCF Light Rocket Battery"],
+      "category": "Вооружение",
+      "page": 60,
+      "imageUrl": "/modules/enlightened/light-rocket-battery.webp",
+      "imageWidth": 301,
+      "imageHeight": 146,
+      "paragraphs": [
+        "The use of rocketry—both guided and otherwise—has become something of a sore point for the Enlightened. Several times it has found itself sanctioned by one or other of the Great Powers for so-called “cloud seeding”, the experimental manipulation of the environment via airburst projectiles filled with silver iodide. Most of these accusations are entirely false. Some are absolutely true, such as the infamous Tierra del Fuego incident, when one Peer’s attempts to manipulate the weather above the Fueguino Volcano led to a major geothermal disaster.",
+        "Even the most distasteful incidents are not entirely without merit; they have led to some remarkable breakthroughs in E.S.C.F. weaponry, such as the Model X2 “Falconet” rocket battery. This device fires missiles in a high-altitude, corkscrewing arc, enhancing accuracy through state-of-the-art ballistic dynamism."
+      ]
+    },
+    {
+      "id": "caloric-oscillator",
+      "name": "Caloric Oscillator",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 61,
+      "imageUrl": "/modules/enlightened/caloric-oscillator.webp",
+      "imageWidth": 357,
+      "imageHeight": 172,
+      "paragraphs": [
+        "Originally designed to render minerals and metals into a more manipulable state, the Caloric Oscillator has proven a truly frightening weapon. It projects a near-invisible wave of electromagnetic radiation that causes frantic molecular oscillation—effectively cooking a target from the inside out as its constituent elements vibrate against each other. In naval terms the oscillator is a terror weapon that can temporarily incapacitate enemy crew, who can do nothing but shriek and writhe as their organs blister.",
+        "Caloric Oscillators can also deal significant damage to a warship’s systems and weaken the bonds that hold its armour plating together. The one silver lining for those facing such a horrific device is that oscillators only work at a very short range, giving them a brief window of time to make the sensible decision: turn about and flee."
+      ]
+    },
+    {
+      "id": "heavy-gun-battery",
+      "name": "Heavy Gun Battery",
+      "aliases": ["Heavy ESCF Gun Battery"],
+      "category": "Вооружение",
+      "page": 61,
+      "imageUrl": "/modules/enlightened/heavy-gun-battery.webp",
+      "imageWidth": 511,
+      "imageHeight": 162,
+      "paragraphs": [
+        "The heavy gun batteries favoured by the E.S.C.F. may lack the shock and awe of more esoteric Enlightened technology, but they are no less capable of hammering an enemy warship into submission. There is no standardised design, with each naval Promethean Complex fabricating its own pattern. Common models include the X39 Osprey mounted upon vessels leaving the Nova Atlantis docks, and the Mk4 Pratique invented by the weaponsmiths of La Forge, with its mag-coil rifling and in-built automata loaders.",
+        "These weapons serve another purpose beyond mundane military use. Peers of the Enlightened consider the destruction unleashed by a heavy gun battery to be a useful control element of any experimental weapons test—a basic level of effectiveness against which their more catastrophic tools might be compared."
+      ]
+    },
+    {
+      "id": "heavy-rocket-battery",
+      "name": "Heavy Rocket Battery",
+      "aliases": ["Heavy ESCF Rocket Battery"],
+      "category": "Вооружение",
+      "page": 61,
+      "imageUrl": "/modules/enlightened/heavy-rocket-battery.webp",
+      "imageWidth": 366,
+      "imageHeight": 177,
+      "paragraphs": [
+        "Many advances in rocketry have been achieved in recent years, a large portion of them thanks to the efforts of Enlightened scientists attempting to push the limits of aeronautical engineering. Elements of this work have found their way into the E.S.C.F.’s armoury, enhancing the accuracy and killing power of their heavy rocket arrays.",
+        "Enlightened rockets possess miniaturised guiding automata that can identify and manually seek out their target amidst the fire and confusion of a naval battle. Payloads differ greatly depending on location, and to which Promethean Complex a ship’s captain is contracted, some are packed with thermo-crystalline incendiaries, others with galvanic charges to disrupt systems, or even void warheads that can phase through a ship’s hull before detonating."
+      ]
+    },
+    {
+      "id": "molecular-disharmoniser",
+      "name": "Molecular Disharmoniser",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 61,
+      "imageUrl": "/modules/enlightened/molecular-disharmoniser.webp",
+      "imageWidth": 180,
+      "imageHeight": 172,
+      "paragraphs": [
+        "Brainchild of the experimental physicist Adolphus Gage, the Molecular Disharmoniser concentrates tight-wave beams of extreme radiation to pull apart the bonds of a physical structure on a molecular level. In layman’s terms: anything subjected to concentrated fire from this weapon begins to dissolve into a bubbling slurry. One can imagine the scientific potential of such a tool—and just as easily imagine the horrendous potential in a military context.",
+        "Disharmonisers take some time to focus their true murderous potential, and thus are typically fired en masse into a single target, at a close enough range that the weapon’s operator can maintain accuracy. Targeting vital systems first, they will surgically dismantle their target until its melting bulk sinks beneath the waves."
+      ]
+    },
+    {
+      "id": "particle-beamer",
+      "name": "Particle Beamer",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 62,
+      "imageUrl": "/modules/enlightened/particle-beamer.webp",
+      "imageWidth": 355,
+      "imageHeight": 174,
+      "paragraphs": [
+        "Rightly feared by anyone who has ever been on the wrong side of the Enlightened, the Particle Beamer is a state-of-the-art main warship weapon that fires a blistering lance of anti-matter energy. Anything struck by this projectile is disintegrated in a scorching flash of light; gaping holes are punched deep into a cruiser’s belt armour, and munitions dumps ignited in a pyrotechnic display of the Covenant’s scientific superiority.",
+        "Beamers are highly efficient weapons, requiring no shells or casings of any kind. They draw power from a miniaturised mass-energy reactor, which must be cooled and cycled after each combat encounter to prevent a deadly surge. They are also extraordinarily accurate compared with conventional ballistic weapons, skilled operators can knock out an enemy flagship’s vital functions one by one with precise volleys."
+      ]
+    },
+    {
+      "id": "pulse-emitter",
+      "name": "Pulse Emitter",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 62,
+      "imageUrl": "/modules/enlightened/pulse-emitter.webp",
+      "imageWidth": 365,
+      "imageHeight": 168,
+      "paragraphs": [
+        "Pulse Emitters are another of the Enlightened’s deadly short-range weapons, adapted from deep-strata mineral scanners invented by famed geologist Petronella Gage. Concentrating electromagnetic emissions known as “G-rays” into a directional blast, the Pulse Emitter engulfs its targets in a crackling web of galvanic energy. Anything within close proximity is stricken: systems are melted and fried, along with the brains and nervous systems of organic beings.",
+        "While extended blasts from a Pulse Emitter are invariably lethal, its power levels can be reduced in order to function as a non-lethal pacification tool. This works equally well on automata, as the scientists of La Forge discovered during a Complex-wide malfunction event in 1871, in which over five hundred Citizen-Soldiers were killed."
+      ]
+    },
+    {
+      "id": "sturginium-agitator",
+      "name": "Sturginium Agitator",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 62,
+      "imageUrl": "/modules/enlightened/sturginium-agitator.webp",
+      "imageWidth": 370,
+      "imageHeight": 176,
+      "paragraphs": [
+        "Sturginium is one of the most valuable and extraordinary substances in existence, utilised by every one of the Great Powers. Indeed, it is so commonplace that several Enlightened Peers have designed weapons specifically to counter it. The Sturginium Agitator is a microwave agitation weapon calibrated specifically to undermine materials that have been treated or exposed to Element 270—effectively, every single warship on the ocean.",
+        "The Agitator attacks the foundations of a vessel’s structure, twisting bulkheads and crumpling load-bearing beams until the greater mass begins to collapse in upon itself like a crushed tin can. The larger the vessel, the more vulnerable it is to such structural failure."
+      ]
+    },
+    {
+      "id": "gravitronic-imperilator",
+      "name": "Gravitronic Imperilator",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 63,
+      "imageUrl": "/modules/enlightened/gravitronic-imperilator.webp",
+      "imageWidth": 340,
+      "imageHeight": 171,
+      "paragraphs": [
+        "The Gravitronic Imperilator is a military adaptation of the anti-gravity machines used by the Enlightened for heavy construction. It unleashes a directed burst of energy that subverts physical laws, either reversing the direction of force or multiplying gravitational pressure. This sends airships and other sky-roaming craft plummeting towards the ground, their superstructure buckling under the Imperilator’s crushing grip."
+      ]
+    },
+    {
+      "id": "heavy-particle-cannon",
+      "name": "Heavy Particle Cannon",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 63,
+      "imageUrl": "/modules/enlightened/heavy-particle-cannon.webp",
+      "imageWidth": 345,
+      "imageHeight": 179,
+      "paragraphs": [
+        "If a Particle Beamer is feared by the enemies of the Enlightened, then the Heavy Particle Cannon is enough to haunt their nightmares forever. An upscaled version of the same device, this weapon unleashes a ship-killing lance of anti-matter devastation. Already enough to annihilate most warships, the lethality of this beam is multiplied upon exposure to tricobalt gas—the very substance found in pressurized fuel tankage within Scythe air superiority drones."
+      ]
+    },
+    {
+      "id": "atomic-generator",
+      "name": "Atomic Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 65,
+      "imageUrl": "/modules/enlightened/atomic-generator.webp",
+      "imageWidth": 359,
+      "imageHeight": 172,
+      "paragraphs": [
+        "Atomic power is considered somewhat old hat by the Covenant’s master engineers, who have already begun attempting to harness void anomalies and other experimental forms of energy in order to fuel their more advanced contraptions. Yet they acknowledge that crude fissure techniques still have their use; with an atomic generator installed, even a heavy line ship can reach an impressive cruising speed, outpacing any pursuers or bearing down on targets of opportunity."
+      ]
+    },
+    {
+      "id": "chrono-generator",
+      "name": "Chrono Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 65,
+      "imageUrl": "/modules/enlightened/chrono-generator.webp",
+      "imageWidth": 369,
+      "imageHeight": 180,
+      "paragraphs": [
+        "“The last threshold to be crossed is the boundary of temporality.” Thus spoke Lord Leonard Keppler at the culmination of the Fifth Grand Symposium, before unveiling the first Chrono Generator. This device—fiercely protected by the Enlightened—can unravel the temporal flow in a localised area, reverting the physical integrity of materials and objects back to where they were a few moments ago. Or indeed hasten their structural decay. Warships equipped with these prototype devices can either undo crippling integral damage in the blink of an eye or imbue their own attacks with entropic force. Unfortunately, it is extremely hard to predict which of these abilities will manifest. Rumours that those aboard a chrono-capable vessel age far more quickly than normal are yet to be confirmed."
+      ]
+    },
+    {
+      "id": "fury-generator",
+      "name": "Fury Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 65,
+      "imageUrl": "/modules/enlightened/fury-generator.webp",
+      "imageWidth": 347,
+      "imageHeight": 172,
+      "paragraphs": [
+        "A thundering blood-rage is not something the average scientist wishes to experience, but more ruthless Peers are perfectly happy to induce one upon their CitizenSoldiers. Based upon prototype mechanisms discretely acquired from the Promethean Complex of Burson Carpathian, the Enlightened’s Fury Generators utilise RJ-1027 fluid agitation to whip up an aura of unquenchable rage, a berserker fury that causes humans to fight with unnatural strength and boldness until they burn themselves out. Often literally."
+      ]
+    },
+    {
+      "id": "heavy-shield-generator",
+      "name": "Heavy Shield Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 65,
+      "imageUrl": "/modules/enlightened/heavy-shield-generator.webp",
+      "imageWidth": 357,
+      "imageHeight": 171,
+      "paragraphs": [
+        "Invented in 1850, the Heavy Shield Generator has transformed the face of naval warfare, acting as a sole defensive ward against the most catastrophic weapons of the Dystopian Age. The Covenant of the Enlightened continues to pour funding into the research of improved shield mechanics, experimenting with void-blockers and thermokinetic barriers. As such, there is no single model in production, a warship from Nova Atlantis is likely to employ vastly different countermeasures than a cruiser fresh from the shipyards of La Forge."
+      ]
+    },
+    {
+      "id": "magnetic-generator",
+      "name": "Magnetic Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 65,
+      "imageUrl": "/modules/enlightened/magnetic-generator.webp",
+      "imageWidth": 358,
+      "imageHeight": 177,
+      "paragraphs": [
+        "Many of the Enlightened’s weapon systems rely upon the manipulation of galvanic fields, and such designs are easily converted for defensive ends. Magnetic Generators surround the warship on which they are mounted with an invisible bubble of anti-polaric force, causing incoming shells and other projectiles to be violently hurled offcourse. Such generators can even be overcharged in order to manipulate the motion of nearby vessels and aircraft, for a hapless pilot, the effect is rather like flying directly into a brick wall."
+      ]
+    },
+    {
+      "id": "null-clone-generator",
+      "name": "Null-Clone Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 65,
+      "imageUrl": "/modules/enlightened/null-clone-generator.webp",
+      "imageWidth": 356,
+      "imageHeight": 172,
+      "paragraphs": [
+        "A truly bizarre quantum-replication device invented by the eccentric theorist Morayo Abayomi, the NullClone Generator has only recently been installed upon Enlightened warships. This device is able to isolate and suppress electromagnetic damage inflicted upon allied vessels in the vicinity, inflicting that same trauma upon the enemy’s battlefleet. Rumour has it that Abayomi stole much of her proprietary machinery from one the Sultanate’s portal ships. Given that the Order has taken to obsessively pursuing any vessels equipped with a nullclone device, this seems entirely possible."
+      ]
+    },
+    {
+      "id": "repulsion-field-generator",
+      "name": "Repulsion Field Generator",
+      "aliases": ["Repulsion Generator"],
+      "category": "Генератор",
+      "page": 66,
+      "imageUrl": "/modules/enlightened/repulsion-field-generator.webp",
+      "imageWidth": 355,
+      "imageHeight": 171,
+      "paragraphs": [
+        "The first prototypes of repulsor technology were based upon devices recovered from the Bimini Crater in 1850, and ever since the Enlightened has refined and perfected the concept. The latest Repulsion Field Generators are fully capable of lifting over a thousand tonnes of military warship out of the water, allowing the vessel to bypass blockades or stretches of land before descending back to the surface—often none too gently."
+      ]
+    },
+    {
+      "id": "shroud-generator",
+      "name": "Shroud Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 66,
+      "imageUrl": "/modules/enlightened/shroud-generator.webp",
+      "imageWidth": 347,
+      "imageHeight": 176,
+      "paragraphs": [
+        "Many forms of Shroud Generator are utilised by the Enlightened, from those that weave a complex web of refractive light to obscure a warship from incoming fire, to so-called “stutter fields” that appear to phase a vessel in and out of existence. Since so much of the Covenant’s global ambitions require some level of subterfuge, or even outright skulduggery, such defensive measures have become increasingly common in recent years. More than one patrol boat traversing apparently empty waters has crashed right into a cloaked exploration ship."
+      ]
+    }
+  ]
+}

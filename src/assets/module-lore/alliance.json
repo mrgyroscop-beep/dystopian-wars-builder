@@ -1,0 +1,235 @@
+{
+  "faction": "Alliance",
+  "source": {
+    "title": "Alliance · ORBAT 4.01",
+    "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01_W.pdf",
+    "kind": "orbat",
+    "sha256": "210fb0ca29859b5d3da461cdaa64b73f7215e9d06b511072917c41c306b39579"
+  },
+  "modules": [
+    {
+      "id": "heat-lancette",
+      "name": "Heat Lancette",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 68,
+      "imageUrl": "/modules/alliance/heat-lancette.webp",
+      "imageWidth": 499,
+      "imageHeight": 115,
+      "paragraphs": [
+        "It proved surprisingly difficult for the French Navy to adapt the heat lance for smaller patrol vessels, as miniaturised versions struggled to attain the extreme temperatures required to inflict significant structural damage. That changed with the invention of the miniaturised Solex battery, an ingenious device that could store thermal energy and release it in a brief pulse of extreme intensity.",
+        "Outfitted with new “lancette” batteries powered by this mechanism, even destroyers and frigates are able to unleash the fury of the sun upon their foes. When a squadron of lancette-armed patrol ships attacks together, their luckless target is neatly dissected by a half-dozen fiery beams, each as precise as a surgeon’s scalpel."
+      ]
+    },
+    {
+      "id": "light-gun-battery",
+      "name": "Light Gun Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 68,
+      "imageUrl": "/modules/alliance/light-gun-battery.webp",
+      "imageWidth": 320,
+      "imageHeight": 198,
+      "paragraphs": [
+        "Vessels of the Latin Alliance run the gamut from the wondrously ornate to the bluntly utilitarian, and so the nature of the armament varies wildly. A French ship of the line may boast the latest gyro-stabilised gun batteries, while a SUSA blockade runner relies upon cannons that fired their first salvos before the Ore War even began. Though it must sometimes seem an impossible task, Prince-President Bonaparte has made great efforts to standardise weaponry and munitions whenever possible. Entire factory-districts in France have changed their production line to produce nothing but light batteries for use on patrol and destroyer models, most notably the Modèle 1868 naval gun with its hydro-pneumatic recoil system.",
+        "These weapons are shipped along transatlantic trade routes in vast numbers, whereupon they are retrofitted into the timeworn fleets of the Socialist Unity, and put to work against any vessels threatening the autonomy of South America. The combined force of light batteries firing armour-penetrating shells in unison should not be underestimated—a well-aimed volley can breach the vital systems of even capital-class vessels, igniting a deadly internal chain reaction."
+      ]
+    },
+    {
+      "id": "light-rocket-battery",
+      "name": "Light Rocket Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 68,
+      "imageUrl": "/modules/alliance/light-rocket-battery.webp",
+      "imageWidth": 369,
+      "imageHeight": 202,
+      "paragraphs": [
+        "Many French and Italian naval officers scorn the use of rockets in battle, considering them far too scattershot and inelegant. These are the weapons of poorly trained amateurs, they insist, not the gallant young hotshots of the Latin Alliance. Commandant Supérieur Francois LeMarie—figurehead of the French Navy—has no time for such foolish notions. Rival Great Powers have made tremendous advances in the field of rocketry, and he has no intention of allowing the Latin Alliance to fall behind for the sake of pride.",
+        "The most common type of rocket utilised by the Alliance is the Faucon, a light projectile with penetrative power and a magnetic guidance cone that ensures each volley fired converges more or less on the selected target. When multiple rockets strike home the effects can be catastrophic, as hull plating is shredded and bulkheads are buckled and melted."
+      ]
+    },
+    {
+      "id": "light-torpedo-turret",
+      "name": "Light Torpedo Turret",
+      "aliases": ["Torpedo Turret", "Torpedo Turrets"],
+      "category": "Вооружение",
+      "page": 68,
+      "imageUrl": "/modules/alliance/light-torpedo-turret.webp",
+      "imageWidth": 175,
+      "imageHeight": 198,
+      "paragraphs": [
+        "Each Alliance torpedo is a work of art, a sleek and deadly javelin packed with high explosives and capable of reaching speeds of up to thirty knots. The fleet dispatched by Prince-President Bonaparte to safeguard his interests across the globe seldom travels without a contingent of destroyers or frigates armed with these deadly weapons, ready to bring them to bear upon targets of opportunity should open hostilities break out.",
+        "Lacking the sheer firepower of their heavier cousins, light torpedo turrets are designed with rate of fire foremost in mind. They are intended to be fired en masse by an attack squadron, filling the sea with a criss-crossing web of propulsion trails and maximising the chance to score a hit. An individual torpedo might be shrugged off by a sufficiently rugged target, but when several impact at once they are capable of sending even a line ship to the bottom of the ocean."
+      ]
+    },
+    {
+      "id": "heat-lance",
+      "name": "Heat Lance",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 69,
+      "imageUrl": "/modules/alliance/heat-lance.webp",
+      "imageWidth": 526,
+      "imageHeight": 192,
+      "paragraphs": [
+        "Invented by the French physicist Fresnel, the Solexpowered heat lance has become the iconic weapon of the Alliance military. Focusing lenses channel the power of thermally resonant crystals, issuing forth a spear of whitehot energy as focused and blinding as a sun beam. Such is the intensity of this projection that it can melt through the thick armour of a warship in the blink of an eye, burning all the way through to vital components and systems, and igniting sudden flash-fires that cause widespread panic amongst the crew.",
+        "For all its destructive potential, the heat lance is a difficult weapon to master. At extreme distances its heat begins to dissipate, meaning that Alliance captains must draw close to the enemy to maximise the chances of a critical hit. The results are often well worth the risk; there are few more awesome sights than a battleship collapsing from within, its structural integrity buckling under the solar onslaught of multiple heat lance strikes."
+      ]
+    },
+    {
+      "id": "heavy-gun-battery",
+      "name": "Heavy Gun Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 69,
+      "imageUrl": "/modules/alliance/heavy-gun-battery.webp",
+      "imageWidth": 554,
+      "imageHeight": 168,
+      "paragraphs": [
+        "The sailors of the Alliance take great pride in their shipkilling heavy guns, which are forged from diamond-hard alloys and proudly emblazoned with the fleur-de-lys—a venerable French symbol that has come to represent the honour and prestige of the grand coalition of Latin nations. There are a number of models in use across the Alliance battlefleets, but most capital-class vessels are outfitted with Bourreau cannons; mighty ship-killers renowned for their accuracy and penetrative power even at extreme range.",
+        "When the guns of the Latin fleets roar there is a single moment of eerie silence before the shells strike home, tearing through armour-plated foredecks, pulverising gun housings and engulfing luckless sailors in a storm of fire and shrapnel. When the smoke clears there is little left of the target but a listing ruin."
+      ]
+    },
+    {
+      "id": "heavy-magnetic-bombard",
+      "name": "Heavy Magnetic Bombard",
+      "aliases": ["Magnetic Bombard"],
+      "category": "Вооружение",
+      "page": 69,
+      "imageUrl": "/modules/alliance/heavy-magnetic-bombard.webp",
+      "imageWidth": 448,
+      "imageHeight": 180,
+      "paragraphs": [
+        "An ingenious weapon against which none of the great navies of the world have managed to find a counter, the Heavy Magnetic Bombard ensures that the Latin Alliance has the edge in any long-range slugging match. The weapon’s housing is rather simple; little more than a pneumatic launch tube filled with racked ammunition, capable of hurling a cylindrical explosive charge high into the air. It is this projectile that packs a devious guiding mechanism.",
+        "At the apex of its trajectory a magnetic transducer inside the mortar round activates, seeking out the nearest mass of heavy metal. Honing in on this target with unerring accuracy, the round clamps down upon a section of hull before detonating, directing the full fury of its thermal payload directly into the target ship’s vital systems."
+      ]
+    },
+    {
+      "id": "heavy-rocket-battery",
+      "name": "Heavy Rocket Battery",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 69,
+      "imageUrl": "/modules/alliance/heavy-rocket-battery.webp",
+      "imageWidth": 435,
+      "imageHeight": 249,
+      "paragraphs": [
+        "The Alliance’s heavy rocket batteries utilise cyclical firing triggers to unleash more than a dozen missiles in quick succession, each warhead outfitted with a miniaturised tracking automata to ensure that it strikes its target. The guidance jets of French-designed rockets make an instantly identifiable keening wail as they descend in a perfect arc to crash against the target’s hull, enveloping its deck in a deadly fireball. This sound is referred to by Alliance sailors as “the Eagle’s Cry”, and enemy sailors have learned to dread hearing it.",
+        "Rocket barrages are typically utilised by Alliance admirals to soften up the enemy fleet ahead of the advance of their close-range specialists. There can be little more demoralising than staggering upright on the burning foredeck of a stricken vessel, only to see the sleek shapes of attack cruisers scything through the waves, heat lances aglow with building energy."
+      ]
+    },
+    {
+      "id": "heavy-torpedo-turret",
+      "name": "Heavy Torpedo Turret",
+      "aliases": [],
+      "category": "Вооружение",
+      "page": 70,
+      "imageUrl": "/modules/alliance/heavy-torpedo-turret.webp",
+      "imageWidth": 504,
+      "imageHeight": 182,
+      "paragraphs": [
+        "The Alliance’s heavy torpedoes are almost the size of light attack boats, each one packed with fearsome explosive power. When launched en masse from the turrets of a cruiser attack squadron, they can swiftly obliterate anything on the open ocean.",
+        "Fearing the advances that the navies of the Crown and the Imperium have made in the arena of submarine warfare, Prince-President Louis-Napoleon has poured vast amounts of funding into levelling the field with his regional rivals. The Mako class now favoured by the French Navy is an adaptation of an old gun battery design, the barrels cleverly altered to house torpedoes instead of armour-piercing shells."
+      ]
+    },
+    {
+      "id": "atomic-generator",
+      "name": "Atomic Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 70,
+      "imageUrl": "/modules/alliance/atomic-generator.webp",
+      "imageWidth": 408,
+      "imageHeight": 195,
+      "paragraphs": [
+        "Prince-President Bonaparte has always been a firm proponent of atomic energy, seeing it as the most efficient method for transforming the Latin Alliance into a global industrial powerhouse. Calling upon all of his connections within the Enlightened, he has poured an extraordinary amount of money and energy into securing the latest inventions in fission engineering, including the Bunsen-Kirchhoff miniaturised generator.",
+        "This device is capable of producing extraordinary amounts of energy, channelling that power directly into a warship’s engines and granting it a temporary boost of speed. Unfortunately atomic science has not yet been able to eliminate the prospect of a reactor leak due to damage or disrepair, but that is considered a worthwhile risk in order to allow Alliance vessels to travel vast distances in a fraction of the time it would otherwise take."
+      ]
+    },
+    {
+      "id": "fury-generator",
+      "name": "Fury Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 70,
+      "imageUrl": "/modules/alliance/fury-generator.webp",
+      "imageWidth": 410,
+      "imageHeight": 197,
+      "paragraphs": [
+        "The Fury Generator is a bizarre device still barely understood by its own creators. The core of the device contains a sample of the non-Newtonian fluid known as RJ-1027, a bizarre substance that seems to obey none of the laws of science, and which causes a wide range of emotional and physical changes upon those exposed to it. When exposed to extreme heat and violently agitated, RJ-1027 radiates an aura of untrammelled aggression that can turn even the meekest human into a raging killer.",
+        "It took several years following the invention of the Fury Generator for Alliance high command to sanction its use; not due to any of the valid questions regarding its long-term effects on the human psyche, but simply because they believed that the bold Latin spirit needed no artificial bolstering. As the device became more and more widespread amongst the navies of the Great Powers, however, Prince-President Bonaparte ensured that his own fleets possessed their own variant of the original design."
+      ]
+    },
+    {
+      "id": "heavy-shield-generator",
+      "name": "Heavy Shield Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 70,
+      "imageUrl": "/modules/alliance/heavy-shield-generator.webp",
+      "imageWidth": 410,
+      "imageHeight": 195,
+      "paragraphs": [
+        "In an age of molecular disintegrators, sun-powered energy lances and colossal automata, steel and rivets alone cannot be relied upon to protect a warship from catastrophic damage. Only a Heavy Shield Generator can provide sufficient kinetic and energy protection to withstand the most terrible weaponry of the Dystopian Age.",
+        "Fortunately for the Latin Alliance, few statesmen understand the power of weaponised science better than Prince-President Bonaparte, a founding signatory of the Covenant of the Enlightened. Keen to retain his edge in the ever-accelerating arms race that is naval warfare, the Prince-President has secured a number of Ecran-class generators. Developed by the French in concert with Enlightened engineers, these devices project an ovoid shell of shimmering energy around a warship’s hull, intercepting the majority of any incoming shells and energy weapons and dispersing their energy harmlessly."
+      ]
+    },
+    {
+      "id": "magnetic-generator",
+      "name": "Magnetic Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 71,
+      "imageUrl": "/modules/alliance/magnetic-generator.webp",
+      "imageWidth": 415,
+      "imageHeight": 199,
+      "paragraphs": [
+        "Magnetic Generators are designed to safeguard a vessel from the menace of guided torpedoes and rockets. These devices project a bubble of galvanic energy that causes incoming rockets to veer wildly off course as their internal guidance mechanisms go haywire. Rather than striking their target they will harmlessly explode several hundred metres away. This polaric inversion is particularly deadly to small attack aircraft, who are physically repulsed with such force that often their pilots are rendered unconscious by the sudden change in direction, spiralling out of control until they smash into the ocean.",
+        "Though the Magnetic Generator is bulky enough that housing one typically means sacrificing a gun battery or torpedo bay, they are highly prized by Alliance naval officers, especially Portuguese captains making the long, dangerous trek across the Atlantic to SUSA ports."
+      ]
+    },
+    {
+      "id": "repulsion-field-generator",
+      "name": "Repulsion Field Generator",
+      "aliases": ["Repulsion Generator"],
+      "category": "Генератор",
+      "page": 71,
+      "imageUrl": "/modules/alliance/repulsion-field-generator.webp",
+      "imageWidth": 433,
+      "imageHeight": 207,
+      "paragraphs": [
+        "There is a great deal of argument regarding the invention of the Repulsion Field Generator, with several of the Great Powers claiming to be the first to install these anti-gravitational devices aboard their warships. In truth it was probably scientists of the Enlightened who created the original models, adapting alien treasures discovered within the Vault of Antarctica. Yet, even if that is so, none can deny that Prince-President Bonaparte was the first leader to understand the true potential of repulsion engineering, funding the geniuses of Mont Saint-Michel and overseeing the production of the first Levant Generator.",
+        "The Levant harnesses colossal amounts of gravitic energy and projects it into invisible columns of force that can lift thousands of tonnes of metal high into the air. The most advanced such systems hold the specially designed warships of the Marine Levante aloft indefinitely, but cruder models can also be installed upon seaborne cruisers and battleships, granting them a brief period of low-altitude flight before lowering them back to the surface. Often none too gently."
+      ]
+    },
+    {
+      "id": "shroud-generator",
+      "name": "Shroud Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 71,
+      "imageUrl": "/modules/alliance/shroud-generator.webp",
+      "imageWidth": 415,
+      "imageHeight": 199,
+      "paragraphs": [
+        "Shroud Generators employ various illusory tricks to conceal the vessel upon which they are installed, making it near invisible on the open sea until it closes with the enemy. The Alliance’s most common variant—the Cape Fantôme—projects a ghostly curtain of displaced light, whilst at the same time unleashing a wave of magnetic interference to fool ship detection systems.",
+        "While every nation within the Alliance has experimented with Shroud Generator machinery, it is the fleets of the Italian States that have done so most often, and most successfully. With their doctrine favouring closequarters combat and aggressive ramming, the ability to approach their prey swiftly without being seen is a tremendous boon."
+      ]
+    },
+    {
+      "id": "solex-generator",
+      "name": "Solex Generator",
+      "aliases": [],
+      "category": "Генератор",
+      "page": 71,
+      "imageUrl": "/modules/alliance/solex-generator.webp",
+      "imageWidth": 414,
+      "imageHeight": 200,
+      "paragraphs": [
+        "There can be no doubt that the Latin Alliance dominates the scientific field when it comes to the weaponisation of thermal agitation theory. This is a particular passion of Prince-President Bonaparte, who sees the harnessing of solar power as critical to his country’s industrial and martial future. Solex devices are powered by crystal fragments recovered from sites across the southern hemisphere. Extraterrestrial in origin and imbued with the white-hot ferocity of stellar fusion, when subjected to violent pressure they are capable of generating sufficient thermal energy to reduce hardened steel to vapour in a blinding instant. This is what makes the Alliance’s heat lance weaponry so phenomenally dangerous.",
+        "The Solex Generator is an enlarged version of the same device embedded in ship-mounted lances and lancettes, but attached to a magnification housing that acts as a gigantic solar battery. Nearby vessels can draw from this power source, enhancing the murderous volleys of their own thermal weaponry."
+      ]
+    }
+  ]
+}

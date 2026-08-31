@@ -7620,6 +7620,16 @@ button.button {
   margin: 1rem 0;
 }
 
+.module-lore__notice {
+  margin: 0.75rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .module-lore__source {
   display: grid;
   gap: 0.4rem;

@@ -1,0 +1,647 @@
+{
+  "alliance": {
+    "source": {
+      "title": "Alliance · ORBAT 4.01",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01_W.pdf",
+      "kind": "orbat"
+    },
+    "modules": [
+      {
+        "name": "Heat Lancette",
+        "page": 68,
+        "art": [55.19, 248.13, 175.5, 272.68],
+        "regions": [[55.7, 290.0, 293.7, 460.57]],
+        "aliases": []
+      },
+      {
+        "name": "Light Gun Battery",
+        "page": 68,
+        "art": [50.31, 463.04, 126.01, 508.3],
+        "regions": [[55.7, 521.67, 293.7, 796.06]],
+        "aliases": []
+      },
+      {
+        "name": "Light Rocket Battery",
+        "page": 68,
+        "art": [304.47, 222.71, 392.33, 268.95],
+        "regions": [[303.7, 289.63, 541.7, 501.78]],
+        "aliases": []
+      },
+      {
+        "name": "Light Torpedo Turret",
+        "page": 68,
+        "art": [344.83, 505.15, 384.43, 550.3],
+        "regions": [[303.7, 567.92, 541.7, 796.06]],
+        "aliases": ["Torpedo Turret", "Torpedo Turrets"]
+      },
+      {
+        "name": "Heat Lance",
+        "page": 69,
+        "art": [55.69, 110.49, 182.88, 154.0],
+        "regions": [[55.7, 168.92, 293.7, 409.28]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Gun Battery",
+        "page": 69,
+        "art": [55.69, 421.02, 189.93, 458.81],
+        "regions": [[55.7, 479.53, 293.7, 693.89]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Magnetic Bombard",
+        "page": 69,
+        "art": [303.72, 108.41, 411.35, 149.01],
+        "regions": [[303.7, 169.02, 541.7, 357.38]],
+        "aliases": ["Magnetic Bombard"]
+      },
+      {
+        "name": "Heavy Rocket Battery",
+        "page": 69,
+        "art": [298.46, 368.37, 402.9, 426.34],
+        "regions": [[303.7, 439.53, 541.7, 640.89]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Torpedo Turret",
+        "page": 70,
+        "art": [55.69, 84.04, 177.49, 125.29],
+        "regions": [[55.7, 148.84, 293.7, 324.2]],
+        "aliases": []
+      },
+      {
+        "name": "Atomic Generator",
+        "page": 70,
+        "art": [55.69, 356.04, 153.43, 400.56],
+        "regions": [[55.7, 421.28, 293.7, 635.64]],
+        "aliases": []
+      },
+      {
+        "name": "Fury Generator",
+        "page": 70,
+        "art": [303.72, 84.04, 401.88, 129.03],
+        "regions": [[303.7, 147.86, 541.7, 401.22]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Shield Generator",
+        "page": 70,
+        "art": [303.72, 406.23, 401.88, 450.75],
+        "regions": [[303.7, 471.46, 541.7, 698.83]],
+        "aliases": []
+      },
+      {
+        "name": "Magnetic Generator",
+        "page": 71,
+        "art": [55.69, 84.04, 155.06, 129.62],
+        "regions": [[55.7, 152.11, 293.7, 366.47]],
+        "aliases": []
+      },
+      {
+        "name": "Repulsion Field Generator",
+        "page": 71,
+        "art": [55.69, 372.9, 159.62, 420.25],
+        "regions": [[55.7, 440.97, 293.7, 720.33]],
+        "aliases": ["Repulsion Generator"]
+      },
+      {
+        "name": "Shroud Generator",
+        "page": 71,
+        "art": [303.72, 84.04, 403.18, 129.74],
+        "regions": [[303.7, 152.11, 541.7, 340.47]],
+        "aliases": []
+      },
+      {
+        "name": "Solex Generator",
+        "page": 71,
+        "art": [303.72, 346.9, 402.94, 392.64],
+        "regions": [[303.7, 414.97, 541.7, 668.33]],
+        "aliases": []
+      }
+    ]
+  },
+  "crown": {
+    "source": {
+      "title": "Crown · ORBAT 4.02a",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02a.pdf",
+      "kind": "orbat"
+    },
+    "modules": [
+      {
+        "name": "Heavy Gun Battery",
+        "page": 70,
+        "art": [54.65, 254.53, 172.83, 294.79],
+        "regions": [[55.7, 314.49, 293.7, 446.6]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Rocket Battery",
+        "page": 70,
+        "art": [55.69, 451.01, 148.39, 503.21],
+        "regions": [[55.7, 523.93, 293.7, 669.04]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Swift Torpedo Turret",
+        "page": 70,
+        "art": [303.72, 256.26, 423.22, 293.77],
+        "regions": [[303.7, 314.49, 541.7, 554.85]],
+        "aliases": []
+      },
+      {
+        "name": "Majestic Cannons",
+        "page": 71,
+        "art": [64.27, 101.64, 185.79, 144.46],
+        "regions": [[55.7, 163.25, 293.7, 377.61]],
+        "aliases": []
+      },
+      {
+        "name": "Light Gun Battery",
+        "page": 71,
+        "art": [303.72, 117.36, 441.18, 140.32],
+        "regions": [[303.7, 161.85, 541.7, 255.94]],
+        "aliases": []
+      },
+      {
+        "name": "Light Rocket Battery",
+        "page": 71,
+        "art": [303.72, 261.84, 357.31, 284.21],
+        "regions": [[303.7, 304.93, 541.7, 424.04]],
+        "aliases": []
+      },
+      {
+        "name": "Light Swift Torpedo Turret",
+        "page": 71,
+        "art": [303.72, 429.62, 370.9, 452.31],
+        "regions": [[303.7, 473.02, 541.7, 700.39]],
+        "aliases": []
+      },
+      {
+        "name": "Atomic Generator",
+        "page": 72,
+        "art": [55.69, 104.68, 154.19, 149.2],
+        "regions": [[55.7, 169.92, 293.7, 449.28]],
+        "aliases": []
+      },
+      {
+        "name": "Fury Generator",
+        "page": 72,
+        "art": [55.69, 453.87, 153.2, 498.86],
+        "regions": [
+          [55.7, 519.11, 293.7, 690.22],
+          [304, 81, 542, 248]
+        ],
+        "aliases": []
+      },
+      {
+        "name": "Guardian Generator",
+        "page": 72,
+        "art": [303.72, 244.99, 516.74, 289.51],
+        "regions": [[303.7, 310.18, 541.7, 641.54]],
+        "aliases": []
+      },
+      {
+        "name": "Magnetic Generator",
+        "page": 73,
+        "art": [55.69, 104.69, 158.71, 150.27],
+        "regions": [[55.7, 169.92, 293.7, 423.28]],
+        "aliases": []
+      },
+      {
+        "name": "Shroud Generator",
+        "page": 73,
+        "art": [55.69, 427.87, 155.91, 473.57],
+        "regions": [[55.7, 493.11, 293.7, 664.22]],
+        "aliases": []
+      },
+      {
+        "name": "Trident Generator",
+        "page": 73,
+        "art": [304.38, 99.15, 398.72, 152.25],
+        "regions": [[303.7, 169.92, 541.7, 479.54]],
+        "aliases": []
+      }
+    ]
+  },
+  "enlightened": {
+    "source": {
+      "title": "Enlightened · ORBAT 4.01",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01_W_Compressed-further.pdf",
+      "kind": "orbat"
+    },
+    "modules": [
+      {
+        "name": "Advanced Aetheric Lance",
+        "page": 60,
+        "art": null,
+        "regions": [[56, 238, 294, 473]],
+        "aliases": []
+      },
+      {
+        "name": "Light Gun Battery",
+        "page": 60,
+        "art": [55.69, 479.57, 131.41, 500.39],
+        "regions": [[55.7, 519.9, 293.7, 775.29]],
+        "aliases": ["ESCF Light Gun Battery"]
+      },
+      {
+        "name": "Light Rocket Battery",
+        "page": 60,
+        "art": [305.14, 203.97, 376.17, 236.09],
+        "regions": [[303.7, 251.35, 541.7, 448.92]],
+        "aliases": ["ESCF Light Rocket Battery"]
+      },
+      {
+        "name": "Caloric Oscillator",
+        "page": 61,
+        "art": [55.78, 106.01, 140.87, 144.8],
+        "regions": [[55.7, 164.67, 293.7, 366.05]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Gun Battery",
+        "page": 61,
+        "art": [55.69, 376.64, 179.07, 412.99],
+        "regions": [[55.7, 430.6, 293.7, 631.98]],
+        "aliases": ["Heavy ESCF Gun Battery"]
+      },
+      {
+        "name": "Heavy Rocket Battery",
+        "page": 61,
+        "art": [303.72, 107.7, 390.81, 147.51],
+        "regions": [[303.7, 164.25, 541.7, 365.63]],
+        "aliases": ["Heavy ESCF Rocket Battery"]
+      },
+      {
+        "name": "Molecular Disharmoniser",
+        "page": 61,
+        "art": [305.14, 373.49, 345.84, 412.15],
+        "regions": [[303.7, 430.9, 541.7, 619.28]],
+        "aliases": []
+      },
+      {
+        "name": "Particle Beamer",
+        "page": 62,
+        "art": [54.5, 82.75, 139.11, 122.11],
+        "regions": [[55.7, 143.09, 293.7, 357.48]],
+        "aliases": []
+      },
+      {
+        "name": "Pulse Emitter",
+        "page": 62,
+        "art": [55.69, 363.9, 142.73, 401.74],
+        "regions": [[55.7, 422.03, 293.7, 623.41]],
+        "aliases": []
+      },
+      {
+        "name": "Sturginium Agitator",
+        "page": 62,
+        "art": [303.72, 84.26, 391.75, 124.2],
+        "regions": [[303.7, 144.41, 541.7, 319.78]],
+        "aliases": []
+      },
+      {
+        "name": "Gravitronic Imperilator",
+        "page": 63,
+        "art": [57.9, 366.05, 138.54, 404.71],
+        "regions": [[55.7, 429.68, 293.7, 535.8]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Particle Cannon",
+        "page": 63,
+        "art": [304.35, 370.76, 386.4, 411.35],
+        "regions": [[303.7, 429.01, 541.7, 548.12]],
+        "aliases": []
+      },
+      {
+        "name": "Atomic Generator",
+        "page": 65,
+        "art": [58.13, 103.87, 143.58, 142.54],
+        "regions": [[55.7, 163.25, 293.7, 282.38]],
+        "aliases": []
+      },
+      {
+        "name": "Chrono Generator",
+        "page": 65,
+        "art": [54.64, 285.1, 142.59, 325.86],
+        "regions": [[55.7, 345.44, 293.7, 529.65]],
+        "aliases": []
+      },
+      {
+        "name": "Fury Generator",
+        "page": 65,
+        "art": [58.13, 532.73, 140.75, 571.39],
+        "regions": [[55.7, 592.78, 293.7, 724.9]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Shield Generator",
+        "page": 65,
+        "art": [304.74, 102.55, 389.63, 141.21],
+        "regions": [[303.7, 163.35, 541.7, 296.04]],
+        "aliases": []
+      },
+      {
+        "name": "Magnetic Generator",
+        "page": 65,
+        "art": [304.74, 298.96, 389.93, 338.94],
+        "regions": [[303.7, 355.78, 541.7, 487.91]],
+        "aliases": []
+      },
+      {
+        "name": "Null-Clone Generator",
+        "page": 65,
+        "art": [304.16, 491.67, 388.78, 530.33],
+        "regions": [[303.7, 548.21, 541.7, 693.33]],
+        "aliases": []
+      },
+      {
+        "name": "Repulsion Field Generator",
+        "page": 66,
+        "art": [56.0, 84.04, 140.75, 122.7],
+        "regions": [[55.7, 144.83, 293.7, 250.96]],
+        "aliases": ["Repulsion Generator"]
+      },
+      {
+        "name": "Shroud Generator",
+        "page": 66,
+        "art": [58.13, 254.72, 140.75, 294.43],
+        "regions": [[55.7, 314.1, 293.7, 446.23]],
+        "aliases": []
+      }
+    ]
+  },
+  "sultanate": {
+    "source": {
+      "title": "Sultanate · ORBAT 4.01",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Sultanate-4.01_W.pdf",
+      "kind": "orbat"
+    },
+    "modules": [
+      {
+        "name": "Aetheric Lance",
+        "page": 65,
+        "art": [52.86, 229.45, 138.6, 273.18],
+        "regions": [[55.7, 290.23, 293.7, 517.84]],
+        "aliases": []
+      },
+      {
+        "name": "Light Gun Battery",
+        "page": 65,
+        "art": [301.15, 230.26, 411.08, 272.89],
+        "regions": [[303.7, 291.57, 541.7, 492.93]],
+        "aliases": []
+      },
+      {
+        "name": "Light Rocket Battery",
+        "page": 65,
+        "art": [307.45, 502.04, 388.57, 542.04],
+        "regions": [[303.7, 562.76, 541.7, 790.12]],
+        "aliases": []
+      },
+      {
+        "name": "D-Cannon Battery",
+        "page": 66,
+        "art": [49.94, 97.3, 158.75, 157.47],
+        "regions": [[55.7, 171.75, 293.7, 386.12]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Gun Battery",
+        "page": 66,
+        "art": [55.69, 397.86, 181.71, 435.65],
+        "regions": [[55.7, 456.36, 293.7, 675]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Rocket Battery",
+        "page": 66,
+        "art": [298.22, 98.67, 401.5, 154.83],
+        "regions": [[303.7, 170.43, 541.7, 397.8]],
+        "aliases": []
+      },
+      {
+        "name": "Pala Railgun",
+        "page": 66,
+        "art": [303.72, 406.92, 458.27, 447.32],
+        "regions": [[303.7, 468.04, 541.7, 721.4]],
+        "aliases": []
+      },
+      {
+        "name": "Particle Beamer",
+        "page": 67,
+        "art": [55.69, 84.04, 168.95, 130.69],
+        "regions": [[55.7, 152.97, 293.7, 424.74]],
+        "aliases": []
+      },
+      {
+        "name": "Atomic Generator",
+        "page": 67,
+        "art": [55.69, 457.48, 156.15, 502.0],
+        "regions": [[55.7, 524.28, 293.7, 778.02]],
+        "aliases": []
+      },
+      {
+        "name": "Fury Generator",
+        "page": 67,
+        "art": [303.72, 84.04, 401.88, 129.03],
+        "regions": [[303.7, 153.53, 541.7, 458.9]],
+        "aliases": []
+      },
+      {
+        "name": "Heavy Shield Generator",
+        "page": 67,
+        "art": [303.72, 468.16, 401.88, 512.68],
+        "regions": [[303.7, 537.64, 541.7, 778.02]],
+        "aliases": []
+      },
+      {
+        "name": "Magnetic Generator",
+        "page": 68,
+        "art": [55.69, 84.04, 155.06, 129.62],
+        "regions": [[55.7, 153.53, 293.7, 411.14]],
+        "aliases": []
+      },
+      {
+        "name": "Mirage Generator",
+        "page": 68,
+        "art": [303.72, 84.04, 408.27, 129.84],
+        "regions": [[303.7, 154.81, 541.7, 464.42]],
+        "aliases": []
+      },
+      {
+        "name": "Portal Generator",
+        "page": 68,
+        "art": [303.72, 473.69, 403.89, 520.18],
+        "regions": [[303.7, 543.17, 541.7, 787.79]],
+        "aliases": []
+      },
+      {
+        "name": "Repulsion Field Generator",
+        "page": 69,
+        "art": [55.69, 84.04, 159.52, 131.39],
+        "regions": [[55.7, 153.53, 293.7, 376.64]],
+        "aliases": ["Repulsion Generator"]
+      },
+      {
+        "name": "Shroud Generator",
+        "page": 69,
+        "art": [55.69, 385.9, 155.14, 430.42],
+        "regions": [[55.7, 453.97, 293.7, 694.33]],
+        "aliases": []
+      }
+    ]
+  },
+  "commonwealth": {
+    "file": "commonwealth-assembly.pdf",
+    "source": {
+      "title": "Commonwealth · Faction Starter Set — Assembly Guide",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/units/assembly-guides/DW-Assembly-COMMONWEALTH-Faction-Starter-Set_W.pdf",
+      "kind": "assembly"
+    },
+    "modules": [
+      {
+        "name": "Heavy Gun Battery",
+        "page": 1,
+        "art": [214, 504, 261, 546],
+        "aliases": ["Tracer Heavy Gun Battery"],
+        "regions": []
+      },
+      {
+        "name": "Tri-Railgun",
+        "page": 1,
+        "art": [275, 505, 321, 548],
+        "aliases": ["Tracer Tri-Railgun"],
+        "regions": []
+      },
+      {
+        "name": "Zhalo Rocket Battery",
+        "page": 1,
+        "art": [340, 505, 383, 546],
+        "aliases": [],
+        "regions": []
+      },
+      {
+        "name": "Light Gun Battery",
+        "page": 5,
+        "art": [133, 139, 165, 171],
+        "aliases": [],
+        "regions": []
+      },
+      {
+        "name": "Railgun",
+        "page": 5,
+        "art": [178, 132, 218, 186],
+        "aliases": [],
+        "regions": []
+      },
+      {
+        "name": "Seismic Mortar",
+        "page": 5,
+        "art": [80, 119, 119, 170],
+        "aliases": [],
+        "regions": []
+      }
+    ]
+  },
+  "imperium": {
+    "file": "imperium-assembly.pdf",
+    "source": {
+      "title": "Imperium · Faction Starter Set — Assembly Guide",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/units/assembly-guides/DW-Assembly-IMPERIUM-Faction-Starter-Set.pdf",
+      "kind": "assembly"
+    },
+    "modules": [
+      {
+        "name": "Heavy Voltaic Gun Battery",
+        "page": 3,
+        "art": [319, 505, 381, 542],
+        "aliases": [
+          "Auto-Targeting Heavy Voltaic Gun Battery",
+          "Guided Heavy Voltaic Gun Battery",
+          "Twin-Linked Heavy Voltaic Gun Battery"
+        ],
+        "regions": []
+      },
+      {
+        "name": "Stromschlag Rocket Battery",
+        "page": 3,
+        "art": [260, 504, 304, 552],
+        "aliases": ["Guided Stromschlag Rocket Battery"],
+        "regions": []
+      },
+      {
+        "name": "Gustav Twin Bombard",
+        "page": 2,
+        "art": [32, 279, 141, 339],
+        "aliases": [],
+        "regions": []
+      },
+      {
+        "name": "Bertha Heavy Bombard",
+        "page": 2,
+        "art": [279, 280, 388, 340],
+        "aliases": [],
+        "regions": []
+      },
+      {
+        "name": "Shroud Generator",
+        "page": 4,
+        "art": [242, 331, 285, 364],
+        "aliases": [],
+        "regions": []
+      }
+    ]
+  },
+  "union": {
+    "file": "union-assembly.pdf",
+    "source": {
+      "title": "Union · Faction Starter Set — Assembly Guide",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/units/assembly-guides/UNION-Faction-Starter-Set_WEB.pdf",
+      "kind": "assembly"
+    },
+    "modules": [
+      {
+        "name": "Heavy Gun Battery",
+        "page": 1,
+        "art": [88, 504, 151, 551],
+        "aliases": [],
+        "regions": []
+      },
+      {
+        "name": "Heavy Rocket Battery",
+        "page": 1,
+        "art": [32, 504, 80, 552],
+        "aliases": [],
+        "regions": []
+      },
+      {
+        "name": "Light Gun Battery",
+        "page": 10,
+        "art": [266, 507, 326, 550],
+        "regions": [],
+        "aliases": [],
+        "file": "union-long-range.pdf",
+        "source": {
+          "title": "Union · Long Range Squadrons — Assembly Guide",
+          "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/units/assembly-guides/DW-Assembly-UNION-Long-Range-Squadrons_W.pdf",
+          "kind": "assembly"
+        }
+      },
+      {
+        "name": "Chesapeake Gatling Gun",
+        "page": 10,
+        "art": [333, 507, 388, 550],
+        "regions": [],
+        "aliases": [],
+        "file": "union-long-range.pdf",
+        "source": {
+          "title": "Union · Long Range Squadrons — Assembly Guide",
+          "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/units/assembly-guides/DW-Assembly-UNION-Long-Range-Squadrons_W.pdf",
+          "kind": "assembly"
+        }
+      }
+    ]
+  }
+}

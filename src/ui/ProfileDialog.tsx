@@ -10,7 +10,7 @@ import {
 
 import type { ShipEditorReadyReadModel } from "../application/rosters/ship-editor";
 import type { RuleReadModel, WeaponProfileReadModel } from "../application/rosters/profile-rules";
-import { moduleLoreRussianParagraphs, moduleLoreSource, type ModuleLore } from "../app/moduleLore";
+import { moduleLoreRussianParagraphs, type ModuleLore } from "../app/moduleLore";
 import { CameraIcon } from "./CameraIcon";
 import { WeaponProfiles } from "./ProfileRules";
 import { RuleDescription, RuleLinks, ShipCardProfile, ShipMobileProfile } from "./ShipCardProfile";
@@ -193,27 +193,34 @@ export function ModuleLoreDialog({
   const translation = moduleLoreRussianParagraphs(module);
   const translated = language === "ru" && translation !== null;
   const paragraphs = translated ? translation : module.paragraphs;
+  const assembly = module.source.kind === "assembly";
 
   return (
     <InspectorDialog
       backgroundUrl={null}
       closeLabel="Закрыть изображение и лор"
       compact
-      eyebrow={`Арсенал Империи · ${module.category}`}
+      eyebrow={`Арсенал ${module.arsenal} · ${module.category}`}
       name={name}
       onClose={onClose}
     >
       <article className="module-lore">
-        <figure className="module-lore__figure">
-          <img
-            alt={`${module.name} — оригинальная иллюстрация из ORBAT Империи`}
-            decoding="async"
-            height={module.imageHeight}
-            src={module.imageUrl}
-            width={module.imageWidth}
-          />
-          <figcaption>Иллюстрация из Tools of War</figcaption>
-        </figure>
+        {module.imageUrl ? (
+          <figure className="module-lore__figure">
+            <img
+              alt={`${module.name} — оригинальная иллюстрация: ${module.source.title}`}
+              decoding="async"
+              height={module.imageHeight ?? undefined}
+              src={module.imageUrl}
+              width={module.imageWidth ?? undefined}
+            />
+            <figcaption>
+              {assembly ? "Иллюстрация из инструкции сборки" : "Иллюстрация из Tools of War"}
+            </figcaption>
+          </figure>
+        ) : (
+          <p className="module-lore__notice">В ORBAT нет отдельной иллюстрации этого оружия.</p>
+        )}
         <div className="module-lore__heading">
           <h3>История модуля</h3>
           {translation ? (
@@ -225,25 +232,31 @@ export function ModuleLoreDialog({
                 EN · Оригинал
               </button>
             </div>
-          ) : (
+          ) : paragraphs.length ? (
             <span>EN · Оригинал</span>
-          )}
+          ) : null}
         </div>
         <div className="module-lore__text" lang={translated ? "ru" : "en"}>
           {paragraphs.map((paragraph, index) => (
             <p key={index}>{paragraph}</p>
           ))}
         </div>
+        {!paragraphs.length ? (
+          <p className="module-lore__notice">
+            Лорное описание этого модуля отсутствует в текущем ORBAT фракции. Показана официальная
+            иллюстрация из инструкции сборки.
+          </p>
+        ) : null}
         <footer className="module-lore__source">
           <a
-            href={`${moduleLoreSource.url}#page=${module.page}`}
+            href={`${module.source.url}#page=${module.page}`}
             target="_blank"
             rel="noopener noreferrer"
           >
-            {moduleLoreSource.title} · стр. {module.page} ↗
+            {module.source.title} · стр. {module.page} ↗
           </a>
           <small>
-            Иллюстрация и лор © Warcradle Studios.
+            Материалы © Warcradle Studios.
             {translated ? " Неофициальный русский перевод." : ""} Игровые свойства — по кнопке с
             глазом.
           </small>

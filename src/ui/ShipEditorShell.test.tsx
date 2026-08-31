@@ -64,7 +64,7 @@ describe("ShipEditorShell", () => {
     expect(camera).toHaveFocus();
   });
 
-  it("shows generator artwork in preview, including catalog aliases, only for Empire", async () => {
+  it("shows generator artwork in preview with aliases, without borrowing another faction's record", async () => {
     const user = userEvent.setup();
     const props = {
       busy: false,
