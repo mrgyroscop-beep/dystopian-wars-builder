@@ -9,7 +9,7 @@ const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const MAX_SOURCES = 6;
 const MIN_SOURCE_SCORE = 10;
 const GLOSSARY_URL =
-  "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.03b_W.pdf";
+  "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.04-Beta_W.pdf";
 const translatedRuleAliases = [
   { title: "All Around", pattern: /(?:кругов\p{L}*|всесторонн\p{L}*)/u },
   { title: "Torpedo", pattern: /торпед\p{L}*/u },

@@ -108,7 +108,7 @@ describe("Worker API", () => {
       ].map((faction) => resolveReferenceDocument(`orbat-${faction}`)?.url),
     ).toEqual([
       "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01-Beta_W.pdf",
-      "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-400a_W.pdf",
+      "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01-Beta_W.pdf",
       "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02a.pdf",
       "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01_W.pdf",
       "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01-Beta2_W.pdf",
@@ -119,9 +119,9 @@ describe("Worker API", () => {
   });
 
   it("serves the current official Rules Glossary", () => {
-    expect(resolveReferenceDocument("glossary-4-03b")).toEqual({
-      filename: "dystopian-wars-glossary-4-03b.pdf",
-      url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.03b_W.pdf",
+    expect(resolveReferenceDocument("glossary-4-04-beta")).toEqual({
+      filename: "dystopian-wars-glossary-4-04-beta.pdf",
+      url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.04-Beta_W.pdf",
     });
     expect(resolveReferenceDocument("glossary-4-03a")).toBeNull();
   });

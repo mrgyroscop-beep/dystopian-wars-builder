@@ -35,13 +35,13 @@ const rules: readonly ReferenceEntry[] = [
     action: "Читать внутри",
   },
   {
-    id: "glossary-4-03b",
+    id: "glossary-4-04-beta",
     kind: "rules",
     eyebrow: "Живой справочник",
-    title: "Rules Glossary 4.03b",
+    title: "Rules Glossary 4.04 Beta",
     summary: "Актуальные свойства, системы и качества из профилей кораблей.",
-    meta: "PDF · English · обновлено 07.08.2026",
-    href: "/reference-pdf/glossary-4-03b",
+    meta: "PDF · English · обновлено 10.09.2026",
+    href: "/reference-pdf/glossary-4-04-beta",
     action: "Читать внутри",
   },
   {

@@ -7,9 +7,9 @@ const documents = {
     filename: "dystopian-wars-rules-4-00.pdf",
     url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW-Rule-Book-4.00_Full_W.pdf",
   },
-  "glossary-4-03b": {
-    filename: "dystopian-wars-glossary-4-03b.pdf",
-    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.03b_W.pdf",
+  "glossary-4-04-beta": {
+    filename: "dystopian-wars-glossary-4-04-beta.pdf",
+    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/pdfs/essentials/DW4-Rules-Glossary-v4.04-Beta_W.pdf",
   },
   "quick-reference": {
     filename: "dystopian-wars-quick-reference.pdf",
@@ -20,8 +20,8 @@ const documents = {
     url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01-Beta_W.pdf",
   },
   "orbat-commonwealth": {
-    filename: "dystopian-wars-orbat-commonwealth-4-00a.pdf",
-    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-400a_W.pdf",
+    filename: "dystopian-wars-orbat-commonwealth-4-01-beta.pdf",
+    url: "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01-Beta_W.pdf",
   },
   "orbat-crown": {
     filename: "dystopian-wars-orbat-crown-4-02a.pdf",
