@@ -241,10 +241,12 @@ export async function openRosterWorkspace(
   const stored =
     (await dependencies.rosterRepository.read(id)) ?? dependencies.fallbackRoster?.(id);
   if (!stored) return null;
-  const [catalog, setup] = await Promise.all([
-    dependencies.catalogGateway.load(stored.roster.catalogContentVersion, stored.faction.id),
-    dependencies.setupGateway.load(stored.roster.catalogContentVersion),
-  ]);
+  // A saved roster may reference a catalog version that is no longer published.
+  // Resolve the current setup first, then load the faction catalog from that
+  // setup. The roster keeps its original version so the workspace can surface
+  // the mismatch and preserve the user's saved data instead of failing open.
+  const setup = await dependencies.setupGateway.load();
+  const catalog = await dependencies.catalogGateway.load(setup.contentVersion, stored.faction.id);
   const session = new WorkspaceSession(stored, catalog, setup, dependencies);
   await session.prepare();
   return session;

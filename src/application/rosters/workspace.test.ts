@@ -30,6 +30,43 @@ describe("roster workspace application boundary", () => {
     expect(session!.model.catalog.every((item) => item.id.startsWith("demo-"))).toBe(true);
   });
 
+  it("opens a roster saved against an unpublished catalog version", async () => {
+    const fixture = harness();
+    const stale = {
+      ...fixture.fallback,
+      roster: {
+        ...fixture.fallback.roster,
+        catalogContentVersion: "old-catalog-version",
+      },
+    };
+    const requestedVersions: string[] = [];
+    const dependencies: RosterWorkspaceDependencies = {
+      ...fixture.dependencies,
+      fallbackRoster: (id) => (id === stale.id ? stale : null),
+      catalogGateway: {
+        contractVersion: 1,
+        load: (contentVersion) => {
+          requestedVersions.push(contentVersion);
+          return Promise.resolve(createDemonstrationFleetCatalog());
+        },
+      },
+    };
+
+    const session = await openRosterWorkspace(stale.id, dependencies);
+
+    expect(session).not.toBeNull();
+    expect(requestedVersions).toEqual(["demonstration-1"]);
+    expect(session!.model.summary.availability).toBe("degraded");
+    expect(session!.model.problems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "CATALOG_VERSION_MISMATCH",
+          reason: expect.stringContaining("old-catalog-version"),
+        }),
+      ]),
+    );
+  });
+
   it("projects the minimum Model count without double-counting linked Cost ids", async () => {
     const fixture = harness(["minimum-unit", "minimum-model"]);
     const source = createDemonstrationFleetCatalog();
