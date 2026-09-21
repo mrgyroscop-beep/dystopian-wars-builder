@@ -41,6 +41,8 @@
   --offline-tint: #f0ebf8;
   --motion-fast: 120ms;
   --motion-medium: 180ms;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 * {
@@ -394,6 +396,11 @@ h3 {
   color: #ffffff;
   background: var(--navy);
   border: 1px solid var(--navy);
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
 }
 
 .button:hover {
@@ -421,6 +428,13 @@ h3 {
 .button--danger:hover {
   color: #ffffff;
   background: var(--error);
+}
+
+.button:active:not(:disabled),
+.text-action:active:not(:disabled),
+.primary-nav__link:active,
+.primary-nav__account:active {
+  transform: scale(0.97);
 }
 
 .auth-mode-switch {
@@ -539,6 +553,10 @@ h3 {
 .text-action {
   color: #0d5b76;
   border: 1px solid transparent;
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out);
 }
 
 .fixture-switcher {
@@ -1625,6 +1643,26 @@ button.button {
   }
 }
 
+@keyframes dialog-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.97);
+  }
+}
+
+@keyframes editor-group-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}
+
 @media (max-width: 64rem) {
   .creation-grid {
     grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.72fr);
@@ -1684,13 +1722,26 @@ button.button {
   }
 
   .primary-nav__link {
-    flex: 1 1 auto;
-    padding-inline: 0.65rem;
+    min-height: 2.5rem;
+    justify-content: center;
+    padding-inline: 0.4rem;
+    text-align: center;
   }
 
   .primary-nav__account {
-    flex: 1 1 auto;
+    grid-column: 1 / -1;
     max-width: 100%;
+  }
+
+  .primary-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.25rem;
+  }
+
+  .site-header__language {
+    grid-column: span 2;
+    justify-content: center;
   }
 
   .site-header__language {
@@ -1725,13 +1776,19 @@ button.button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  html {
+    scroll-behavior: auto;
+  }
+
+  .state-panel[data-state="loading"] .state-panel__symbol,
+  .text-glossary__translation-state > span,
+  .creation-form,
+  .battlefleet-brief,
+  .dialog-backdrop,
+  .glossary-dialog,
+  .profile-dialog,
+  .editor-group__body {
+    animation: none;
   }
 }
 
@@ -6039,6 +6096,7 @@ button.button {
   place-items: center;
   padding: 1rem;
   background: rgb(20 38 45 / 62%);
+  animation: dialog-backdrop-in 180ms var(--ease-out) both;
 }
 
 .glossary-dialog {
@@ -6050,6 +6108,8 @@ button.button {
   border-radius: 0.55rem;
   box-shadow: 0 18px 50px rgb(20 38 45 / 28%);
   overflow: auto;
+  animation: dialog-in 220ms var(--ease-out) both;
+  transform-origin: center;
 }
 
 .glossary-dialog > header {
@@ -6094,6 +6154,8 @@ button.button {
   border-radius: 0.5rem;
   box-shadow: 0 24px 70px rgb(4 18 24 / 48%);
   overflow: auto;
+  animation: dialog-in 240ms var(--ease-out) both;
+  transform-origin: center;
 }
 
 .profile-dialog[data-compact="true"] {
@@ -7356,6 +7418,7 @@ button.button {
   gap: 0.35rem;
   padding: 0.55rem;
   border-top: 1px solid var(--border);
+  animation: editor-group-in var(--motion-medium) var(--ease-out) both;
 }
 
 .editor-group__body > p {
