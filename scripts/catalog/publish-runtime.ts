@@ -8,6 +8,7 @@ import {
   canonicalJson,
   chunkDomainCatalog,
   enrichBattlefleetCatalog,
+  enrichCommonwealthOrbat,
   normalizeCatalog,
   type ContentHasher,
   type DomainCatalog,
@@ -52,11 +53,13 @@ const imported = await buildDataset(lock, sources, provenance);
 const graphJson = imported.files.get("catalog.json");
 if (!graphJson) throw new Error("Imported catalog graph is missing");
 
-const normalized = enrichBattlefleetCatalog(
-  normalizeCatalog({
-    graph: JSON.parse(graphJson) as LosslessGraph,
-    source: imported.manifest.source.resolved,
-  }),
+const normalized = enrichCommonwealthOrbat(
+  enrichBattlefleetCatalog(
+    normalizeCatalog({
+      graph: JSON.parse(graphJson) as LosslessGraph,
+      source: imported.manifest.source.resolved,
+    }),
+  ),
 );
 const hasher: ContentHasher = {
   sha256(value) {

@@ -10,8 +10,10 @@ import { readSourceLock } from "../catalog/lib/source-lock.mjs";
 import { verifyLockedProvenance } from "../catalog/lib/verify-provenance.mjs";
 import {
   canonicalJson,
+  domainCatalogSchema,
   chunkDomainCatalog,
   enrichBattlefleetCatalog,
+  enrichCommonwealthOrbat,
   MAX_CHUNK_BYTES,
   loadDomainCatalog,
   normalizeCatalog,
@@ -29,6 +31,7 @@ import {
   type RosterSnapshot,
 } from "../../src/domain/roster";
 import { projectRosterSetup } from "../../src/application/rosters/create-roster";
+import { projectShipProfileRules } from "../../src/application/rosters/profile-rules";
 import {
   applyFleetDoctrineCommand,
   applyShipEditorCommand,
@@ -91,6 +94,91 @@ afterAll(async () => {
 });
 
 describe("pinned real domain model", () => {
+  it("applies Commonwealth 4.01 arrays per model with exclusive choice, costs and systems", () => {
+    const updated = enrichCommonwealthOrbat(first);
+    expect(domainCatalogSchema.safeParse(updated).success).toBe(true);
+    expect(enrichCommonwealthOrbat(updated)).toEqual(updated);
+    for (const name of ["Voivode", "Jadwiga"]) {
+      const model = Object.values(updated.entities).find(
+        (entity) =>
+          entity.kind === "Model" &&
+          entity.label.plainText === name &&
+          entity.provenance.documentPath === "Commonwealth.cat",
+      )!;
+      const placement = Object.values(updated.placements).find(
+        (candidate) =>
+          candidate.definitionId === model.id &&
+          updated.entities[candidate.ownerId]?.kind === "Unit",
+      )!;
+      let snapshot = realAkitaSnapshot(placement.ownerId, model.id, placement.id);
+      const unitId = rosterInstanceId("real:akita:unit");
+      const modelId = rosterInstanceId("real:akita:model");
+      snapshot = {
+        ...snapshot,
+        instances: {
+          ...snapshot.instances,
+          [modelId]: { ...snapshot.instances[modelId]!, quantity: 2 },
+        },
+      };
+      const basePoints = Number(
+        evaluateRoster(updated, snapshot).totals.find((total) => total.resource === "points")!
+          .value,
+      );
+      let editor = readyEditor(
+        projectShipEditor(snapshot, updated, unitId, placement.ownerId, "saved-local"),
+      );
+      const group = editor.groups.find((candidate) =>
+        candidate.options.some((option) => option.label === "Zubr Anti-Air Array"),
+      )!;
+      expect(group.minimum).toBe(0);
+      expect(group.maximum).toBe(1);
+      for (const [label, delta, system] of [
+        ["Zubr Anti-Air Array", 10, "Flak Barrage (4)"],
+        ["Giyena Dissonance Array", 20, "Shockwave Generator"],
+      ] as const) {
+        snapshot = applyShipEditorCommand(
+          snapshot,
+          updated,
+          {
+            type: "replace-exclusive",
+            instanceId: unitId,
+            groupId: group.id,
+            optionId: group.options.find((option) => option.label === label)!.id,
+          },
+          () => `commonwealth:${name}:${delta}`,
+        );
+        expect(
+          Number(
+            evaluateRoster(updated, snapshot).totals.find((total) => total.resource === "points")!
+              .value,
+          ),
+        ).toBe(basePoints + delta);
+        editor = readyEditor(
+          projectShipEditor(snapshot, updated, unitId, placement.ownerId, "saved-local"),
+        );
+        expect(
+          editor.groups
+            .find((candidate) => candidate.id === group.id)!
+            .options.filter((option) => option.selectedQuantity),
+        ).toHaveLength(1);
+        const profile = projectShipProfileRules(
+          snapshot,
+          updated,
+          snapshot.instances[unitId]!,
+          snapshot.instances[modelId]!,
+        );
+        expect(
+          profile.sections
+            .find((section) => section.id === "systems")!
+            .rows.some((row) => row.value.plainText.includes(system)),
+        ).toBe(true);
+      }
+    }
+    for (const [id, entity] of Object.entries(first.entities)) {
+      if (entity.provenance.documentPath !== "Commonwealth.cat")
+        expect(updated.entities[id]).toBe(entity);
+    }
+  });
   it("covers every playable faction structurally", () => {
     const playable = [
       "Alliance",

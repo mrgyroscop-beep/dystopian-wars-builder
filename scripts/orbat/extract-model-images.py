@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 from io import BytesIO
@@ -57,7 +58,7 @@ def crop(image: Image.Image) -> Image.Image:
 
 
 MODEL_IMAGE_INDEX: dict[str, int | None] = {
-    "commonwealth": None,
+    "commonwealth": 7,
     "crown": 8,
     "empire": 7,
     "enlightened": 7,
@@ -68,6 +69,9 @@ MODEL_IMAGE_INDEX: dict[str, int | None] = {
 
 
 def model_image_index(slug: str, page_number: int, image_count: int) -> int | None:
+    if slug == "commonwealth" and page_number == 58:
+        # Marena omits the first background layer in Commonwealth 4.01.
+        return 6
     if slug == "alliance":
         # Alliance model layers have a stable square-ish 435x422 source box,
         # while the absolute index moves when a page omits a decoration.
@@ -77,6 +81,7 @@ def model_image_index(slug: str, page_number: int, image_count: int) -> int | No
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--pdf", type=Path, help="PDF override; requires --faction.")
     parser.add_argument(
         "--faction",
         choices=(
@@ -91,7 +96,10 @@ def parse_args() -> argparse.Namespace:
         ),
         help="Update only one faction while preserving the existing image manifest.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.pdf and not args.faction:
+        parser.error("--pdf requires --faction")
+    return args
 
 
 def candidate(page: Any, slug: str, page_number: int) -> tuple[int, Image.Image] | None:
@@ -126,14 +134,18 @@ def main() -> None:
     source = json.loads(CARD_MANIFEST.read_text("utf-8"))
     if args.faction and IMAGE_MANIFEST.is_file():
         result: dict[str, Any] = json.loads(IMAGE_MANIFEST.read_text("utf-8"))
-        result["sources"] = source["sources"]
+        result["sources"][args.faction] = source["sources"][args.faction]
     else:
         result = {"images": {}, "missing": {}, "sources": source["sources"]}
     OUTPUT.mkdir(parents=True, exist_ok=True)
     for slug, cards in source["cards"].items():
         if args.faction and slug != args.faction:
             continue
-        pdf = source_path(slug)
+        pdf = args.pdf or source_path(slug)
+        if pdf.is_file():
+            actual_hash = hashlib.sha256(pdf.read_bytes()).hexdigest()
+            if actual_hash != source["sources"][slug]["sha256"]:
+                raise ValueError(f"{slug}: PDF SHA-256 does not match the card manifest")
         reader = PdfReader(str(pdf)) if pdf.is_file() else None
         by_page: dict[int, list[str]] = {}
         for key, card_url in cards.items():

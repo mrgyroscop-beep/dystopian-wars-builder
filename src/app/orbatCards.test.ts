@@ -11,6 +11,21 @@ describe("orbatCardFor", () => {
     expect(orbatCardFor("Empire", "Akita Demonstrator")).toBe("/orbat-cards/empire/23.webp");
   });
 
+  it("maps Commonwealth catalog spellings to the official 4.01 profiles", () => {
+    expect(orbatCardFor("Commonwealth", "Jadwiga Airborne Monitor")).toBe(
+      "/orbat-cards/commonwealth/41.webp",
+    );
+    expect(orbatCardFor("Commonwealth", "Yak Transport Hovercraft")).toBe(
+      "/orbat-cards/commonwealth/60.webp",
+    );
+    expect(orbatCardFor("Commonwealth", "Europa Grand Conveyor")).toBe(
+      "/orbat-cards/commonwealth/61.webp",
+    );
+    expect(orbatCardFor("Commonwealth", "Titan Mass Conveyor")).toBe(
+      "/orbat-cards/commonwealth/64.webp",
+    );
+  });
+
   it("returns null when no original card is mapped", () => {
     expect(orbatCardFor("Unknown faction", "Unpublished ship")).toBeNull();
   });

@@ -178,7 +178,188 @@
         "url": "/ships/alliance/67.webp"
       }
     },
-    "commonwealth": {},
+    "commonwealth": {
+      "alexayevekranoplanheavytransport": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/20.webp"
+      },
+      "anastasialegendarymobilestronghold": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/21.webp"
+      },
+      "arkhangelcommandcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/22.webp"
+      },
+      "borodinobattleship": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/23.webp"
+      },
+      "deathbringerprototypegrandsubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/24.webp"
+      },
+      "khodynkaheavyskycruiser": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/25.webp"
+      },
+      "krasnayaheavyskydrill": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/26.webp"
+      },
+      "moskvaheavybattleship": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/27.webp"
+      },
+      "mozhayskifleetcarrier": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/28.webp"
+      },
+      "murmanskmobilestronghold": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/29.webp"
+      },
+      "prezidiumcommandship": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/30.webp"
+      },
+      "rikhterartillerydreadnought": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/31.webp"
+      },
+      "tobolskmobilestronghold": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/32.webp"
+      },
+      "zamiecskyfortress": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/33.webp"
+      },
+      "khyzhakattacksubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/34.webp"
+      },
+      "kutsovcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/35.webp"
+      },
+      "norilskheavycruiser": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/36.webp"
+      },
+      "tunguskaskycruiser": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/37.webp"
+      },
+      "voivodeheavyairship": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/38.webp"
+      },
+      "boyarheavyfrigate": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/39.webp"
+      },
+      "dragunovekranoplanbrawler": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/40.webp"
+      },
+      "jadwigaairbornemonitor": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/41.webp"
+      },
+      "olegmonitor": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/42.webp"
+      },
+      "piranyahuntersubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/43.webp"
+      },
+      "rurikfrigate": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/44.webp"
+      },
+      "smokaerialdestroyer": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/45.webp"
+      },
+      "akulagrandsubmarine": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/46.webp"
+      },
+      "defenceplatformsubataiclass": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/47.webp"
+      },
+      "heavyplatformkhanclass": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/48.webp"
+      },
+      "kostromavitruviancolossus": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/49.webp"
+      },
+      "konostogaheavyskycannon": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/50.webp"
+      },
+      "markovsprometheuslegendarygeneratorship": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/51.webp"
+      },
+      "pravdasupportcarrier": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/52.webp"
+      },
+      "saranskskyfurnace": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/53.webp"
+      },
+      "stoletovekranoplanharrier": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/54.webp"
+      },
+      "szlachtaswordwingcarrier": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/55.webp"
+      },
+      "stanislawassaultairship": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/56.webp"
+      },
+      "irkutskskydrill": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/57.webp"
+      },
+      "marenavitruviancolossus": {
+        "imageIndex": 6,
+        "url": "/ships/commonwealth/58.webp"
+      },
+      "sineusfastcruiser": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/59.webp"
+      },
+      "yaktransporthovercraft": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/60.webp"
+      },
+      "europagrandconveyor": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/61.webp"
+      },
+      "hermessupplyfreighter": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/62.webp"
+      },
+      "supplyplatformortoqclass": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/63.webp"
+      },
+      "titanmassconveyor": {
+        "imageIndex": 7,
+        "url": "/ships/commonwealth/64.webp"
+      }
+    },
     "crown": {
       "adventurergrandindiaman": {
         "imageIndex": 8,
@@ -928,25 +1109,7 @@
   },
   "missing": {
     "alliance": [],
-    "commonwealth": [
-      "alexayevekranoplanheavytransport",
-      "borodinobattleship",
-      "khodynkaheavyskycruiser",
-      "khyzhakattacksubmarine",
-      "krasnayaheavyskydrill",
-      "kutsovcruiser",
-      "morozkoheavycryocruiser",
-      "moskvaheavybattleship",
-      "mozhayskifleetcarrier",
-      "murmanskmobilestronghold",
-      "norilskheavycruiser",
-      "prezidiumcommandship",
-      "rikhterartillerydreadnought",
-      "tobolskmobilestronghold",
-      "tunguskaskycruiser",
-      "voivodeheavyairship",
-      "zamiecskyfortress"
-    ],
+    "commonwealth": [],
     "crown": [],
     "empire": [],
     "enlightened": [],
@@ -987,9 +1150,9 @@
       "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01-Beta_W.pdf"
     },
     "commonwealth": {
-      "mappedCards": 17,
-      "sha256": "c10fcdf945deac3f4dcdc2660b17864862fa1201dfa7182fd3d5f869a1bfe995",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01-Beta_W.pdf"
+      "mappedCards": 45,
+      "sha256": "23d5f9bc067208a4c91efd09bf912ffc85c1dc08112ede4188dd834b6a5ff33f",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01_W_2026-09-28-131803_pgvm.pdf"
     },
     "crown": {
       "mappedCards": 49,

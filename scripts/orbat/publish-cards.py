@@ -19,13 +19,21 @@ from pypdf import PdfReader
 
 SOURCES = {
     "alliance": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01-Beta_W.pdf",
-    "commonwealth": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01-Beta_W.pdf",
+    "commonwealth": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01_W_2026-09-28-131803_pgvm.pdf",
     "crown": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02a.pdf",
     "empire": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01_W.pdf",
     "enlightened": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01-Beta2_W.pdf",
     "imperium": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Imperium-400b_W.pdf",
     "sultanate": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Sultanate-4.01_W.pdf",
     "union": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Union-4.00a_W.pdf",
+}
+
+# Catalog spellings that differ from the official PDF's table of contents.
+INDEX_ALIASES = {
+    "jadwigaairbornemonitor": "jadwigaaerialmonitor",
+    "yaktransporthovercraft": "yakhovercraft",
+    "europagrandconveyor": "europagrandconveyer",
+    "titanmassconveyor": "titanmassconveyer",
 }
 
 
@@ -73,7 +81,8 @@ def page_map(reader: PdfReader, units: list[str]) -> dict[str, int]:
     result: dict[str, int] = {}
     for unit in units:
         token = compact(unit)
-        matches = [line for line in lines if token and token in compact(line)]
+        tokens = {token, INDEX_ALIASES.get(token, token)}
+        matches = [line for line in lines if any(t and t in compact(line) for t in tokens)]
         for line in matches:
             numbers = [int(value) for value in re.findall(r"\d+", line)]
             candidates = [value for value in numbers if 10 <= value <= total_pages]
@@ -141,18 +150,33 @@ def download(url: str, target: Path, refresh: bool) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Publish complete ORBAT profile pages.")
     parser.add_argument("--refresh", action="store_true", help="Download the current PDFs again.")
+    parser.add_argument("--faction", choices=tuple(SOURCES), help="Update only this faction.")
+    parser.add_argument("--pdf", type=Path, help="Use this PDF; requires --faction.")
     args = parser.parse_args()
+    if args.pdf and not args.faction:
+        parser.error("--pdf requires --faction")
     root = Path(__file__).resolve().parents[2]
     pdf_root = root / "tmp/pdfs"
     asset_root = root / "public/orbat-cards"
-    manifest: dict[str, dict] = {"cards": {}, "sources": {}}
+    target = root / "src/assets/orbat-card-manifest.json"
+    manifest: dict[str, dict] = (
+        json.loads(target.read_text("utf-8"))
+        if args.faction and target.is_file()
+        else {"cards": {}, "sources": {}}
+    )
     executable = renderer()
 
     for slug, url in SOURCES.items():
-        pdf = pdf_root / ("empire-4.01.pdf" if slug == "empire" else f"{slug}.pdf")
-        download(url, pdf, args.refresh)
+        if args.faction and slug != args.faction:
+            continue
+        pdf = args.pdf or pdf_root / ("empire-4.01.pdf" if slug == "empire" else f"{slug}.pdf")
+        if not args.pdf:
+            download(url, pdf, args.refresh)
         reader = PdfReader(str(pdf))
-        cards = page_map(reader, catalog_units(root, slug))
+        # Retain verified profile aliases that may not be standalone Units in
+        # the current upstream catalog (for example Europa in Commonwealth).
+        units = sorted(set(catalog_units(root, slug)) | set(manifest["cards"].get(slug, {})))
+        cards = page_map(reader, units)
         with tempfile.TemporaryDirectory(prefix=f"dwb-{slug}-") as temporary_name:
             render_pages(
                 executable,
@@ -171,7 +195,6 @@ def main() -> None:
         }
         print(f"{slug}: {len(cards)} cards")
 
-    target = root / "src/assets/orbat-card-manifest.json"
     target.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", "utf-8")
 
 
