@@ -64,8 +64,8 @@ export function ShipCardProfile({
       data-density={rowCount > 11 ? "compact" : rowCount > 7 ? "dense" : "normal"}
       style={{ "--ship-card-accent": template.accent } as CSSProperties}
     >
-      <img alt="" aria-hidden="true" className="ship-card__background" src={template.imageUrl} />
       <div className="ship-card__canvas">
+        <img alt="" aria-hidden="true" className="ship-card__background" src={template.imageUrl} />
         <div aria-hidden="true" className="ship-card__role ship-card__role--left">
           {role}
         </div>
