@@ -1,3 +1,4 @@
+import { openShipLibrary, listShipLibraryFactions } from "../../src/application/ships/ship-library";
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -94,6 +95,36 @@ afterAll(async () => {
 });
 
 describe("pinned real domain model", () => {
+  it("publishes all 45 Commonwealth profiles with matching counts and a usable Europa", async () => {
+    const updated = enrichCommonwealthOrbat(first);
+    const setup = projectRosterSetup(updated);
+    const faction = setup.factions.find((entry) => entry.label === "Commonwealth")!;
+    const scoped = {
+      ...updated,
+      entities: Object.fromEntries(
+        Object.entries(updated.entities).filter(
+          ([, entity]) =>
+            !["Unit", "Model"].includes(entity.kind) ||
+            entity.provenance.documentPath === "Commonwealth.cat",
+        ),
+      ),
+    };
+    const dependencies = {
+      setupGateway: { load: () => Promise.resolve({ ...setup, factions: [faction] }) },
+      catalogGateway: { load: () => Promise.resolve(scoped) },
+    };
+    const library = await openShipLibrary(faction.id, dependencies);
+    expect(library?.session.ships).toHaveLength(45);
+    expect((await listShipLibraryFactions(dependencies))[0]?.shipCount).toBe(45);
+    const europa = library!.session.ships.find((ship) => ship.name === "Europa Grand Conveyor")!;
+    expect(europa).toMatchObject({
+      category: "Logistical",
+      orbatPageUrl: "/orbat-cards/commonwealth/61.webp",
+    });
+    expect(Number(europa.points)).toBeGreaterThan(0);
+    expect(library!.profile(europa.id)?.profileRules.weapons.length).toBeGreaterThan(0);
+  });
+
   it("applies Commonwealth 4.01 arrays per model with exclusive choice, costs and systems", () => {
     const updated = enrichCommonwealthOrbat(first);
     expect(domainCatalogSchema.safeParse(updated).success).toBe(true);

@@ -18,6 +18,7 @@ export interface BattlefleetSetupOption {
 }
 
 export interface FactionSetupOption {
+  readonly shipLibraryCount?: number | undefined;
   readonly id: string;
   readonly label: string;
   readonly battlefleets: readonly BattlefleetSetupOption[];
@@ -45,6 +46,7 @@ export const rosterSetupCatalogSchema = z.object({
     z.object({
       id: z.string().min(1),
       label: z.string().min(1),
+      shipLibraryCount: z.number().int().min(0).optional(),
       battlefleets: z.array(
         z.object({
           id: z.string().min(1),

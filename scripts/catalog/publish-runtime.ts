@@ -1,3 +1,4 @@
+import { countShipLibraryEntries } from "../../src/application/ships/ship-library";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -75,10 +76,12 @@ const releaseDirectory = path.join(staging, "releases", chunked.index.contentVer
 const factionDirectory = path.join(releaseDirectory, "factions");
 await mkdir(factionDirectory, { recursive: true });
 try {
+  const shipCounts = new Map<string, number>();
   const factions = Object.fromEntries(
     await Promise.all(
       setup.factions.map(async (faction) => {
         const scoped = projectFactionCatalog(currentCatalog, faction.id);
+        shipCounts.set(faction.id, countShipLibraryEntries(scoped, faction.label));
         const contents = canonicalJson(scoped);
         const decodedBytes = Buffer.byteLength(contents);
         const compressed = gzipSync(contents, { level: 9 });
@@ -110,7 +113,16 @@ try {
       factions,
     }),
   );
-  await writeFile(path.join(staging, "setup.json"), canonicalJson(setup));
+  await writeFile(
+    path.join(staging, "setup.json"),
+    canonicalJson({
+      ...setup,
+      factions: setup.factions.map((faction) => ({
+        ...faction,
+        shipLibraryCount: shipCounts.get(faction.id)!,
+      })),
+    }),
+  );
   await writeFile(
     path.join(staging, "source.json"),
     canonicalJson({

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { createDemonstrationFleetCatalogGateway } from "../../infrastructure/catalog/demonstration-fleet-catalog";
-import { filterShipLibrary, openShipLibrary, type ShipLibraryDependencies } from "./ship-library";
+import {
+  filterShipLibrary,
+  listShipLibraryFactions,
+  openShipLibrary,
+  type ShipLibraryDependencies,
+} from "./ship-library";
 
 const dependencies: ShipLibraryDependencies = {
   setupGateway: {
@@ -32,6 +37,32 @@ describe("ship library", () => {
     expect(
       catalog?.profile(session?.ships[0]?.id ?? "")?.profileRules.weapons.length,
     ).toBeGreaterThan(0);
+  });
+
+  it("counts the same published entries on the faction card and inside its library", async () => {
+    const factions = await listShipLibraryFactions(dependencies);
+    const library = await openShipLibrary("demo-empire", dependencies);
+    expect(factions[0]?.shipCount).toBe(1);
+    expect(factions[0]?.shipCount).toBe(library?.session.ships.length);
+  });
+
+  it("uses generated summary counts without downloading every faction catalog", async () => {
+    const setup = await dependencies.setupGateway.load();
+    const factions = await listShipLibraryFactions({
+      setupGateway: {
+        load: () =>
+          Promise.resolve({
+            ...setup,
+            factions: setup.factions.map((faction) => ({ ...faction, shipLibraryCount: 1 })),
+          }),
+      },
+      catalogGateway: {
+        load: () => {
+          throw new Error("Unexpected full catalog download");
+        },
+      },
+    });
+    expect(factions[0]?.shipCount).toBe(1);
   });
 
   it("filters by type and sorts prices in either direction", () => {

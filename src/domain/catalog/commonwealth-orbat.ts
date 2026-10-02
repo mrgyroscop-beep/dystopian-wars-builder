@@ -15,6 +15,24 @@ export function enrichCommonwealthOrbat(catalog: DomainCatalog): DomainCatalog {
   const slots = { ...catalog.slots };
   for (const model of Object.values(catalog.entities)) {
     if (model.kind !== "Model" || model.provenance.documentPath !== "Commonwealth.cat") continue;
+    // Upstream labels the Europa unit container as a model, although it owns
+    // the actual Europa model. Preserve its identity and all existing references.
+    if (
+      model.identity.upstreamId === "2315-c0ee-8a1e-947d" &&
+      model.label.plainText === "Europa Grand Conveyor"
+    ) {
+      entities[model.id] = {
+        ...model,
+        kind: "Unit",
+        attributes: {
+          ...model.attributes,
+          "source.url": SOURCE_URL,
+          "source.page": "61",
+          "derived.kind": "commonwealth-orbat-4.01-unit-correction",
+        },
+      };
+      continue;
+    }
     const page =
       model.label.plainText === "Voivode" ? 38 : model.label.plainText === "Jadwiga" ? 41 : null;
     if (!page) continue;

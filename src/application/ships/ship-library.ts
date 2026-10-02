@@ -18,17 +18,6 @@ export interface ShipLibraryFaction {
   readonly shipCount: number;
 }
 
-const publishedShipCounts: Readonly<Record<string, number>> = {
-  alliance: 44,
-  commonwealth: 17,
-  crown: 49,
-  empire: 53,
-  enlightened: 40,
-  imperium: 9,
-  sultanate: 42,
-  union: 15,
-};
-
 export interface ShipLibraryItem {
   readonly id: string;
   readonly name: string;
@@ -60,11 +49,26 @@ export async function listShipLibraryFactions(
   dependencies: ShipLibraryDependencies,
 ): Promise<readonly ShipLibraryFaction[]> {
   const setup = await dependencies.setupGateway.load();
-  return setup.factions.map((faction) => ({
-    id: faction.id,
-    label: faction.label,
-    shipCount: publishedShipCounts[compact(faction.label)] ?? 0,
-  }));
+  return Promise.all(
+    setup.factions.map(async (faction) => {
+      const shipCount =
+        faction.shipLibraryCount ??
+        countShipLibraryEntries(
+          await dependencies.catalogGateway.load(setup.contentVersion, faction.id),
+          faction.label,
+        );
+      return {
+        id: faction.id,
+        label: faction.label,
+        shipCount,
+      };
+    }),
+  );
+}
+
+export function countShipLibraryEntries(catalog: DomainCatalog, factionLabel: string): number {
+  const slug = compact(factionLabel);
+  return libraryUnits(catalog, cards[slug] ?? {}, fixtureAliases[slug] ?? {}).length;
 }
 
 export async function openShipLibrary(
