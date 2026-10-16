@@ -114,6 +114,17 @@ describe("roster workspace application boundary", () => {
     expect(session.model.catalog.find((item) => item.id === unit.id)?.points).toBe("700");
     const added = await session.execute({ type: "add", definitionId: unit.id });
     expect(added.summary.points).toBe("700");
+    const selected = added.elements.flatMap((element) => element.instances)[0]!;
+    expect(selected.modelCount).toBe(2);
+    const editor = session.editor(selected.id, null);
+    expect(editor?.dataState).toBe("ready");
+    if (!editor || editor.dataState !== "ready") throw new Error("Expected ship editor");
+    const updated = await session.execute({
+      type: "set-model-quantity",
+      instanceId: editor.modelQuantity.instanceId!,
+      quantity: 3,
+    });
+    expect(updated.elements.flatMap((element) => element.instances)[0]!.modelCount).toBe(3);
   });
 
   it("creates the Battlefleet structure idempotently without mutating the input fixture", async () => {

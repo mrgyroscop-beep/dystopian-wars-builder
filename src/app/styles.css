@@ -4578,6 +4578,10 @@ button.button {
   line-height: 1.15;
 }
 
+.instance-model-count {
+  white-space: nowrap;
+}
+
 .instance-inspect,
 .instance-orbat {
   width: 1.7rem;

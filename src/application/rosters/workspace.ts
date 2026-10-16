@@ -75,6 +75,7 @@ export interface CatalogItemReadModel {
 }
 
 export interface RosterInstanceReadModel {
+  readonly modelCount: number;
   readonly id: string;
   readonly definitionId: string;
   readonly name: string;
@@ -1098,6 +1099,13 @@ function projectElements(
           id: instance.id,
           definitionId: instance.definitionId,
           name: catalog.entities[instance.definitionId]?.label.plainText || "Неизвестный корабль",
+          modelCount: Object.values(stored.roster.instances)
+            .filter(
+              (candidate) =>
+                candidate.parentInstanceId === instance.id &&
+                catalog.entities[candidate.definitionId]?.kind === "Model",
+            )
+            .reduce((total, model) => total + model.quantity, 0),
           points: contributionFor(stored.roster, evaluation, instance.id, "points"),
           victoryPoints: contributionFor(stored.roster, evaluation, instance.id, "victory-points"),
           loadout: projectSelectedLoadout(stored.roster, catalog, instance),

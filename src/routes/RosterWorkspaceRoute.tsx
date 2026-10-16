@@ -1115,7 +1115,10 @@ function CompositionPane({
                           type="button"
                         >
                           <span className="instance-title">
-                            <strong>{instance.name}</strong>
+                            <strong>
+                              {instance.name}{" "}
+                              <span className="instance-model-count">×{instance.modelCount}</span>
+                            </strong>
                           </span>
                           <small>
                             {instance.points} Points · {instance.victoryPoints} VPR
