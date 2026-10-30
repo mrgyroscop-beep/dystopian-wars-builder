@@ -11,7 +11,14 @@ export function ShipArtwork({
   return (
     <span className={`ship-artwork${image ? " ship-artwork--available" : ""}`}>
       {image ? (
-        <img alt="" aria-hidden="true" decoding="async" loading="lazy" src={image} />
+        <img
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          loading="lazy"
+          src={image}
+          style={image === "/ships/imperium/munich.jpg" ? { transform: "scale(2.5)" } : undefined}
+        />
       ) : (
         <svg aria-hidden="true" className="ship-artwork__silhouette" viewBox="0 0 240 92">
           <path d="M16 60h30l12-16h35l9-15h33l11 15h29l14 16h35l-14 17H35L16 60Z" />
