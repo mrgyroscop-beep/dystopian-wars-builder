@@ -13,9 +13,9 @@ describe("shipImageFor", () => {
     );
   });
 
-  it("uses new Imperium models but excludes the Munich newspaper placeholder", () => {
+  it("uses the verified Munich photograph instead of the newspaper placeholder", () => {
     expect(shipImageFor("Imperium", "Elector")).toBe("/ships/imperium/21.webp");
-    expect(shipImageFor("Imperium", "Munich Aerial Destroyer")).toBeNull();
+    expect(shipImageFor("Imperium", "Munich Aerial Destroyer")).toBe("/ships/imperium/munich.jpg");
   });
 
   it("leaves explicitly missing ORBAT art available for a silhouette fallback", () => {

@@ -170,6 +170,13 @@ def main() -> None:
                     "imageIndex": image_index,
                     "url": f"/ships/{slug}/{page_number}.webp",
                 }
+        if slug == "imperium" and (OUTPUT / slug / "munich.jpg").is_file():
+            found["munichaerialdestroyer"] = {
+                "imageIndex": -1,
+                "url": "/ships/imperium/munich.jpg",
+                "sourceUrl": "https://theninthfleet.co.uk/images/dystopian-wars/imperium/munich.jpg",
+            }
+            missing = [key for key in missing if key != "munichaerialdestroyer"]
         result["images"][slug] = found
         result["missing"][slug] = sorted(missing)
         print(f"{slug}: {len(found)} images, {len(missing)} missing")

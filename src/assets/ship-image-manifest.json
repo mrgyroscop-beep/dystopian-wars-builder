@@ -1122,6 +1122,11 @@
       "titanmassconveyor": {
         "imageIndex": 8,
         "url": "/ships/imperium/66.webp"
+      },
+      "munichaerialdestroyer": {
+        "imageIndex": -1,
+        "url": "/ships/imperium/munich.jpg",
+        "sourceUrl": "https://theninthfleet.co.uk/images/dystopian-wars/imperium/munich.jpg"
       }
     },
     "sultanate": {
@@ -1302,9 +1307,7 @@
     "crown": [],
     "empire": [],
     "enlightened": [],
-    "imperium": [
-      "munichaerialdestroyer"
-    ],
+    "imperium": [],
     "sultanate": [],
     "union": [
       "americaspecialoperationsvessel",
