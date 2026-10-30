@@ -62,18 +62,21 @@ MODEL_IMAGE_INDEX: dict[str, int | None] = {
     "crown": 8,
     "empire": 7,
     "enlightened": 7,
-    "imperium": None,
+    "imperium": -1,
     "sultanate": 7,
     "union": None,
 }
 
 
 def model_image_index(slug: str, page_number: int, image_count: int) -> int | None:
+    if slug == "imperium" and page_number == 49:
+        # Munich has a newspaper placeholder, not model artwork, in 4.01 Beta.
+        return None
     if slug == "commonwealth" and page_number == 58:
         # Marena omits the first background layer in Commonwealth 4.01.
         return 6
-    if slug == "alliance":
-        # Alliance model layers have a stable square-ish 435x422 source box,
+    if slug in {"alliance", "imperium", "enlightened"}:
+        # Alliance and Imperium model layers use a square-ish 435x422 source box,
         # while the absolute index moves when a page omits a decoration.
         return -1
     return MODEL_IMAGE_INDEX.get(slug)

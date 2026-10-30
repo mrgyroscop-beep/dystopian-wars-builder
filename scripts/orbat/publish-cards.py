@@ -18,18 +18,25 @@ from pypdf import PdfReader
 
 
 SOURCES = {
-    "alliance": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01-Beta_W.pdf",
-    "commonwealth": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01_W_2026-09-28-131803_pgvm.pdf",
-    "crown": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02a.pdf",
-    "empire": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01_W.pdf",
-    "enlightened": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01-Beta2_W.pdf",
-    "imperium": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Imperium-400b_W.pdf",
+    "alliance": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01_W.pdf",
+    "commonwealth": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01_W.pdf",
+    "crown": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02c_W.pdf",
+    "empire": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01.pdf",
+    "enlightened": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01_W_Compressed-further.pdf",
+    "imperium": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Imperium_V4.01-Beta.pdf",
     "sultanate": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Sultanate-4.01_W.pdf",
-    "union": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Union-4.00a_W.pdf",
+    "union": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Union-4.00a_W.pdf"
 }
 
 # Catalog spellings that differ from the official PDF's table of contents.
 INDEX_ALIASES = {
+    "metzgervitruiviancolossus": "metzgervitruviancolossus",
+    "smsskjaldenthedarkomen": "skjaldenthedarkomen",
+    "ikuchiexosubmersiblecarier": "ikuchiexosubmersiblecarrier",
+    "yuzhoucityoffurnaces": "yuzhouthecityoffurnaces",
+    "defenceplatformbarangaoclass": "defenceplatform",
+    "heavyplatformmalandokclass": "heavyplatform",
+    "supplyplatformmagwayenclass": "supplyplatform",
     "jadwigaairbornemonitor": "jadwigaaerialmonitor",
     "yaktransporthovercraft": "yakhovercraft",
     "europagrandconveyor": "europagrandconveyer",

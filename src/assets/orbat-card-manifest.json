@@ -105,6 +105,7 @@
       "caliburnfrigate": "/orbat-cards/crown/40.webp",
       "camelothighguardian": "/orbat-cards/crown/21.webp",
       "ceylonguardianplatform": "/orbat-cards/crown/51.webp",
+      "chanurarepairship": "/orbat-cards/crown/65.webp",
       "defenceplatformrossclass": "/orbat-cards/crown/52.webp",
       "devakimonitor": "/orbat-cards/crown/41.webp",
       "europagrandconveyor": "/orbat-cards/crown/66.webp",
@@ -138,8 +139,9 @@
       "sabrecommandcruiser": "/orbat-cards/crown/28.webp",
       "saxonscoutrotor": "/orbat-cards/crown/64.webp",
       "secacefastdestroyer": "/orbat-cards/crown/47.webp",
-      "thenautiluslegendaryprivateer": "/orbat-cards/crown/25.webp",
+      "supplyplatformbelfastclass": "/orbat-cards/crown/68.webp",
       "tintagelbattlerotor": "/orbat-cards/crown/48.webp",
+      "titanmassconveyor": "/orbat-cards/crown/69.webp",
       "toronto": "/orbat-cards/crown/29.webp",
       "victoryheavycarrier": "/orbat-cards/crown/30.webp",
       "vivienneflaksubmarine": "/orbat-cards/crown/60.webp"
@@ -150,11 +152,14 @@
       "bangpaeexplosiveautomata": "/orbat-cards/empire/57.webp",
       "chubusubmarine": "/orbat-cards/empire/72.webp",
       "daolightcruiser": "/orbat-cards/empire/36.webp",
+      "defenceplatformbarangaoclass": "/orbat-cards/empire/58.webp",
       "diyuimmolationcruiser": "/orbat-cards/empire/37.webp",
       "ergunbattleship": "/orbat-cards/empire/24.webp",
+      "europagrandconveyor": "/orbat-cards/empire/75.webp",
       "gangcheoridraconiccolossus": "/orbat-cards/empire/45.webp",
       "gongdestroyer": "/orbat-cards/empire/46.webp",
       "hachimancarrier": "/orbat-cards/empire/25.webp",
+      "heavyplatformmalandokclass": "/orbat-cards/empire/59.webp",
       "heilongbattleship": "/orbat-cards/empire/26.webp",
       "hermessupplyfreighter": "/orbat-cards/empire/76.webp",
       "hexiehoverzebek": "/orbat-cards/empire/47.webp",
@@ -162,6 +167,7 @@
       "hokkaidoheavycruiser": "/orbat-cards/empire/38.webp",
       "honshulightcruiser": "/orbat-cards/empire/48.webp",
       "hwanunggeneratoraircruiser": "/orbat-cards/empire/60.webp",
+      "ikuchiexosubmersiblecarier": "/orbat-cards/empire/61.webp",
       "jiancruiser": "/orbat-cards/empire/39.webp",
       "kaijuikacolossus": "/orbat-cards/empire/62.webp",
       "kanagawaheavymonitor": "/orbat-cards/empire/49.webp",
@@ -187,6 +193,7 @@
       "sanshinjudgementaircruiser": "/orbat-cards/empire/67.webp",
       "shanghaifrigate": "/orbat-cards/empire/54.webp",
       "shenlongdraconiccolossus": "/orbat-cards/empire/55.webp",
+      "supplyplatformmagwayenclass": "/orbat-cards/empire/78.webp",
       "tianlongdraconiccolossus": "/orbat-cards/empire/32.webp",
       "titanmassconveyer": "/orbat-cards/empire/79.webp",
       "umibozuattacksubmarine": "/orbat-cards/empire/74.webp",
@@ -196,6 +203,7 @@
       "yangtzecommandship": "/orbat-cards/empire/33.webp",
       "yanshifirebase": "/orbat-cards/empire/69.webp",
       "yaojibombardmentcruiser": "/orbat-cards/empire/70.webp",
+      "yuzhoucityoffurnaces": "/orbat-cards/empire/35.webp",
       "zhanmadaoskyfortress": "/orbat-cards/empire/34.webp",
       "ziweiskybastion": "/orbat-cards/empire/71.webp"
     },
@@ -215,6 +223,7 @@
       "endymiondyadrotors": "/orbat-cards/enlightened/51.webp",
       "euclidscoutsaucer": "/orbat-cards/enlightened/52.webp",
       "euripidessubmarine": "/orbat-cards/enlightened/36.webp",
+      "europagrandconveyor": "/orbat-cards/enlightened/56.webp",
       "heavyplatformbellerophonclass": "/orbat-cards/enlightened/42.webp",
       "hermessupplyfreighter": "/orbat-cards/enlightened/57.webp",
       "hypatiageneratorship": "/orbat-cards/enlightened/24.webp",
@@ -242,15 +251,45 @@
       "zumeenacapacitorship": "/orbat-cards/enlightened/48.webp"
     },
     "imperium": {
-      "asgardrotortethership": "/orbat-cards/imperium/16.webp",
-      "icemaidendreadnoughtsupercarrier": "/orbat-cards/imperium/21.webp",
-      "kaiserheavybattleship": "/orbat-cards/imperium/22.webp",
-      "koniggeneratorship": "/orbat-cards/imperium/23.webp",
-      "maximilianaeriallinebreaker": "/orbat-cards/imperium/24.webp",
-      "ragnarokheavyreaver": "/orbat-cards/imperium/25.webp",
-      "starkimperiumskyfortress": "/orbat-cards/imperium/28.webp",
-      "tempelhoffleetcarrier": "/orbat-cards/imperium/29.webp",
-      "zeppelinaerialdreadnought": "/orbat-cards/imperium/31.webp"
+      "arminiusfrigate": "/orbat-cards/imperium/40.webp",
+      "asgardrotortethership": "/orbat-cards/imperium/19.webp",
+      "augustusbombardmentcruiser": "/orbat-cards/imperium/53.webp",
+      "baldrraider": "/orbat-cards/imperium/41.webp",
+      "bluchercruiser": "/orbat-cards/imperium/34.webp",
+      "einherjarvitruviancolossus": "/orbat-cards/imperium/42.webp",
+      "elector": "/orbat-cards/imperium/21.webp",
+      "europagrandconveyor": "/orbat-cards/imperium/63.webp",
+      "falkensteinbattlecarrier": "/orbat-cards/imperium/22.webp",
+      "fenrirsubmarine": "/orbat-cards/imperium/59.webp",
+      "gefjonmerchantman": "/orbat-cards/imperium/43.webp",
+      "gungnirraider": "/orbat-cards/imperium/44.webp",
+      "hermessupplyfreighter": "/orbat-cards/imperium/64.webp",
+      "hochmeistervitruviancolossus": "/orbat-cards/imperium/45.webp",
+      "hothcorvette": "/orbat-cards/imperium/46.webp",
+      "icemaidendreadnoughtsupercarrier": "/orbat-cards/imperium/24.webp",
+      "jaegeraerialdestroyer": "/orbat-cards/imperium/47.webp",
+      "jotunnheavyraider": "/orbat-cards/imperium/35.webp",
+      "kaiserheavybattleship": "/orbat-cards/imperium/25.webp",
+      "koniggeneratorship": "/orbat-cards/imperium/26.webp",
+      "konradsupportcarrier": "/orbat-cards/imperium/54.webp",
+      "kriegsturmassaultairship": "/orbat-cards/imperium/55.webp",
+      "lokishadowraider": "/orbat-cards/imperium/60.webp",
+      "maximilianaeriallinebreaker": "/orbat-cards/imperium/27.webp",
+      "metzgervitruiviancolossus": "/orbat-cards/imperium/48.webp",
+      "munichaerialdestroyer": "/orbat-cards/imperium/49.webp",
+      "nurembergheavyairship": "/orbat-cards/imperium/36.webp",
+      "odinreaver": "/orbat-cards/imperium/37.webp",
+      "ragnarokheavyreaver": "/orbat-cards/imperium/28.webp",
+      "reiterflakcruiser": "/orbat-cards/imperium/50.webp",
+      "sigimerdestroyer": "/orbat-cards/imperium/51.webp",
+      "smsskjaldenthedarkomen": "/orbat-cards/imperium/29.webp",
+      "starkimperiumskyfortress": "/orbat-cards/imperium/30.webp",
+      "tempelhoffleetcarrier": "/orbat-cards/imperium/31.webp",
+      "thorassaultraider": "/orbat-cards/imperium/38.webp",
+      "titanmassconveyor": "/orbat-cards/imperium/66.webp",
+      "valkyriehuntrotor": "/orbat-cards/imperium/61.webp",
+      "volsungcruiser": "/orbat-cards/imperium/39.webp",
+      "zeppelinaerialdreadnought": "/orbat-cards/imperium/33.webp"
     },
     "sultanate": {
       "abydoshoverstronghold": "/orbat-cards/sultanate/19.webp",
@@ -317,33 +356,33 @@
   "sources": {
     "alliance": {
       "mappedCards": 44,
-      "sha256": "24684d1aaa5a23fb92669f50dff8fe1d7cd719ef387e4aeb0aaa5f1611b3f5fa",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01-Beta_W.pdf"
+      "sha256": "210fb0ca29859b5d3da461cdaa64b73f7215e9d06b511072917c41c306b39579",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01_W.pdf"
     },
     "commonwealth": {
       "mappedCards": 45,
-      "sha256": "23d5f9bc067208a4c91efd09bf912ffc85c1dc08112ede4188dd834b6a5ff33f",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01_W_2026-09-28-131803_pgvm.pdf"
+      "sha256": "68e925dd0273fb046cb9b10b1f5b76f088aa52efb147703d502b402bf91bba87",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01_W.pdf"
     },
     "crown": {
-      "mappedCards": 49,
-      "sha256": "6d960998953f5e9ebda5cebc8c4d369fc82cc5ad92c63c8ca21a32b6d66265df",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02a.pdf"
+      "mappedCards": 51,
+      "sha256": "df86b7ade449fafb96a0458faab06c4371a0a17da666533b9200ad1ffe6cae02",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02c_W.pdf"
     },
     "empire": {
-      "mappedCards": 53,
-      "sha256": "1ecca809a0c2fc4366036de40f5decba6c2c405f052323e37ab41fff80008cad",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01_W.pdf"
+      "mappedCards": 59,
+      "sha256": "365800226de41046054f74bfb9e98855264894b856f6881ca985813eb9667ad7",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01.pdf"
     },
     "enlightened": {
-      "mappedCards": 40,
-      "sha256": "fdc368efb7fd64f44d58319db40cc46daab47fee66ae52b9d1b41b91d3f3c621",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01-Beta2_W.pdf"
+      "mappedCards": 41,
+      "sha256": "a302f04083c1ae8e38c0df1145c2c3b21b36694d1833ea7ca7131a357dbb6bfa",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01_W_Compressed-further.pdf"
     },
     "imperium": {
-      "mappedCards": 9,
-      "sha256": "e6746e0f4939006e92e0dac4ffbe9aee5edb43eacf7ebbd27deb839d4046de05",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Imperium-400b_W.pdf"
+      "mappedCards": 39,
+      "sha256": "33fe5f867870dfdf81e97b5d00c41375a1e1e9ece547fb26b5cef6f57e480737",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Imperium_V4.01-Beta.pdf"
     },
     "sultanate": {
       "mappedCards": 42,

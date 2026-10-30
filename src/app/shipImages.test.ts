@@ -13,6 +13,11 @@ describe("shipImageFor", () => {
     );
   });
 
+  it("uses new Imperium models but excludes the Munich newspaper placeholder", () => {
+    expect(shipImageFor("Imperium", "Elector")).toBe("/ships/imperium/21.webp");
+    expect(shipImageFor("Imperium", "Munich Aerial Destroyer")).toBeNull();
+  });
+
   it("leaves explicitly missing ORBAT art available for a silhouette fallback", () => {
     expect(shipImageFor("Commonwealth", "Morozko Heavy Cryo Cruiser")).toBeNull();
   });

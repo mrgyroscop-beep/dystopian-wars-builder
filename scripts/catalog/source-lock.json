@@ -1,8 +1,8 @@
 {
   "repository": "Nord0rk/Dystopian-Wars-4.0",
-  "commit": "42b5fa3e81f62456d856588dc71e2fe33f5da166",
-  "tree": "0f7307115be610114b7df7a422c7b4fdbbc368ea",
-  "commitTimestamp": "2026-09-12T22:48:03Z",
+  "commit": "b3f04598de52391ae1b3aad6b4ffd0d82126474a",
+  "tree": "7e0dc04244f2bc7414b81220db2474f0379a5acf",
+  "commitTimestamp": "2026-09-22T10:04:22Z",
   "files": [
     {
       "path": "Alliance.cat",
@@ -12,9 +12,9 @@
     },
     {
       "path": "Commonwealth.cat",
-      "blob": "967661ead846ca8881bba28ca5c16132fe3f8bf2",
-      "bytes": 832479,
-      "sha256": "10cd94c689cccbe6408be1b9c6d6799588274fccadaf8c718ecf7ea66af0d2fc"
+      "blob": "b804761006ca850bfc25d8f1924d65f5c93f279e",
+      "bytes": 826473,
+      "sha256": "bdee8d0a9fb622785146f6a15ecbeec44e6538f96ddc602ff06d5a352cf0fee9"
     },
     {
       "path": "Crown.cat",
@@ -36,9 +36,9 @@
     },
     {
       "path": "Enlightened.cat",
-      "blob": "552275b45d31b3fef20792ec111733a3d3c6238f",
-      "bytes": 672087,
-      "sha256": "0d88bb7a874a5f4447afb9ff15c664ee16f9960dceb49667a5dbed0d41ce642e"
+      "blob": "793c545748db4a4ebc39aca1a1f45db6ef040070",
+      "bytes": 672412,
+      "sha256": "daaa71da2829ee19f902f78576e405786ed07e1b5e5a524a97bb2d963250f42f"
     },
     {
       "path": "Imperium.cat",

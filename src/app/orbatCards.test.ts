@@ -26,6 +26,22 @@ describe("orbatCardFor", () => {
     );
   });
 
+  it("resolves Empire profiles despite upstream spelling differences", () => {
+    expect(orbatCardFor("Empire", "Ikuchi Exo-Submersible Carier")).toBe(
+      "/orbat-cards/empire/61.webp",
+    );
+    expect(orbatCardFor("Empire", "Yuzhou City of Furnaces")).toBe("/orbat-cards/empire/35.webp");
+    expect(orbatCardFor("Empire", "Defence Platform Barangao Class")).toBe(
+      "/orbat-cards/empire/58.webp",
+    );
+    expect(orbatCardFor("Empire", "Heavy Platform Malandok Class")).toBe(
+      "/orbat-cards/empire/59.webp",
+    );
+    expect(orbatCardFor("Empire", "Supply Platform Magwayen Class")).toBe(
+      "/orbat-cards/empire/78.webp",
+    );
+  });
+
   it("returns null when no original card is mapped", () => {
     expect(orbatCardFor("Unknown faction", "Unpublished ship")).toBeNull();
   });

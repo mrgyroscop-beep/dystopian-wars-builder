@@ -389,10 +389,6 @@
         "imageIndex": 8,
         "url": "/ships/crown/24.webp"
       },
-      "thenautiluslegendaryprivateer": {
-        "imageIndex": 8,
-        "url": "/ships/crown/25.webp"
-      },
       "palashiindiaman": {
         "imageIndex": 8,
         "url": "/ships/crown/26.webp"
@@ -549,6 +545,10 @@
         "imageIndex": 8,
         "url": "/ships/crown/64.webp"
       },
+      "chanurarepairship": {
+        "imageIndex": 8,
+        "url": "/ships/crown/65.webp"
+      },
       "europagrandconveyor": {
         "imageIndex": 8,
         "url": "/ships/crown/66.webp"
@@ -556,6 +556,14 @@
       "hermessupplyfreighter": {
         "imageIndex": 8,
         "url": "/ships/crown/67.webp"
+      },
+      "supplyplatformbelfastclass": {
+        "imageIndex": 8,
+        "url": "/ships/crown/68.webp"
+      },
+      "titanmassconveyor": {
+        "imageIndex": 8,
+        "url": "/ships/crown/69.webp"
       }
     },
     "empire": {
@@ -606,6 +614,10 @@
       "zhanmadaoskyfortress": {
         "imageIndex": 7,
         "url": "/ships/empire/34.webp"
+      },
+      "yuzhoucityoffurnaces": {
+        "imageIndex": 7,
+        "url": "/ships/empire/35.webp"
       },
       "daolightcruiser": {
         "imageIndex": 7,
@@ -699,9 +711,21 @@
         "imageIndex": 7,
         "url": "/ships/empire/57.webp"
       },
+      "defenceplatformbarangaoclass": {
+        "imageIndex": 7,
+        "url": "/ships/empire/58.webp"
+      },
+      "heavyplatformmalandokclass": {
+        "imageIndex": 7,
+        "url": "/ships/empire/59.webp"
+      },
       "hwanunggeneratoraircruiser": {
         "imageIndex": 7,
         "url": "/ships/empire/60.webp"
+      },
+      "ikuchiexosubmersiblecarier": {
+        "imageIndex": 7,
+        "url": "/ships/empire/61.webp"
       },
       "kaijuikacolossus": {
         "imageIndex": 7,
@@ -755,6 +779,10 @@
         "imageIndex": 7,
         "url": "/ships/empire/74.webp"
       },
+      "europagrandconveyor": {
+        "imageIndex": 7,
+        "url": "/ships/empire/75.webp"
+      },
       "hermessupplyfreighter": {
         "imageIndex": 7,
         "url": "/ships/empire/76.webp"
@@ -762,6 +790,10 @@
       "lantaumerchantman": {
         "imageIndex": 7,
         "url": "/ships/empire/77.webp"
+      },
+      "supplyplatformmagwayenclass": {
+        "imageIndex": 7,
+        "url": "/ships/empire/78.webp"
       },
       "titanmassconveyer": {
         "imageIndex": 7,
@@ -774,11 +806,11 @@
     },
     "enlightened": {
       "agoracommandcruiser": {
-        "imageIndex": 7,
+        "imageIndex": 9,
         "url": "/ships/enlightened/19.webp"
       },
       "archimedesvaultship": {
-        "imageIndex": 7,
+        "imageIndex": 10,
         "url": "/ships/enlightened/20.webp"
       },
       "chionesubnauticalexplorer": {
@@ -786,7 +818,7 @@
         "url": "/ships/enlightened/21.webp"
       },
       "daedalustethership": {
-        "imageIndex": 7,
+        "imageIndex": 8,
         "url": "/ships/enlightened/22.webp"
       },
       "descartescontrolship": {
@@ -802,15 +834,15 @@
         "url": "/ships/enlightened/25.webp"
       },
       "keplerbattlecruiser": {
-        "imageIndex": 7,
+        "imageIndex": 8,
         "url": "/ships/enlightened/26.webp"
       },
       "loewfastexplorer": {
-        "imageIndex": 7,
+        "imageIndex": 8,
         "url": "/ships/enlightened/27.webp"
       },
       "nansenexplorer": {
-        "imageIndex": 7,
+        "imageIndex": 8,
         "url": "/ships/enlightened/28.webp"
       },
       "thuleskyfortress": {
@@ -822,7 +854,7 @@
         "url": "/ships/enlightened/30.webp"
       },
       "copernicusheavycruiser": {
-        "imageIndex": 7,
+        "imageIndex": 8,
         "url": "/ships/enlightened/31.webp"
       },
       "lovelacecruiser": {
@@ -834,7 +866,7 @@
         "url": "/ships/enlightened/33.webp"
       },
       "valtarsaucer": {
-        "imageIndex": 7,
+        "imageIndex": 8,
         "url": "/ships/enlightened/34.webp"
       },
       "adamskisaucer": {
@@ -854,11 +886,11 @@
         "url": "/ships/enlightened/38.webp"
       },
       "merianautomatafrigate": {
-        "imageIndex": 7,
+        "imageIndex": 8,
         "url": "/ships/enlightened/39.webp"
       },
       "chateletdronecarrier": {
-        "imageIndex": 7,
+        "imageIndex": 8,
         "url": "/ships/enlightened/40.webp"
       },
       "defenceplatformleibnizclass": {
@@ -921,6 +953,10 @@
         "imageIndex": 7,
         "url": "/ships/enlightened/55.webp"
       },
+      "europagrandconveyor": {
+        "imageIndex": 8,
+        "url": "/ships/enlightened/56.webp"
+      },
       "hermessupplyfreighter": {
         "imageIndex": 7,
         "url": "/ships/enlightened/57.webp"
@@ -930,11 +966,164 @@
         "url": "/ships/enlightened/58.webp"
       },
       "titanmassconveyer": {
-        "imageIndex": 7,
+        "imageIndex": 8,
         "url": "/ships/enlightened/59.webp"
       }
     },
-    "imperium": {},
+    "imperium": {
+      "asgardrotortethership": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/19.webp"
+      },
+      "elector": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/21.webp"
+      },
+      "falkensteinbattlecarrier": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/22.webp"
+      },
+      "icemaidendreadnoughtsupercarrier": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/24.webp"
+      },
+      "kaiserheavybattleship": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/25.webp"
+      },
+      "koniggeneratorship": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/26.webp"
+      },
+      "maximilianaeriallinebreaker": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/27.webp"
+      },
+      "ragnarokheavyreaver": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/28.webp"
+      },
+      "smsskjaldenthedarkomen": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/29.webp"
+      },
+      "starkimperiumskyfortress": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/30.webp"
+      },
+      "tempelhoffleetcarrier": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/31.webp"
+      },
+      "zeppelinaerialdreadnought": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/33.webp"
+      },
+      "bluchercruiser": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/34.webp"
+      },
+      "jotunnheavyraider": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/35.webp"
+      },
+      "nurembergheavyairship": {
+        "imageIndex": 12,
+        "url": "/ships/imperium/36.webp"
+      },
+      "odinreaver": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/37.webp"
+      },
+      "thorassaultraider": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/38.webp"
+      },
+      "volsungcruiser": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/39.webp"
+      },
+      "arminiusfrigate": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/40.webp"
+      },
+      "baldrraider": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/41.webp"
+      },
+      "einherjarvitruviancolossus": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/42.webp"
+      },
+      "gefjonmerchantman": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/43.webp"
+      },
+      "gungnirraider": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/44.webp"
+      },
+      "hochmeistervitruviancolossus": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/45.webp"
+      },
+      "hothcorvette": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/46.webp"
+      },
+      "jaegeraerialdestroyer": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/47.webp"
+      },
+      "metzgervitruiviancolossus": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/48.webp"
+      },
+      "reiterflakcruiser": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/50.webp"
+      },
+      "sigimerdestroyer": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/51.webp"
+      },
+      "augustusbombardmentcruiser": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/53.webp"
+      },
+      "konradsupportcarrier": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/54.webp"
+      },
+      "kriegsturmassaultairship": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/55.webp"
+      },
+      "fenrirsubmarine": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/59.webp"
+      },
+      "lokishadowraider": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/60.webp"
+      },
+      "valkyriehuntrotor": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/61.webp"
+      },
+      "europagrandconveyor": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/63.webp"
+      },
+      "hermessupplyfreighter": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/64.webp"
+      },
+      "titanmassconveyor": {
+        "imageIndex": 8,
+        "url": "/ships/imperium/66.webp"
+      }
+    },
     "sultanate": {
       "abydoshoverstronghold": {
         "imageIndex": 7,
@@ -1114,15 +1303,7 @@
     "empire": [],
     "enlightened": [],
     "imperium": [
-      "asgardrotortethership",
-      "icemaidendreadnoughtsupercarrier",
-      "kaiserheavybattleship",
-      "koniggeneratorship",
-      "maximilianaeriallinebreaker",
-      "ragnarokheavyreaver",
-      "starkimperiumskyfortress",
-      "tempelhoffleetcarrier",
-      "zeppelinaerialdreadnought"
+      "munichaerialdestroyer"
     ],
     "sultanate": [],
     "union": [
@@ -1146,33 +1327,33 @@
   "sources": {
     "alliance": {
       "mappedCards": 44,
-      "sha256": "24684d1aaa5a23fb92669f50dff8fe1d7cd719ef387e4aeb0aaa5f1611b3f5fa",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01-Beta_W.pdf"
+      "sha256": "210fb0ca29859b5d3da461cdaa64b73f7215e9d06b511072917c41c306b39579",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Alliance-4.01_W.pdf"
     },
     "commonwealth": {
       "mappedCards": 45,
-      "sha256": "23d5f9bc067208a4c91efd09bf912ffc85c1dc08112ede4188dd834b6a5ff33f",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01_W_2026-09-28-131803_pgvm.pdf"
+      "sha256": "68e925dd0273fb046cb9b10b1f5b76f088aa52efb147703d502b402bf91bba87",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Commonwealth-4.01_W.pdf"
     },
     "crown": {
-      "mappedCards": 49,
-      "sha256": "c2152353cab585ffc537b0c9822ff163b2dfe5345eb9dce92c4c9b106fee172d",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02a.pdf"
+      "mappedCards": 51,
+      "sha256": "df86b7ade449fafb96a0458faab06c4371a0a17da666533b9200ad1ffe6cae02",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Crown_Full-4.02c_W.pdf"
     },
     "empire": {
-      "mappedCards": 53,
-      "sha256": "1ecca809a0c2fc4366036de40f5decba6c2c405f052323e37ab41fff80008cad",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01_W.pdf"
+      "mappedCards": 59,
+      "sha256": "365800226de41046054f74bfb9e98855264894b856f6881ca985813eb9667ad7",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Empire_Full-4.01.pdf"
     },
     "enlightened": {
-      "mappedCards": 40,
-      "sha256": "fdc368efb7fd64f44d58319db40cc46daab47fee66ae52b9d1b41b91d3f3c621",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01-Beta2_W.pdf"
+      "mappedCards": 41,
+      "sha256": "a302f04083c1ae8e38c0df1145c2c3b21b36694d1833ea7ca7131a357dbb6bfa",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Enlightened-v4.01_W_Compressed-further.pdf"
     },
     "imperium": {
-      "mappedCards": 9,
-      "sha256": "e6746e0f4939006e92e0dac4ffbe9aee5edb43eacf7ebbd27deb839d4046de05",
-      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Imperium-400b_W.pdf"
+      "mappedCards": 39,
+      "sha256": "33fe5f867870dfdf81e97b5d00c41375a1e1e9ece547fb26b5cef6f57e480737",
+      "url": "https://www.warcradle.com/assets/warcradleGames/dystopianWars/factions/orbat/DW-ORBATS_Imperium_V4.01-Beta.pdf"
     },
     "sultanate": {
       "mappedCards": 42,
