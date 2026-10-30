@@ -328,6 +328,13 @@ function InspectorDialog({
 
   return (
     <div className="dialog-backdrop profile-dialog-backdrop">
+      <button
+        type="button"
+        className="profile-dialog__dismiss"
+        aria-label="Закрыть окно по фону"
+        tabIndex={-1}
+        onClick={onClose}
+      />
       <dialog
         aria-labelledby={titleId}
         aria-modal="true"
